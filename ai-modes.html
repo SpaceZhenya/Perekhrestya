@@ -63,6 +63,11 @@
         #chat-header .ch-name { flex:1; font-size:13px; color:rgba(255,255,255,0.5); }
         #chat-header .ch-name b { color:rgba(255,255,255,0.7); }
         #chat-header .ch-desc { font-size:10px; color:rgba(255,255,255,0.1); }
+        .ai-status { font-size:9px; display:flex; align-items:center; gap:4px; }
+        .ai-status .dot { width:6px; height:6px; border-radius:50%; }
+        .ai-status.online .dot { background:#44cc88; box-shadow:0 0 6px rgba(68,204,136,0.3); }
+        .ai-status.offline .dot { background:#666; }
+        .ai-status .label { color:rgba(255,255,255,0.08); }
 
         #chat-box {
             flex:1; overflow-y:auto; padding:16px;
@@ -174,6 +179,10 @@
                     <div class="ch-name">Обери персонажа <b id="chName">—</b></div>
                     <div class="ch-desc" id="chDesc">Ліворуч обери моду для спілкування</div>
                 </div>
+                <div class="ai-status offline" id="aiStatus">
+                    <span class="dot"></span>
+                    <span class="label">AI offline</span>
+                </div>
             </div>
 
             <div id="chat-box">
@@ -244,6 +253,7 @@
     let allModes = [...DEFAULT_MODES, ...customModes];
     let activeMode = null;
     let loading = false;
+    let aiOnline = false;
 
     // ============================================================
     // РЕНДЕР МОД
@@ -378,31 +388,65 @@
     }
 
     // ============================================================
-    // API ЗАПИТ
+    // API ЗАПИТ (справжній AI)
     // ============================================================
     async function callAIApi(message, mode) {
-        // Формуємо системний промпт + повідомлення
         const system = mode.prompt || 'Ти — AI, який відповідає на запитання. Відповідай українською.';
-        const fullPrompt = system + '\n\nКористувач: ' + message + '\n' + mode.name + ':';
 
         try {
-            // Pollinations API (безкоштовно, без токена)
-            const resp = await fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt), {
-                method: 'GET',
-                headers: { 'Accept': 'text/plain' },
-                signal: AbortSignal.timeout(15000),
+            // Pollinations API — безкоштовно, без токена
+            const resp = await fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: system },
+                        { role: 'user', content: message }
+                    ],
+                    model: 'openai',
+                    temperature: 0.7,
+                }),
+                signal: AbortSignal.timeout(30000),
             });
 
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.text();
 
-            if (!data || data.length < 2) throw new Error('Порожня відповідь');
-            return data.trim();
+            const data = await resp.json();
+            const text = data.choices?.[0]?.message?.content || data.response || data.text || '...';
+
+            if (!text || text.length < 3) throw new Error('Порожня відповідь');
+            aiOnline = true;
+            updateAIStatus();
+            return text.trim();
 
         } catch(e) {
-            // Якщо Pollinations не відповів — локальний генератор
+            // Спробуємо GET метод
+            try {
+                const full = system + '\n\nКористувач: ' + message + '\n' + mode.name + ':';
+                const resp2 = await fetch('https://text.pollinations.ai/' + encodeURIComponent(full), {
+                    signal: AbortSignal.timeout(15000),
+                });
+                if (resp2.ok) {
+                    const text = await resp2.text();
+                    if (text && text.length > 3) {
+                        aiOnline = true;
+                        updateAIStatus();
+                        return text.trim();
+                    }
+                }
+            } catch(e2) {}
+
+            // AI offline — використовуємо локальні відповіді
+            aiOnline = false;
+            updateAIStatus();
             return localResponse(message, mode);
         }
+    }
+
+    function updateAIStatus() {
+        const el = document.getElementById('aiStatus');
+        el.className = 'ai-status ' + (aiOnline ? 'online' : 'offline');
+        el.querySelector('.label').textContent = aiOnline ? 'AI online' : 'AI offline (local)';
     }
 
     // ============================================================
