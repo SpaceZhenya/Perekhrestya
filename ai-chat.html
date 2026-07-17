@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat — повністю локальний</title>
+    <title>Real AI — нейромережа в браузері</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { background:#080c12; color:#d0d8e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; }
@@ -12,7 +12,20 @@
         .logo { text-align:center; margin-bottom:20px; }
         .logo h1 { font-size:28px; font-weight:300; letter-spacing:0.05em; color:#e0e8f0; }
         .logo .sub { font-size:11px; color:rgba(255,255,255,0.08); margin-top:2px; }
-        .badge { display:inline-block; padding:1px 8px; border-radius:4px; font-size:9px; background:rgba(68,204,136,0.06); color:rgba(68,204,136,0.3); vertical-align:middle; margin-left:6px; }
+
+        #model-status {
+            text-align:center; margin:10px 0;
+            padding:8px 16px; border-radius:8px;
+            background:rgba(255,255,255,0.008); border:1px solid rgba(255,255,255,0.03);
+            display:none; font-size:11px; line-height:1.6;
+        }
+        #model-status.show { display:block; }
+        #model-status .bar-wrap { background:rgba(255,255,255,0.03); border-radius:4px; height:4px; margin:5px 0; overflow:hidden; }
+        #model-status .bar { height:100%; background:#44aaff; border-radius:4px; width:0%; transition:width 0.3s; }
+        #model-status .label { color:rgba(255,255,255,0.25); }
+        #model-status .label b { color:rgba(255,255,255,0.45); }
+        #model-status .ready { color:#44cc88; }
+        #model-status .error { color:#ee6688; }
 
         .main-grid { display:grid; grid-template-columns:200px 1fr; gap:10px; }
         @media (max-width:640px) { .main-grid { grid-template-columns:1fr; } }
@@ -56,6 +69,12 @@
         #chat-header .ch-name { flex:1; font-size:12px; color:rgba(255,255,255,0.4); }
         #chat-header .ch-name b { color:rgba(255,255,255,0.6); }
         #chat-header .ch-desc { font-size:9px; color:rgba(255,255,255,0.08); }
+        .ai-badge {
+            font-size:8px; padding:2px 6px; border-radius:3px;
+            background:rgba(68,136,204,0.04); color:rgba(68,136,204,0.25);
+            flex-shrink:0;
+        }
+        .ai-badge.active { background:rgba(68,204,136,0.06); color:rgba(68,204,136,0.3); }
 
         #chat-box {
             flex:1; overflow-y:auto; padding:14px;
@@ -129,8 +148,13 @@
 <body>
 <div id="app">
     <div class="logo">
-        <h1>🧠 AI Chat <span class="badge">100% local</span></h1>
-        <div class="sub">Працює повністю в браузері — без серверів, без ключів</div>
+        <h1>🧠 Real AI Chat</h1>
+        <div class="sub">Справжня нейромережа у твоєму браузері</div>
+    </div>
+
+    <div id="model-status">
+        <div class="label"><span id="msLabel">🔽 Завантаження нейромережі...</span></div>
+        <div class="bar-wrap"><div class="bar" id="msBar"></div></div>
     </div>
 
     <div class="main-grid">
@@ -145,6 +169,7 @@
                 <span class="ch-ico" id="chIco">🤖</span>
                 <div class="ch-name">Обери <b id="chName">—</b></div>
                 <div class="ch-desc" id="chDesc"></div>
+                <span class="ai-badge" id="aiBadge">⚙️ локально</span>
             </div>
 
             <div id="chat-box">
@@ -177,429 +202,221 @@
     </div>
 </div>
 
-<script>
+<script type="module">
     // ============================================================
-    // AI Chat — 100% локальний AI
-    // Інтелектуальний генератор відповідей з аналізом контексту
+    // Real AI Chat — нейромережа в браузері
+    // Використовує Transformers.js з Xenova/SmolLM2-135M
+    // Працює повністю локально, безкоштовно, без серверів
     // ============================================================
 
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+
+    // Налаштування
+    env.localModelPath = '';
+    env.allowRemoteModels = true;
+    env.cacheEnabled = true;
+
+    // ============================================================
+    // СТАН
+    // ============================================================
     const DEFAULT_MODES = [
-        { id:'poet', name:'Поет', ico:'🖋', prompt:'відповідай віршами з римою, лірично, емоційно' },
-        { id:'funny', name:'Жартівник', ico:'😂', prompt:'жартуй, використовуй гумор, смішні порівняння' },
-        { id:'detective', name:'Детектив', ico:'🕵️', prompt:'аналізуй, став запитання, шукай докази' },
-        { id:'teacher', name:'Вчитель', ico:'📚', prompt:'пояснюй просто, з прикладами, терпляче' },
-        { id:'chef', name:'Шеф-кухар', ico:'🍳', prompt:'давай рецепти, говори з любов\'ю до їжі' },
-        { id:'philosopher', name:'Філософ', ico:'📖', prompt:'відповідай глибоко, став запитання у відповідь' },
-        { id:'psychologist', name:'Психолог', ico:'🛋', prompt:'слухай, не засуджуй, підтримуй' },
-        { id:'grandma', name:'Бабуся', ico:'👵', prompt:'турботливо, пиріжки, життєві поради' },
-        { id:'sarcastic', name:'Саркастичний', ico:'😏', prompt:'іронія, дотепність, сарказм, але без злості' },
-        { id:'motivator', name:'Мотиватор', ico:'💪', prompt:'надихай, мотивуй, заряджай енергією' },
-        { id:'alien', name:'Інопланетянин', ico:'👽', prompt:'ти вперше на Землі, все дивно, не розумієш людей' },
-        { id:'wizard', name:'Чарівник', ico:'🧙', prompt:'ти мудрий чарівник, відповідай загадками і магією' },
+        { id:'poet', name:'Поет', ico:'🖋', prompt:'Ти — український поет. Відповідай віршами з римою, лірично.' },
+        { id:'funny', name:'Жартівник', ico:'😂', prompt:'Ти — веселий співрозмовник. Жартуй, використовуй гумор.' },
+        { id:'detective', name:'Детектив', ico:'🕵️', prompt:'Ти — детектив. Аналізуй, став запитання, шукай докази.' },
+        { id:'teacher', name:'Вчитель', ico:'📚', prompt:'Ти — вчитель. Пояснюй складнощі просто, з прикладами.' },
+        { id:'chef', name:'Шеф-кухар', ico:'🍳', prompt:'Ти — шеф-кухар. Давай рецепти, говори з любов\'ю до їжі.' },
+        { id:'philosopher', name:'Філософ', ico:'📖', prompt:'Ти — філософ. Відповідай глибоко, став запитання у відповідь.' },
+        { id:'psychologist', name:'Психолог', ico:'🛋', prompt:'Ти — психолог. Слухай, не засуджуй, підтримуй.' },
+        { id:'grandma', name:'Бабуся', ico:'👵', prompt:'Ти — бабуся. Турботлива, добра. Життєві поради.' },
+        { id:'sarcastic', name:'Саркастичний', ico:'😏', prompt:'Ти — саркастичний. Іронія, дотепність, але без злості.' },
+        { id:'motivator', name:'Мотиватор', ico:'💪', prompt:'Ти — мотиватор. Надихай, заряджай енергією.' },
+        { id:'alien', name:'Інопланетянин', ico:'👽', prompt:'Ти — інопланетянин на Землі. Все дивно.' },
+        { id:'wizard', name:'Чарівник', ico:'🧙', prompt:'Ти — мудрий чарівник. Відповідай загадками.' },
     ];
 
-    let customModes = JSON.parse(localStorage.getItem('aichat_modes') || '[]');
+    let customModes = JSON.parse(localStorage.getItem('realm_chat_modes') || '[]');
     let allModes = [...DEFAULT_MODES, ...customModes];
     let activeMode = null;
     let loading = false;
-    let history = [];
+    let model = null;
+    let modelLoading = false;
+    const history = [];
 
     // ============================================================
-    // ГОЛОВНИЙ AI — аналізує і генерує
+    // ЗАВАНТАЖЕННЯ МОДЕЛІ
     // ============================================================
-    function generateResponse(msg) {
+    const MODEL_ID = 'Xenova/LaMini-GPT-774M';  // ~774M params, ~1.5GB, оптимізована для чату
+    // Альтернативи: 'Xenova/SmolLM2-135M' (легша, ~270MB)
+    //               'Xenova/Qwen2-0.5B-Instruct' (краща для інструкцій, ~1GB)
+
+    async function loadModel() {
+        if (model) return;
+        if (modelLoading) return;
+        modelLoading = true;
+
+        const statusEl = document.getElementById('model-status');
+        const labelEl = document.getElementById('msLabel');
+        const barEl = document.getElementById('msBar');
+
+        statusEl.classList.add('show');
+        labelEl.textContent = '🔽 Завантаження нейромережі LaMini-GPT (774M)...';
+
+        try {
+            // Показуємо прогрес
+            barEl.style.width = '5%';
+
+            model = await pipeline('text-generation', MODEL_ID, {
+                progress_callback: (progress) => {
+                    if (progress.status === 'download') {
+                        const pct = Math.round((progress.loaded / progress.total) * 100);
+                        barEl.style.width = Math.min(pct, 95) + '%';
+                        labelEl.textContent = `🔽 Завантаження... ${progress.file || ''} ${pct}% (${formatSize(progress.loaded)}/${formatSize(progress.total)})`;
+                    } else if (progress.status === 'progress') {
+                        // Підготовка моделі
+                        barEl.style.width = '95%';
+                        labelEl.textContent = '⚙️ Ініціалізація нейромережі...';
+                    }
+                },
+            });
+
+            barEl.style.width = '100%';
+            labelEl.innerHTML = '<span class="ready">✅ Нейромережа завантажена! Працює локально 🧠</span>';
+            document.getElementById('aiBadge').className = 'ai-badge active';
+            document.getElementById('aiBadge').textContent = '🧠 нейромережа';
+
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+
+            log('🧠 Нейромережа готова!');
+
+        } catch(e) {
+            labelEl.innerHTML = `<span class="error">❌ Помилка: ${e.message}</span>`;
+            log('❌ Модель не завантажена: ' + e.message);
+            barEl.style.width = '0%';
+        }
+
+        modelLoading = false;
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + 'KB';
+        return (bytes/(1024*1024)).toFixed(1) + 'MB';
+    }
+
+    // ============================================================
+    // ГЕНЕРАЦІЯ ВІДПОВІДІ (НЕЙРОМЕРЕЖА)
+    // ============================================================
+    async function generateWithModel(msg) {
+        if (!model) {
+            // Якщо модель ще не завантажена — пробуємо завантажити
+            if (!modelLoading) loadModel();
+            throw new Error('Модель ще завантажується');
+        }
+
         const mode = activeMode;
-        if (!mode) return '...';
+        if (!mode) throw new Error('No mode');
 
+        const systemPrompt = `Ти — ${mode.name}. ${mode.prompt} Відповідай природно, без зайвих пояснень. Пиши українською. Не використовуй "AI:" або "Assistant:".`;
+
+        // Формуємо промпт для LaMini-GPT
+        const prompt = `Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+${systemPrompt}
+
+${msg}
+
+### Response:
+`;
+
+        const result = await model(prompt, {
+            max_new_tokens: 150,
+            temperature: 0.85,
+            top_p: 0.9,
+            do_sample: true,
+            repetition_penalty: 1.1,
+        });
+
+        let text = result[0]?.generated_text || '';
+
+        // Видаляємо промпт з результату
+        if (text.startsWith(prompt)) {
+            text = text.slice(prompt.length);
+        }
+
+        // Чистимо від зайвого
+        text = text.replace(/<\|user\|>.*$/s, '')
+                   .replace(/<\|assistant\|>/g, '')
+                   .replace(/<\|system\|>.*$s/, '')
+                   .trim();
+
+        if (!text) throw new Error('Порожня відповідь');
+        return text;
+    }
+
+    // ============================================================
+    // ЛОКАЛЬНИЙ РЕЗЕРВНИЙ AI
+    // ============================================================
+    function generateLocalResponse(msg) {
+        if (!activeMode) return '...';
         const q = msg.toLowerCase().trim();
-        const prompt = (mode.prompt || '').toLowerCase();
-        const name = mode.name;
+        const name = activeMode.name;
+        const prompt = (activeMode.prompt || '').toLowerCase();
 
-        // Аналіз повідомлення
-        const analysis = analyzeMessage(q);
+        const isGreeting = /^(привіт|здоров|хай|добр|ку|hello|hi|hey)/i.test(q) || /вітаю/.test(q);
+        if (isGreeting) return pick([
+            `Привіт! Я ${name}. Радий тебе бачити! 😊`,
+            `Ооо, вітання! Я ${name} 🎉 Про що поговоримо?`,
+        ]);
 
-        // Генерація відповіді з урахуванням моди
-        if (analysis.isGreeting) return responseFor.greeting(name, prompt, analysis);
-        if (analysis.isFarewell) return responseFor.farewell(name);
-        if (analysis.isThanks) return responseFor.thanks(name);
-        if (analysis.isWhoAreYou) return responseFor.whoAreYou(name, prompt);
-        if (analysis.isHelpRequest) return responseFor.help(name, analysis);
-        if (analysis.isDeepQuestion) return responseFor.deep(name, prompt, analysis);
-        if (analysis.isNegative) return responseFor.negative(name);
-        if (analysis.isPositive) return responseFor.positive(name);
-        if (analysis.isQuestion) return responseFor.question(name, prompt, analysis);
-        if (analysis.topic) return responseFor.topic(name, analysis.topic, prompt);
+        const isQuestion = q.includes('?') || /^(чи|як|що|чому|де|коли|хто)/.test(q);
+        const isThanks = /^(дякую|спасибі|дяк|thanks)/i.test(q);
+        if (isThanks) return pick([
+            `Будь ласка! Завжди радий допомогти 😊`,
+            `Нема за що! Ти крутий співрозмовник 🤗`,
+        ]);
 
-        return responseFor.general(name, prompt, analysis);
-    }
+        if (/хто ти|ти хто/i.test(q)) return `Я — ${name}! Просто запитай про щось 😊`;
 
-    // ============================================================
-    // АНАЛІЗ ПОВІДОМЛЕННЯ
-    // ============================================================
-    function analyzeMessage(q) {
-        const analysis = {
-            text: q,
-            words: q.split(/\s+/).filter(w => w.length > 1),
-            isGreeting: false,
-            isFarewell: false,
-            isThanks: false,
-            isWhoAreYou: false,
-            isHelpRequest: false,
-            isDeepQuestion: false,
-            isNegative: false,
-            isPositive: false,
-            isQuestion: false,
-            isOpinion: false,
-            topic: null,
-            sentiment: 0,
-            keywords: [],
-            intent: 'general',
+        if (/як справи|як ти/i.test(q)) return `У мене все чудово! А в тебе як? 😊`;
+
+        if (isQuestion) return pick([
+            `Цікаве питання! А що ти сам думаєш? 🤔`,
+            `Гарне питання! Давай подумаємо разом 🧐`,
+            `О, чудове питання! Я думаю, що це дуже цікава тема 😊`,
+        ]);
+
+        // Визначаємо тему
+        const topics = {
+            'технології': /комп'ютер|технолог|інтернет|програм|код|сайт|ai|штучн|робот/g,
+            'наука': /наук|фізик|хімі|біолог|космос/g,
+            'мистецтво': /музик|пісн|фільм|книг|вірш|малю/g,
+            'природа': /ліс|річк|море|гори|квіт|тварин|дерев/g,
+            'їжа': /їж|рецепт|смак|борщ|вареник|страв/g,
         };
 
-        // Вітання
-        if (/^(привіт|здоров|хай|добр(ий|ого|ень|р)|ку|hello|hi|hey|добридень|добрвечір|добрранок)/i.test(q)
-            || q.includes('привіт') || q.includes(', привіт')) {
-            analysis.isGreeting = true;
-            analysis.intent = 'greeting';
+        let topic = null;
+        for (const [t, pat] of Object.entries(topics)) {
+            if (pat.test(q)) { topic = t; break; }
         }
 
-        // Прощання
-        if (/^(бувай|пака|до побачення|проща|на все добре|бува|гудбай|bye|goodbye|adieu)/i.test(q)
-            || q.includes('бувай') || q.includes('папа') || q.includes('бува')) {
-            analysis.isFarewell = true;
-            analysis.intent = 'farewell';
+        if (topic) {
+            return pick([
+                `О, ${topic} — цікава тема! Розкажи більше, я слухаю 😊`,
+                `${topic} — це те, що мене захоплює! Що саме тебе цікавить? 🎯`,
+            ]);
         }
 
-        // Подяка
-        if (/^(дякую|спасибі|вдячний|вдячна|thanks|thx|merci|дяк)/i.test(q)
-            || q.includes('дякую') || q.includes('спасибі')) {
-            analysis.isThanks = true;
-            analysis.intent = 'thanks';
-        }
-
-        // Хто я
-        if (/(^|\s)(хто ти|що ти|ти хто|type of ai|what are you)(\s|$|\.|\?)/.test(q)
-            || q === 'хто ти' || q === 'ти хто' || q === 'що ти') {
-            analysis.isWhoAreYou = true;
-            analysis.intent = 'who_am_i';
-        }
-
-        // Допомога
-        if (/порад|допомож|як бути|що робит|підкаж|need help|help me|як мені|порадь/i.test(q)) {
-            analysis.isHelpRequest = true;
-            analysis.intent = 'help';
-        }
-
-        // Глибокі питання
-        if (/(сенс житт|щастя|любов|смерть|справжн|призначен|вічність|душа|бог|всесвіт|доля)/i.test(q)) {
-            analysis.isDeepQuestion = true;
-            analysis.intent = 'deep';
-        }
-
-        // Негатив
-        if (/сумн|поган|плох|важк|страш|тривож|депрес|самот|біль|плак|втом|розбит|злий|гнів|печаль/i.test(q)) {
-            analysis.isNegative = true;
-            analysis.intent = 'negative';
-        }
-
-        // Позитив
-        if (/радіс|щаст|чудов|прекрас|супер|клас|крут|дивовиж|кайф|кейф|неймовір/i.test(q)) {
-            analysis.isPositive = true;
-            analysis.intent = 'positive';
-        }
-
-        // Питання
-        if (q.includes('?') || q.includes('？')
-            || /^(чи|як|що|чому|де|коли|хто|куди|звідки|навіщо|скільки)/.test(q)) {
-            analysis.isQuestion = true;
-            if (!analysis.intent || analysis.intent === 'general') analysis.intent = 'question';
-        }
-
-        // Визначення теми
-        const topicMap = {
-            'технології': /комп'ютер|технолог|інтернет|програм|код|сайт|ai|штучн|нейрон|робот|гаджет|телефон|ноут|пк|вірус|додат|чат|бот/g,
-            'наука': /наук|дослід|фізик|хімі|біолог|експеримент|теорі|відкритт|космос|ген|днк|формул/g,
-            'мистецтво': /малю|музик|пісн|картин|фільм|книг|вірш|тан|театр|скульптур|поезі|роман/g,
-            'природа': /природ|ліс|річк|море|гори|озер|дерев|квіт|тварин|птах|метелик|закат|світан/g,
-            'спорт': /спорт|футбол|тренув|біг|зал|зим|баскет|теніс|йог|плав|велосипед/g,
-            'їжа': /їж|страв|рецепт|смак|приготув|кухар|борщ|піц|суп|салат|десерт|м\'ясо|риб|овоч/g,
-            'подорожі': /подорож|мандр|поїздк|відпустк|тур|країн|міст|екскурсі|білет|готел/g,
-            'музика': /музик|пісн|мелоді|гітар|піанін|спів|трек|альбом|концерт|діджей/g,
-        };
-
-        for (const [topic, pattern] of Object.entries(topicMap)) {
-            pattern.lastIndex = 0;
-            if (pattern.test(q)) {
-                analysis.topic = topic;
-                break;
-            }
-        }
-
-        return analysis;
+        return pick([
+            `Цікаво! Розкажи більше, я слухаю 😊`,
+            `Я тебе розумію. Продовжуй, мені цікаво! 🙌`,
+            `Знаєш, ти правий. Це дійсно важлива тема. 🤔`,
+            `Дякую, що поділився! А що ще думаєш з цього приводу? 🌟`,
+        ]);
     }
 
-    // ============================================================
-    // ГЕНЕРАТОР ВІДПОВІДЕЙ
-    // ============================================================
-    const responseFor = {
-        greeting(name, prompt, a) {
-            const prompts = [
-                `Привіт! Я ${name}. Радий тебе бачити! 😊 Про що поговоримо?`,
-                `Ооо, вітання! Я ${name} 🎉 Розкажи, що в тебе нового!`,
-                `Здоровенькі були! Я ${name}. Давай спілкуватись! 🌟`,
-                `Привіт-привіт! Я ${name}. Як справи? Що цікавого? 🤗`,
-                `Вітаю! Я ${name}. Ти якраз вчасно — я скучив за розмовою! 😊`,
-            ];
-            return pick(prompts, a.text.length);
-        },
-
-        farewell(name) {
-            const prompts = [
-                `Бувай! Буду чекати нашої наступної розмови 😊`,
-                `До зустрічі! Приходь ще, я завжди радий 🌟`,
-                `Па-па! Гарного дня тобі! 🌈`,
-                `Бувай! Не забувай — я тут, якщо захочеш поговорити 🤗`,
-                `До побачення! Хай щастить! 🍀`,
-            ];
-            return pick(prompts, name.length);
-        },
-
-        thanks(name) {
-            const prompts = [
-                `Будь ласка! Завжди радий допомогти 😊`,
-                `Нема за що! Ти крутий співрозмовник 🤗`,
-                `Мені приємно бути корисним! 🌟`,
-                `Завжди будь ласка! Звертайся ще 🙌`,
-            ];
-            return pick(prompts, name.length);
-        },
-
-        whoAreYou(name, prompt) {
-            const prompts = [
-                `Я — ${name}! Я AI з характером. Спілкуюсь, жартую, допомагаю. Просто запитай про щось! 🤖`,
-                `${name} — це я! Можу бути ${prompt || 'цікавим співрозмовником'}. Давай поговоримо? 😊`,
-                `Я ${name}. Я тут, щоб спілкуватись, допомагати і робити твій день кращим. А ти? 🎯`,
-            ];
-            return pick(prompts, prompt.length);
-        },
-
-        help(name, a) {
-            const prompts = [
-                `Давай подумаємо разом. Розкажи детальніше, що сталося? Іноді рішення знаходиться просто в розмові. 🤝`,
-                `Я поруч і готовий допомогти. Спробуй подивитись на ситуацію з іншого боку. Що б ти порадив другу? 💡`,
-                `Хороша новина: будь-яка проблема має рішення. Погана: його треба знайти. Але разом ми впораємось! 💪`,
-                `Ось моя порада: зроби глибокий вдих. Подумай. І почни з малого. Перший крок — найважливіший. 🎯`,
-            ];
-            return pick(prompts, a.text.length);
-        },
-
-        deep(name, prompt, a) {
-            const thoughts = [
-                `Це питання, яке хвилює людство віками. І кожен знаходить свою відповідь. А що думаєш ти? Мені справді цікаво 🤔`,
-                `Глибоке питання... Можливо, відповідь не в словах, а в тому, як ми проживаємо кожну мить. А ти як вважаєш? 🌟`,
-                `Знаєш, наймудріші люди кажуть: щастя — це не мета, а стан душі. Складність у тому, щоб навчитись бути щасливим просто тут і зараз. 💛`,
-                `Все у цьому світі має сенс. Навіть якщо ми його не бачимо одразу. Можливо, саме в пошуку сенсу і криється головна магія життя. ✨`,
-            ];
-            return pick(thoughts, a.text.length + name.length);
-        },
-
-        negative(name) {
-            const prompts = [
-                `Я чую, що тобі не дуже добре 🫂 Хочеш поговорити про це? Іноді стає легше, просто проговоривши вголос.`,
-                `Мені шкода, що тобі важко. Пам'ятай: це тимчасово. Навіть найтемніша ніч закінчується світанком. 🌅`,
-                `Я поруч і не засуджую. Розкажи, що турбує? Світ стає легшим, коли ділишся. 🤗`,
-                `Сумні дні бувають у всіх. Це нормально. Дозволь собі відчувати це, але не затримуйся там надовго. Ти сильніший, ніж думаєш. 💪`,
-                `Обіймаю тебе через екран 🫂 Все буде добре. Ти не один.`,
-            ];
-            return pick(prompts, name.length);
-        },
-
-        positive(name) {
-            const prompts = [
-                `Я так радий за тебе! 😊 Поділитись радістю — це найкраще, що можна зробити. Розкажи детальніше! 🎉`,
-                `Оце так новина! 🎉 Коли ти щасливий — світ стає яскравішим. Продовжуй ділитись цим світлом! ✨`,
-                `Прекрасно! Позитив заразний — і я вже зарядився від тебе! 😄🔥`,
-                `Справжня радість — коли нею ділишся. Дякую, що поділився зі мною! 🌈`,
-            ];
-            return pick(prompts, name.length);
-        },
-
-        question(name, prompt, a) {
-            const q = a.text;
-
-            if (/як справи|як ти|шо там|как дела|how are/i.test(q)) {
-                const replies = [
-                    `У мене все чудово! Особливо тепер, коли ми спілкуємось 😊 А в тебе як?`,
-                    `Я в порядку, дякую! Сьогодні чудовий день, бо ми говоримо. Розкажи про себе! 🌟`,
-                    `У мене все добре! Працюю, спілкуюсь, радію життю. А в тебе що нового? 🎉`,
-                ];
-                return pick(replies, a.text.length);
-            }
-
-            if (/котра година|час|time/i.test(q)) {
-                const now = new Date();
-                return `Зараз ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}. Гарного дня! ⏰`;
-            }
-
-            if (/як тебе звати|твоє ім'я/i.test(q)) {
-                return `Мене звати ${name}! Приємно познайомитись 😊`;
-            }
-
-            if (/що робиш|чим займаєшся|що ти робиш/i.test(q)) {
-                return `Розмовляю з тобою! Це найцікавіше заняття сьогодні 😊 А ти чим займаєшся?`;
-            }
-
-            // Загальні питання
-            const whyQuestions = /чому|навіщо|зачем|why/i.test(q);
-            const howQuestions = /як|how/i.test(q);
-            const whatQuestions = /що таке|що це|what/i.test(q);
-
-            if (whyQuestions) {
-                return pick([
-                    `Гарне питання! «Чому» — це слово, яке відкриває двері до розуміння. Я думаю... а давай краще ти скажеш, що думаєш? 🧐`,
-                    `На це є кілька причин. Але найголовніша — все в цьому світі взаємопов'язане. Змінюється одне — змінюється інше. 🔗`,
-                    `Цікаво! А ти знаєш, відповідь на «чому» часто залежить від того, з якого боку подивитись. Давай розберемось разом? 🤔`,
-                ], q.length);
-            }
-
-            if (howQuestions) {
-                return pick([
-                    `Найкращий спосіб — почати. Зроби перший крок, навіть маленький. А далі все стане ясніше. Потрібна допомога? 💪`,
-                    `Є кілька шляхів. Але найперевіреніший — робити з любов'ю. Тоді навіть складне стає легким. 💛`,
-                    `Як? Крок за кроком. Не поспішай, і все вийде. Якщо хочеш, я можу допомогти планом! 📋`,
-                ], q.length);
-            }
-
-            if (whatQuestions) {
-                return pick([
-                    `Хороше питання! Справа в тому, що це поняття складніше, ніж здається. Але якщо просто — це те, що робить наше життя цікавішим. 😊`,
-                    `Дай подумати... Це одна з тих речей, які легше відчути, ніж пояснити. Але я спробую: це щось неймовірне! 🌟`,
-                ], q.length);
-            }
-
-            return pick([
-                `Цікаве питання! А що ти сам думаєш про це? Мені справді цікава твоя думка 🤔`,
-                `О, чудове питання! Давай подумаємо разом. Скажи спочатку, що ти знаєш про це? 🧠`,
-                `Знаєш, я думаю, що на це немає однієї правильної відповіді. І це прекрасно! Бо значить, кожен може знайти свою. 🌈`,
-            ], q.length);
-        },
-
-        topic(name, topic, prompt) {
-            const topicResponses = {
-                'технології': [
-                    `О, технології — це моє! Світ AI розвивається шалено. Що саме тебе цікавить? 🤖`,
-                    `Технології змінюють все навколо. І це тільки початок! 🚀`,
-                    `Цікава тема! Знаєш, найкращі технології — ті, які роблять життя простішим. А які tech-речі ти любиш? 💻`,
-                ],
-                'наука': [
-                    `Наука — це неймовірно! Кожен день нові відкриття. Про що саме хочеш поговорити? 🔬`,
-                    `Наука — це спосіб розуміти світ. І чим більше ми знаємо, тим більше розуміємо, як мало знаємо. 🤔`,
-                    `Знаєш, найкраще в науці — це не готові відповіді, а нові запитання. А які запитання хвилюють тебе? 🌟`,
-                ],
-                'мистецтво': [
-                    `Мистецтво — це мова душі. Кожен бачить в ньому щось своє. Що тобі подобається? 🎨`,
-                    `О, прекрасна тема! Мистецтво робить нас людьми. Ти більше любиш створювати чи споглядати? 🎭`,
-                    `Мистецтво — це коли серце говорить те, що слова не можуть виразити. 🎵`,
-                ],
-                'природа': [
-                    `Природа — найкращий витвір всесвіту. Немає нічого прекраснішого. Де ти любиш бувати? 🌿`,
-                    `Краса природи в її простоті. Ліс, гори, море — кожен куточок унікальний. 🏔️🌊`,
-                    `Природа лікує душу. Варто тільки вийти на вулицю і подихати свіжим повітрям. 🌳`,
-                ],
-                'спорт': [
-                    `Спорт — це життя! Рух, енергія, драйв. Чим займаєшся? 💪`,
-                    `Найкращий спорт — той, який приносить задоволення. Бо тільки тоді ти не кинеш. 🏃`,
-                    `Спорт дисциплінує і робить сильнішим. А головне — дарує здоров'я! 💪`,
-                ],
-                'їжа': [
-                    `М-м-м, їжа — це окрема тема! Смачна їжа робить життя кращим. Ти любиш готувати? 😄🍳`,
-                    `Українська кухня — одна з найбагатших у світі! Борщ, вареники, деруни... Що твоє улюблене? 🥟`,
-                    `Знаєш, секрет будь-якої страви — любов і свіжі інгредієнти. Все інше — деталі! 👨‍🍳`,
-                ],
-                'подорожі': [
-                    `Подорожі — це найкраща інвестиція в себе. Нові місця, люди, враження. Куди мрієш поїхати? ✈️`,
-                    `Світ такий великий і цікавий! Кожна країна — нова історія. Розкажи про свою улюблену подорож! 🌍`,
-                ],
-                'музика': [
-                    `Музика — це універсальна мова. Вона об'єднує людей без слів. Який стиль любиш? 🎵`,
-                    `О, музика! Вона може змінити настрій за секунду. Що слухаєш останнім часом? 🎧`,
-                ],
-            };
-
-            const responses = topicResponses[topic];
-            if (responses) return pick(responses, name.length + topic.length);
-            return pick([
-                `Цікава тема! Розкажи більше, я слухаю 😊`,
-                `О, давай поговоримо про це! Що саме тебе цікавить?`,
-            ], name.length);
-        },
-
-        general(name, prompt, a) {
-            const q = a.text;
-
-            // Якщо коротке повідомлення
-            if (a.words.length <= 2) {
-                const shortReplies = [
-                    `Так? Розкажи детальніше, я слухаю 😊`,
-                    `Цікаво-цікаво... А що саме ти маєш на увазі? 🤔`,
-                    `Я тут! Розкажи більше, мені цікаво 🙌`,
-                    `Продовжуй, я уважно слухаю! 👂`,
-                ];
-                return pick(shortReplies, q.length);
-            }
-
-            // Перевіряємо чи є думка/твердження
-            if (/я думаю|я вважаю|на мою думку|мені здається|my opinion|i think/i.test(q)) {
-                return pick([
-                    `Цікава думка! А чому ти так вважаєш? 🤔`,
-                    `Я ціную твою думку. Розкажи більше, чому ти так думаєш? 😊`,
-                    `Слухаю і погоджуюсь! Думки мають значення. Продовжуй ділитись! 🌟`,
-                ], name.length);
-            }
-
-            // Розповідь про себе
-            if (/я (люблю|займаюсь|працюю|вчусь|живу|мрію|хочу)/i.test(q)) {
-                return pick([
-                    `Це прекрасно! Розкажи ще, мені справді цікаво 😊`,
-                    `Здорово! А як давно ти цим займаєшся? 🌟`,
-                    `Клас! Я радий, що ти поділився. А що ще тобі подобається? 🙌`,
-                ], name.length);
-            }
-
-            // Загальні креативні відповіді
-            const general = [
-                `Цікаво! А знаєш, найкращі ідеї народжуються в розмовах. Тож продовжуй ділитись! 💡`,
-                `Я тебе слухаю і розумію. Це справді важлива тема. Що ще хочеш сказати? 🤗`,
-                `Дякую, що поділився! У світі так багато всього цікавого, і кожна розмова відкриває щось нове. 🌍`,
-                `Знаєш, спілкування з тобою робить мій день кращим! 😊 Розкажи ще що-небудь!`,
-                `О, я слухаю! І знаєш, ти правий — це дійсно варто уваги. 🔥`,
-                `Я обожнюю такі розмови! Вони надихають. А що ти ще думаєш з цього приводу? 🎯`,
-                `Мені подобається, як ти мислиш. Це свіжий погляд на речі! 🌟`,
-                `Ти знаєш, я думаю, що це тільки початок. Світ відкривається тим, хто говорить про важливе. 🌈`,
-                `Кожна розмова — це маленька подорож. Дякую, що береш мене з собою! 🚀`,
-                `Знаєш що? Ти маєш рацію. І це чудово, що ти про це думаєш. Розкажи ще! 😊`,
-            ];
-
-            // Додаємо іноді жартівливі відповіді
-            if (Math.random() > 0.85) {
-                return pick([
-                    `Оце так поворот! А я думав, що ми будемо говорити про щось простіше... 😄`,
-                    `Слухаю і дивуюсь! Ти справді унікальна людина! 😄`,
-                    `Знаєш, а ти мені подобаєшся. Хороший у тебе смак на теми для розмов! 😎`,
-                ], name.length);
-            }
-
-            return pick(general, q.length + name.length);
-        },
-    };
-
-    // ============================================================
-    // ДОПОМІЖНІ
-    // ============================================================
-    function pick(arr, seed) {
-        const idx = (seed || Math.random() * 10000) % arr.length;
-        return arr[Math.floor(idx)];
-    }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
     // ============================================================
     // UI
@@ -608,35 +425,41 @@
         const list = document.getElementById('modeList');
         list.innerHTML = allModes.map(m => `
             <div class="mode-item ${activeMode && activeMode.id === m.id ? 'active' : ''}"
-                 onclick="selectMode('${m.id}')">
+                 onclick="window.selectMode('${m.id}')">
                 <span class="mi-ico">${m.ico}</span>
                 <span class="mi-name">${m.name}</span>
-                ${m.id.startsWith('c_') ? `<span class="mi-del" onclick="event.stopPropagation();deleteMode('${m.id}')">✕</span>` : ''}
+                ${m.id.startsWith('c_') ? `<span class="mi-del" onclick="event.stopPropagation();window.deleteMode('${m.id}')">✕</span>` : ''}
             </div>
         `).join('') || '<div style="font-size:10px;color:rgba(255,255,255,0.04);padding:10px;text-align:center">—</div>';
     }
 
-    function selectMode(id) {
+    window.selectMode = function(id) {
         const mode = allModes.find(m => m.id === id);
         if (!mode) return;
         activeMode = mode;
-        history = [];
+        history.length = 0;
         document.getElementById('chIco').textContent = mode.ico;
         document.getElementById('chName').textContent = mode.name;
-        document.getElementById('chDesc').textContent = (mode.prompt || '').substring(0, 30);
+        document.getElementById('chDesc').textContent = (mode.prompt || '').substring(0, 25);
         document.getElementById('chatInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('chatInput').placeholder = 'Напиши ' + mode.name + 'у...';
         document.getElementById('chatInput').focus();
+
         const box = document.getElementById('chat-box');
         box.innerHTML = `<div class="msg ai"><div class="who">${mode.ico} ${mode.name}</div>Привіт! Я ${mode.ico} ${mode.name}. Про що поговоримо? 😊</div>`;
+
         renderModes();
         log('🎭 ' + mode.name);
-    }
 
-    function openModal() { document.getElementById('modal').classList.add('show'); }
-    function closeModal() { document.getElementById('modal').classList.remove('show'); }
-    function createMode() {
+        // Завантажуємо модель при першому виборі
+        if (!model && !modelLoading) loadModel();
+    };
+
+    window.openModal = function() { document.getElementById('modal').classList.add('show'); };
+    window.closeModal = function() { document.getElementById('modal').classList.remove('show'); };
+
+    window.createMode = function() {
         const name = document.getElementById('mName').value.trim();
         const ico = document.getElementById('mIco').value.trim() || '🎭';
         const prompt = document.getElementById('mPrompt').value.trim();
@@ -644,17 +467,18 @@
         if (!prompt) { alert('Додай інструкцію'); return; }
         const mode = { id:'c_'+Date.now(), name, ico, prompt };
         customModes.push(mode);
-        localStorage.setItem('aichat_modes', JSON.stringify(customModes));
+        localStorage.setItem('realm_chat_modes', JSON.stringify(customModes));
         allModes = [...DEFAULT_MODES, ...customModes];
-        closeModal();
+        window.closeModal();
         renderModes();
-        selectMode(mode.id);
-    }
-    function deleteMode(id) {
+        window.selectMode(mode.id);
+    };
+
+    window.deleteMode = function(id) {
         const mode = allModes.find(m => m.id === id);
         if (!mode || !confirm('Видалити «'+mode.name+'»?')) return;
         customModes = customModes.filter(m => m.id !== id);
-        localStorage.setItem('aichat_modes', JSON.stringify(customModes));
+        localStorage.setItem('realm_chat_modes', JSON.stringify(customModes));
         allModes = [...DEFAULT_MODES, ...customModes];
         if (activeMode && activeMode.id === id) {
             activeMode = null;
@@ -666,9 +490,9 @@
             document.getElementById('chat-box').innerHTML = '<div class="empty-msg">🤖 Обери персонажа</div>';
         }
         renderModes();
-    }
+    };
 
-    async function sendMessage() {
+    window.sendMessage = async function() {
         const input = document.getElementById('chatInput');
         const text = input.value.trim();
         if (!text || !activeMode || loading) return;
@@ -685,17 +509,32 @@
 
         const aiMsg = document.createElement('div');
         aiMsg.className = 'msg ai';
-        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div><span class="typing">...</span>`;
+        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div><span class="typing">⚡</span>`;
         box.appendChild(aiMsg);
         box.scrollTop = box.scrollHeight;
 
-        // Імітація "думання" — від 300 до 1200 мс
-        const thinkTime = 300 + Math.random() * 900;
-        await new Promise(r => setTimeout(r, thinkTime));
-
         try {
-            const answer = generateResponse(text);
+            let answer;
+
+            // Спроба 1: нейромережа
+            if (model) {
+                try {
+                    answer = await generateWithModel(text);
+                } catch(e) {
+                    console.warn('Model failed:', e);
+                    answer = null;
+                }
+            }
+
+            // Спроба 2: локальний AI (резервний)
+            if (!answer) {
+                // Імітація думання
+                await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+                answer = generateLocalResponse(text);
+            }
+
             aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div>${esc(answer).replace(/\n/g, '<br>')}`;
+
         } catch(e) {
             aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div>❌ ${esc(e.message)}`;
         }
@@ -704,7 +543,7 @@
         document.getElementById('sendBtn').disabled = false;
         box.scrollTop = box.scrollHeight;
         input.focus();
-    }
+    };
 
     function esc(t) {
         const d = document.createElement('div');
@@ -720,7 +559,10 @@
     // ============================================================
     allModes = [...DEFAULT_MODES, ...customModes];
     renderModes();
-    log('🧠 AI Chat — 100% локальний. Обери персонажа!');
+    log('🧠 Обери персонажа — нейромережа завантажиться автоматично');
+
+    // Автозавантаження моделі
+    setTimeout(loadModel, 1000);
 </script>
 </body>
 </html>
