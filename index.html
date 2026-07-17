@@ -3,782 +3,672 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Перехрестя — прототип</title>
+    <title>Перехрестя</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Georgia', serif;
-            background: #0a0a0f;
+        * { margin: 0; padding: 0; }
+        body { overflow: hidden; background: #050508; font-family: 'Georgia', serif; }
+        canvas { display: block; }
+        #info {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #d4c5a9; background: rgba(0,0,0,0.6); padding: 8px 20px;
+            border-radius: 20px; font-size: 14px; z-index: 10;
+            border: 1px solid rgba(212,197,169,0.15);
+            pointer-events: none; user-select: none;
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
         }
-        canvas {
-            display: block;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        #ui {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #d4c5a9;
-            font-size: 0.85em;
-            background: rgba(0,0,0,0.5);
-            padding: 6px 16px;
-            border-radius: 20px;
-            opacity: 0;
-            transition: opacity 0.5s;
-            pointer-events: none;
-            z-index: 5;
-            font-family: 'Courier New', monospace;
-        }
-        #ui.visible { opacity: 1; }
         #memory {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.92);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #e8dcc8;
-            z-index: 20;
-            padding: 2em;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            color: #e8dcc8; z-index: 20; padding: 40px;
             text-align: center;
+            backdrop-filter: blur(8px);
         }
-        #memory .text {
-            font-size: 1.5em;
-            max-width: 600px;
-            line-height: 1.6;
-            font-style: italic;
-        }
-        #memory .close-hint {
-            margin-top: 2em;
-            font-size: 0.8em;
-            opacity: 0.5;
-        }
-        #inventory {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            z-index: 5;
-        }
-        .slot {
-            width: 50px;
-            height: 50px;
-            border: 1px solid rgba(212,197,169,0.3);
-            background: rgba(0,0,0,0.5);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-        .slot.show { opacity: 1; }
-        .slot.filled { border-color: #d4c5a9; }
-        #final {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: black;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #d4c5a9;
-            z-index: 30;
-            text-align: center;
-        }
-        #final h2 {
-            font-size: 2.5em;
-            font-weight: normal;
-            letter-spacing: 0.1em;
-        }
-        #final p {
-            max-width: 500px;
-            line-height: 1.8;
-            font-style: italic;
-            opacity: 0.8;
-        }
-        #final .credits {
-            margin-top: 3em;
-            font-size: 0.7em;
-            opacity: 0.4;
-        }
+        #memory .text { font-size: 20px; max-width: 600px; line-height: 1.7; font-style: italic; opacity: 0.9; }
+        #memory .hint { margin-top: 30px; font-size: 14px; opacity: 0.35; letter-spacing: 0.1em; }
+        #memory .title { font-size: 14px; text-transform: uppercase; letter-spacing: 0.3em; opacity: 0.4; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div id="ui" class="visible">🖱 Затисни мишу — огляд • E — взаємодіяти</div>
-
+    <div id="info">🖱 Клік — огляд • WASD — ходьба • E — взаємодія</div>
     <div id="memory">
-        <div class="text"></div>
-        <div class="close-hint">Натисни E, щоб закрити</div>
+        <div class="title">Спогад</div>
+        <div class="text" id="memText"></div>
+        <div class="hint">Натисни E, щоб закрити</div>
     </div>
 
-    <div id="inventory">
-        <div class="slot" id="slot0">🔑</div>
-    </div>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
 
-    <div id="final">
-        <h2>...</h2>
-        <p>Ти спускаєшся в підвал. Там темно. Пахне землею і часом.<br>
-        Десь далеко чути голос бабусі: «Не бійся, це всього лиш спогади.»</p>
-        <p class="credits">Перехрестя — прототип</p>
-    </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script>
         // ============================================================
-        // ЕТАП 1 — Базовий 3D-простір
+        // ГЕНЕРАЦІЯ ТЕКСТУР
         // ============================================================
+        function createTexture(w, h, drawFn, repeat = true) {
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d');
+            drawFn(ctx, w, h);
+            const tex = new THREE.CanvasTexture(c);
+            if (repeat) { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; }
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
 
+        // Стіна — стара штукатурка з нерівностями
+        const wallTex = createTexture(512, 512, (ctx, w, h) => {
+            const base = 180;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const n = (Math.sin(x * 0.1) * Math.cos(y * 0.08) * 20 +
+                              Math.sin(x * 0.05 + y * 0.07) * 30 +
+                              Math.random() * 10);
+                    const v = Math.min(255, Math.max(140, base + n));
+                    ctx.fillStyle = `rgb(${v+10},${v},${v-15})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            // плями
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * w, y = Math.random() * h;
+                const r = 5 + Math.random() * 20;
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+                grad.addColorStop(0, `rgba(100,80,60,${0.05 + Math.random() * 0.1})`);
+                grad.addColorStop(1, 'rgba(100,80,60,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            }
+        });
+
+        // Bump-карта для стін
+        const wallBump = createTexture(256, 256, (ctx, w, h) => {
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const n = (Math.sin(x * 0.2 + y * 0.15) * 0.3 +
+                              Math.sin(x * 0.08) * Math.cos(y * 0.12) * 0.5 +
+                              Math.random() * 0.2) * 255;
+                    ctx.fillStyle = `rgb(${n},${n},${n})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }, false);
+
+        // Підлога — широкі старі дошки
+        const floorTex = createTexture(1024, 512, (ctx, w, h) => {
+            const colors = ['#6a4f3a', '#5c4430', '#785a44', '#4e3828'];
+            for (let x = 0; x < w; x += 80) {
+                const ci = Math.floor(Math.random() * colors.length);
+                ctx.fillStyle = colors[ci];
+                const width = 72 + Math.random() * 12;
+                ctx.fillRect(x, 0, width, h);
+                // текстура дерева
+                for (let i = 0; i < 50; i++) {
+                    const lx = x + Math.random() * width;
+                    const ly = Math.random() * h;
+                    ctx.strokeStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.08})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, ly);
+                    ctx.lineTo(lx + (Math.random() - 0.5) * 20, ly + (Math.random() - 0.5) * 5);
+                    ctx.stroke();
+                }
+                // сучки
+                for (let i = 0; i < 2; i++) {
+                    const kx = x + 10 + Math.random() * (width - 20);
+                    const ky = Math.random() * h;
+                    ctx.fillStyle = '#2a1a10';
+                    ctx.beginPath();
+                    ctx.arc(kx, ky, 3 + Math.random() * 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                // тріщина
+                if (Math.random() > 0.6) {
+                    ctx.strokeStyle = 'rgba(30,20,10,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x + Math.random() * width, 0);
+                    ctx.lineTo(x + Math.random() * width, h);
+                    ctx.stroke();
+                }
+            }
+        });
+
+        const floorBump = createTexture(512, 256, (ctx, w, h) => {
+            for (let x = 0; x < w; x += 40) {
+                for (let y = 0; y < h; y++) {
+                    const v = Math.sin(x * 0.3 + y * 0.01) * 20 + Math.random() * 30 + 100;
+                    ctx.fillStyle = `rgb(${v},${v},${v})`;
+                    ctx.fillRect(x, y, 40, 1);
+                }
+            }
+        }, false);
+
+        // Піч — цегла
+        const brickTex = createTexture(512, 256, (ctx, w, h) => {
+            ctx.fillStyle = '#7a4630';
+            ctx.fillRect(0, 0, w, h);
+            for (let y = 0; y < h; y += 22) {
+                const off = (y / 22) % 2 === 0 ? 0 : 20;
+                for (let x = -off; x < w; x += 42) {
+                    const r = 25 + Math.random() * 15;
+                    const g = 15 + Math.random() * 10;
+                    const b = 10 + Math.random() * 8;
+                    ctx.fillStyle = `rgb(${r+50},${g+30},${b+20})`;
+                    ctx.fillRect(x, y, 40, 20);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, 40, 20);
+                }
+            }
+        });
+
+        // ============================================================
+        // СЦЕНА
+        // ============================================================
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);
-        scene.fog = new THREE.Fog(0x1a1a2e, 8, 16);
+        scene.background = new THREE.Color(0x080810);
+        scene.fog = new THREE.FogExp2(0x080810, 0.06);
 
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(2, 1.6, 4);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 30);
+        camera.position.set(0, 1.6, 3.2);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.bias = 0.00005;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.8;
-        document.body.appendChild(renderer.domElement);
-
-        // --- Світло ---
-        const ambient = new THREE.AmbientLight(0x2a1f1a, 0.4);
-        scene.add(ambient);
-
-        const moon = new THREE.DirectionalLight(0x445566, 0.5);
-        moon.position.set(-5, 8, -5);
-        moon.castShadow = true;
-        scene.add(moon);
-
-        const lamp = new THREE.PointLight(0xff8844, 1.2, 6);
-        lamp.position.set(0, 2.5, -1);
-        lamp.castShadow = true;
-        scene.add(lamp);
+        renderer.toneMappingExposure = 1.2;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.prepend(renderer.domElement);
 
         // ============================================================
-        // ЕТАП 3 — Хата всередині
+        // ENVIRONMENT MAP (IBL)
         // ============================================================
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        const envTexture = pmremGenerator.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+        scene.environment = envTexture;
+        scene.environmentIntensity = 0.6;
 
-        // --- Підлога ---
+        // ============================================================
+        // ПОСТ-ПРОЦЕСИНГ
+        // ============================================================
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.25, 0.3, 0.15
+        );
+        composer.addPass(bloomPass);
+
+        // ============================================================
+        // ОСВІТЛЕННЯ
+        // ============================================================
+        // Місячне світло (холодне)
+        const moonLight = new THREE.DirectionalLight(0x8899cc, 1.5);
+        moonLight.position.set(2.5, 7, -5);
+        moonLight.castShadow = true;
+        moonLight.shadow.mapSize.width = 2048;
+        moonLight.shadow.mapSize.height = 2048;
+        const d = 5;
+        moonLight.shadow.camera.left = -d;
+        moonLight.shadow.camera.right = d;
+        moonLight.shadow.camera.top = d;
+        moonLight.shadow.camera.bottom = -d;
+        moonLight.shadow.camera.near = 1;
+        moonLight.shadow.camera.far = 12;
+        moonLight.shadow.bias = -0.001;
+        scene.add(moonLight);
+
+        // Заповнююче світло (від місяця, відбите від підлоги)
+        const bounce = new THREE.DirectionalLight(0x667788, 0.3);
+        bounce.position.set(-2, -1, 3);
+        scene.add(bounce);
+
+        // Лампа (тепле жовте світло)
+        const lampLight = new THREE.PointLight(0xffcc77, 2.5, 6);
+        lampLight.position.set(-0.3, 2.5, 1.2);
+        lampLight.shadow.mapSize.width = 512;
+        lampLight.shadow.mapSize.height = 512;
+        scene.add(lampLight);
+
+        // Вогонь печі (тепле помаранчеве)
+        const fireLight = new THREE.PointLight(0xff5500, 2.0, 4);
+        fireLight.position.set(-1.5, 0.4, 1.3);
+        scene.add(fireLight);
+
+        // Ліхтар над столом
+        const lanternLight = new THREE.PointLight(0xffaa55, 0.6, 3);
+        lanternLight.position.set(0.8, 2.0, -0.6);
+        scene.add(lanternLight);
+
+        // ============================================================
+        // КІМНАТА
+        // ============================================================
+        const roomW = 5, roomD = 5, roomH = 2.8;
+
+        // Підлога
         const floorMat = new THREE.MeshStandardMaterial({
-            color: 0x4a3728,
-            roughness: 0.9,
+            map: floorTex,
+            bumpMap: floorBump,
+            bumpScale: 0.02,
+            roughness: 0.85,
             metalness: 0.0
         });
-        const floor = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 10), floorMat);
-        floor.position.set(0, -0.1, 0);
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, 0, 0);
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // --- Стіни ---
+        // Стіни
         const wallMat = new THREE.MeshStandardMaterial({
-            color: 0x8b7d6b,
-            roughness: 0.95,
-            metalness: 0.0
+            map: wallTex,
+            bumpMap: wallBump,
+            bumpScale: 0.015,
+            roughness: 0.92,
+            metalness: 0.0,
+            side: THREE.DoubleSide
         });
-        const wallMatDarker = new THREE.MeshStandardMaterial({
-            color: 0x6b5d4b,
-            roughness: 0.95,
-            metalness: 0.0
-        });
-
-        function makeWall(w, h, x, y, z, rotY, mat) {
-            const g = new THREE.BoxGeometry(w, h, 0.15);
-            const m = new THREE.Mesh(g, mat || wallMat);
+        function makeWall(w, h, x, y, z, ry) {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
             m.position.set(x, y, z);
-            m.rotation.y = rotY || 0;
+            m.rotation.y = ry;
             m.receiveShadow = true;
-            m.castShadow = true;
             scene.add(m);
-            return m;
         }
+        makeWall(roomW, roomH, 0, roomH/2, -roomD/2, 0);
+        makeWall(roomW, roomH, 0, roomH/2, roomD/2, 0);
+        makeWall(roomD, roomH, -roomW/2, roomH/2, 0, Math.PI/2);
+        makeWall(roomD, roomH, roomW/2, roomH/2, 0, Math.PI/2);
 
-        // Кімната 5x5 (стіни всередині)
-        makeWall(5, 3, 0, 1.5, -2.5, 0);
-        makeWall(5, 3, 0, 1.5, 2.5, 0);
-        makeWall(5, 3, -2.5, 1.5, 0, Math.PI/2);
-        makeWall(5, 3, 2.5, 1.5, 0, Math.PI/2);
-
-        // --- Стеля ---
-        const ceilMat = new THREE.MeshStandardMaterial({
-            color: 0x3a2a1a,
-            roughness: 0.95,
-            metalness: 0.0
-        });
-        const ceil = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.1, 4.8), ceilMat);
-        ceil.position.set(0, 3.0, 0);
+        // Стеля
+        const ceilMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.95, metalness: 0.0 });
+        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), ceilMat);
+        ceil.rotation.x = Math.PI / 2;
+        ceil.position.y = roomH;
         scene.add(ceil);
 
-        // --- Піч (грубка) ---
-        const stoveMat = new THREE.MeshStandardMaterial({
-            color: 0x5a4a3a,
-            roughness: 0.9,
-            metalness: 0.0
+        // Плінтуси
+        const plinthMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 });
+        function makePlinth(x, z, w, ry) {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.04), plinthMat);
+            p.position.set(x, 0.04, z);
+            p.rotation.y = ry;
+            scene.add(p);
+        }
+        makePlinth(0, -roomD/2 + 0.02, roomW, 0);
+        makePlinth(0, roomD/2 - 0.02, roomW, 0);
+        makePlinth(-roomW/2 + 0.02, 0, roomD, Math.PI/2);
+        makePlinth(roomW/2 - 0.02, 0, roomD, Math.PI/2);
+
+        // ============================================================
+        // ВІКНО (з глибиною)
+        // ============================================================
+        const windowMat = new THREE.MeshStandardMaterial({
+            color: 0x1a3355, emissive: 0x1a3355, emissiveIntensity: 0.2,
+            transparent: true, opacity: 0.35, roughness: 0.05, metalness: 0.0,
+            envMapIntensity: 0.3
         });
-        const stoveMatDark = new THREE.MeshStandardMaterial({
-            color: 0x3a2a1a,
-            roughness: 0.95,
-            metalness: 0.0
-        });
-        const stoveMatWarm = new THREE.MeshStandardMaterial({
-            color: 0xcc6633,
-            roughness: 0.8,
-            metalness: 0.0,
-            emissive: 0x441100,
-            emissiveIntensity: 0.3
+        const windowGl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.8), windowMat);
+        windowGl.position.set(1.6, 1.3, -roomD/2 + 0.05);
+        scene.add(windowGl);
+
+        // Підвіконня
+        const sillMat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.85 });
+        const sill = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 0.12), sillMat);
+        sill.position.set(1.6, 0.9, -roomD/2 + 0.08);
+        sill.receiveShadow = true;
+        scene.add(sill);
+
+        // Рамка вікна
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 });
+        const fw = 0.94, fh = 0.84;
+        frameParts = [
+            { s: [fw, 0.03], p: [1.6, 1.7, -roomD/2 + 0.03] },
+            { s: [fw, 0.03], p: [1.6, 0.9, -roomD/2 + 0.03] },
+            { s: [0.03, fh], p: [2.05, 1.3, -roomD/2 + 0.03] },
+            { s: [0.03, fh], p: [1.15, 1.3, -roomD/2 + 0.03] },
+        ];
+        frameParts.forEach(p => {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(p.s[0], p.s[1]), frameMat);
+            m.position.set(p.p[0], p.p[1], p.p[2]);
+            scene.add(m);
         });
 
-        // Основне тіло печі
-        const stove = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.9), stoveMat);
-        stove.position.set(-1.5, 0.9, 1.2);
+        // ============================================================
+        // ПІЧ
+        // ============================================================
+        const stoveMat = new THREE.MeshStandardMaterial({
+            map: brickTex, roughness: 0.85, metalness: 0.0,
+            envMapIntensity: 0.1
+        });
+        const stove = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.7, 0.75), stoveMat);
+        stove.position.set(-1.5, 0.85, 1.2);
         stove.castShadow = true;
         stove.receiveShadow = true;
         scene.add(stove);
 
-        // Топка (отвор)
-        const firebox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.1), stoveMatWarm);
-        firebox.position.set(-1.5, 0.5, 1.65);
-        scene.add(firebox);
+        // Верх печі (білий)
+        const topMat = new THREE.MeshStandardMaterial({ color: 0xccc0b0, roughness: 0.7 });
+        const stoveTop = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.04, 0.77), topMat);
+        stoveTop.position.set(-1.5, 1.7, 1.2);
+        stoveTop.receiveShadow = true;
+        stoveTop.castShadow = true;
+        scene.add(stoveTop);
 
-        // Труба
-        const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), stoveMatDark);
-        pipe.position.set(-1.5, 2.4, 1.2);
-        pipe.castShadow = true;
-        scene.add(pipe);
-
-        // Верх печі (лежанка)
-        const top = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.1, 0.6), stoveMatDark);
-        top.position.set(-1.5, 1.8, 1.5);
-        scene.add(top);
-
-        // Світло від печі
-        const fireLight = new THREE.PointLight(0xff6622, 0.8, 3);
-        fireLight.position.set(-1.5, 0.5, 1.4);
-        scene.add(fireLight);
-
-        // --- Стіл ---
-        const tableMat = new THREE.MeshStandardMaterial({
-            color: 0x6b4a2a,
-            roughness: 0.8,
-            metalness: 0.0
+        // Топка
+        const fireMat = new THREE.MeshStandardMaterial({
+            color: 0xff5500, emissive: 0xff4400, emissiveIntensity: 0.6,
+            transparent: true, opacity: 0.8
         });
-        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.9), tableMat);
-        tableTop.position.set(1.0, 0.8, -0.5);
+        const fireGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.25), fireMat);
+        fireGlow.position.set(-1.5, 0.4, 1.55);
+        scene.add(fireGlow);
+
+        // Дрова
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x3a2010, roughness: 0.95 });
+        for (let i = 0; i < 3; i++) {
+            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 6), logMat);
+            log.rotation.z = Math.random() * 0.3;
+            log.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+            log.position.set(-1.5 + (i-1) * 0.07, 0.28, 1.5 + (Math.random() - 0.5) * 0.05);
+            scene.add(log);
+        }
+
+        // ============================================================
+        // СТІЛ
+        // ============================================================
+        const tableMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.65, metalness: 0.0, envMapIntensity: 0.2 });
+        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.75), tableMat);
+        tableTop.position.set(0.8, 0.75, -0.6);
         tableTop.receiveShadow = true;
         tableTop.castShadow = true;
         scene.add(tableTop);
 
-        // Ніжки
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 });
-        const legPos = [[0.7, 0.4, -0.9], [1.3, 0.4, -0.9], [0.7, 0.4, -0.1], [1.3, 0.4, -0.1]];
-        legPos.forEach(p => {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6), legMat);
-            leg.position.set(p[0], p[1], p[2]);
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.8 });
+        [[-0.55, 0.38, -0.9], [0.55, 0.38, -0.9], [-0.55, 0.38, -0.3], [0.55, 0.38, -0.3]].forEach(p => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 6), legMat);
+            leg.position.set(0.8 + p[0], p[1], -0.6 + p[2]);
+            leg.castShadow = true;
             scene.add(leg);
         });
 
-        // --- Стілець ---
-        const chairMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
-        const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.4), chairMat);
-        chairSeat.position.set(0.3, 0.4, -0.5);
-        chairSeat.castShadow = true;
-        scene.add(chairSeat);
+        // Чашка на столі
+        const cupMat = new THREE.MeshStandardMaterial({ color: 0xd4c5a9, roughness: 0.3, metalness: 0.1 });
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.08, 12), cupMat);
+        cup.position.set(0.9, 0.79, -0.55);
+        cup.castShadow = true;
+        scene.add(cup);
+        const cupHandle = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.008, 8, 8), cupMat);
+        cupHandle.position.set(0.945, 0.82, -0.55);
+        cupHandle.rotation.z = Math.PI / 2;
+        scene.add(cupHandle);
 
-        const chairBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.04), chairMat);
-        chairBack.position.set(0.3, 0.7, -0.3);
-        scene.add(chairBack);
+        // ============================================================
+        // ФОТО
+        // ============================================================
+        const photoMat = new THREE.MeshStandardMaterial({ color: 0xd4c5a9, roughness: 0.5, envMapIntensity: 0.1 });
+        const photoImg = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.36), photoMat);
+        photoImg.position.set(0.3, 1.2, -roomD/2 + 0.02);
+        scene.add(photoImg);
+        const photoFrm = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.42, 0.025), new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.9 }));
+        photoFrm.position.set(0.3, 1.2, -roomD/2 + 0.01);
+        scene.add(photoFrm);
 
-        // --- Вікно (отвір у стіні через скло) ---
-        const glassMat = new THREE.MeshStandardMaterial({
-            color: 0x112233,
-            transparent: true,
-            opacity: 0.3,
-            roughness: 0.1,
-            metalness: 0.0
-        });
-        const glass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.05), glassMat);
-        glass.position.set(0, 1.6, -2.42);
-        scene.add(glass);
-
-        // Рама
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a });
-        const frameH = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.08), frameMat);
-        frameH.position.set(0, 1.6, -2.43);
-        scene.add(frameH);
-        const frameV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.96, 0.08), frameMat);
-        frameV.position.set(0, 1.6, -2.43);
-        scene.add(frameV);
-
-        // Світло з вікна (місячне)
-        const windowLight = new THREE.DirectionalLight(0x8899bb, 0.3);
-        windowLight.position.set(1, 3, -5);
-        scene.add(windowLight);
-
-        // --- Рушник на стіні ---
-        const towelMat = new THREE.MeshStandardMaterial({
-            color: 0xccaa88,
-            roughness: 0.9,
-            metalness: 0.0
-        });
-        const towel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.03), towelMat);
-        towel.position.set(1.8, 1.2, -2.42);
+        // ============================================================
+        // РУШНИК
+        // ============================================================
+        const towelMat = new THREE.MeshStandardMaterial({ color: 0xd4b898, roughness: 0.9 });
+        const towel = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.6), towelMat);
+        towel.position.set(-0.5, 1.2, -roomD/2 + 0.02);
         scene.add(towel);
-
-        // Вишивка на рушнику (смужки)
-        const embroideryMat = new THREE.MeshStandardMaterial({ color: 0xcc3333 });
-        for (let i = -2; i <= 2; i++) {
-            const strip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.5, 0.04), embroideryMat);
-            strip.position.set(1.8 + i*0.08, 1.2, -2.4);
-            scene.add(strip);
+        // Вишивка
+        const embroMat = new THREE.MeshStandardMaterial({ color: 0xcc3333 });
+        for (let i = 0; i < 4; i++) {
+            const e = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.45), embroMat);
+            e.position.set(-0.5 + (i-1.5) * 0.09, 1.2, -roomD/2 + 0.04);
+            scene.add(e);
         }
 
-        // --- Фотографія на стіні ---
-        const photoMat = new THREE.MeshStandardMaterial({
-            color: 0xd4c5a9,
-            roughness: 0.7,
-            metalness: 0.0
-        });
-        const photo = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.03), photoMat);
-        photo.position.set(-1.0, 1.6, -2.42);
-        scene.add(photo);
-
-        // Рамка фото
-        const framePhotoMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a });
-        const frameP = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.04), framePhotoMat);
-        frameP.position.set(-1.0, 1.6, -2.41);
-        scene.add(frameP);
+        // ============================================================
+        // КЛЮЧ
+        // ============================================================
+        const keyMat = new THREE.MeshStandardMaterial({ color: 0xccaa55, metalness: 0.8, roughness: 0.2, envMapIntensity: 0.5 });
+        const keyGroup = new THREE.Group();
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.012, 8, 12), keyMat);
+        ring.rotation.x = Math.PI / 2;
+        keyGroup.add(ring);
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.012), keyMat);
+        shaft.position.x = 0.045;
+        keyGroup.add(shaft);
+        const bit1 = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.035, 0.012), keyMat);
+        bit1.position.set(0.09, -0.012, 0);
+        keyGroup.add(bit1);
+        const bit2 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.02, 0.012), keyMat);
+        bit2.position.set(0.09, 0.022, 0);
+        keyGroup.add(bit2);
+        keyGroup.position.set(-1.2, 0.06, 0.6);
+        scene.add(keyGroup);
 
         // ============================================================
-        // ЕТАП 5 — Ключ і двері
+        // ДВЕРІ
         // ============================================================
-
-        let hasKey = false;
-
-        // Двері в підвал
-        const doorMat = new THREE.MeshStandardMaterial({
-            color: 0x4a3020,
-            roughness: 0.9,
-            metalness: 0.0
-        });
-        const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x3a2010 });
-
-        // Дверна коробка
-        const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.0, 0.1), doorFrameMat);
-        doorFrame.position.set(1.8, 1.0, 0);
-        scene.add(doorFrame);
-
-        // Двері (відчинені або зачинені — група)
-        const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.7, 0.06), doorMat);
-        door.position.set(1.8, 1.0, 0);
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.85, metalness: 0.0 });
+        const door = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.04), doorMat);
+        door.position.set(roomW/2 - 0.02, 0.9, 0);
         door.castShadow = true;
         scene.add(door);
-
-        // Ручка
-        const handleMat = new THREE.MeshStandardMaterial({ color: 0xccaa55, metalness: 0.6, roughness: 0.4 });
-        const handle = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), handleMat);
-        handle.position.set(1.8, 1.0, 0.08);
+        const handle = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), keyMat);
+        handle.position.set(roomW/2 - 0.02, 0.92, 0.07);
         scene.add(handle);
-
-        // Ключ (схований біля печі, під "кахлем")
-        const keyMat = new THREE.MeshStandardMaterial({
-            color: 0xccaa55,
-            metalness: 0.8,
-            roughness: 0.3
-        });
-        const keyRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 10), keyMat);
-        keyRing.position.set(-1.2, 0.15, 1.1);
-        keyRing.rotation.x = Math.PI/2;
-        scene.add(keyRing);
-        const keyShaft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.02), keyMat);
-        keyShaft.position.set(-1.14, 0.15, 1.1);
-        scene.add(keyShaft);
-        const keyBit = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.02), keyMat);
-        keyBit.position.set(-1.08, 0.15, 1.1);
-        scene.add(keyBit);
-
-        // Кахель (приховує ключ)
-        const tileMat = new THREE.MeshStandardMaterial({
-            color: 0x6b4a2a,
-            roughness: 0.9,
-            metalness: 0.0,
-            transparent: true,
-            opacity: 0.3
-        });
-        const tile = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.3), tileMat);
-        tile.position.set(-1.2, 0.18, 1.1);
-        scene.add(tile);
+        // Одвірок
+        const trimMat = new THREE.MeshStandardMaterial({ color: 0x3a2515, roughness: 0.9 });
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(0.88, 1.9, 0.06), trimMat);
+        trim.position.set(roomW/2 - 0.04, 0.9, 0);
+        scene.add(trim);
 
         // ============================================================
-        // Інтерактивні об'єкти
+        // ПИЛ
         // ============================================================
-
-        const interactables = [];
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        let selectedObject = null;
-        let isLocked = false;
-        let inMemory = false;
-
-        // Підсвічування
-        const glowMat = new THREE.MeshStandardMaterial({
-            color: 0xffcc66,
-            transparent: true,
-            opacity: 0.15,
-            emissive: 0xffcc66,
-            emissiveIntensity: 0.2
-        });
-
-        function addInteractable(mesh, data) {
-            mesh.userData = data;
-            interactables.push(mesh);
+        const dustCount = 300;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPos = new Float32Array(dustCount * 3);
+        const dustData = [];
+        for (let i = 0; i < dustCount; i++) {
+            dustPos[i*3] = (Math.random() - 0.5) * 4;
+            dustPos[i*3+1] = Math.random() * 2.5;
+            dustPos[i*3+2] = (Math.random() - 0.5) * 4 - 1;
+            dustData.push({ s: 0.08 + Math.random() * 0.15, p: Math.random() * Math.PI * 2, a: 0.01 + Math.random() * 0.03 });
         }
-
-        addInteractable(photo, {
-            label: 'Фотографія',
-            memory: 'Тобі років п\'ять. Ти сидиш на підлозі, складаєш вежу з кубиків. Бабуся сидить поруч на стільці. Вона посміхається і каже: "Ти в мене найрозумніший, Євгенку. Пам\'ятай це завжди." Світло падає з вікна. Пахне пиріжками. Ти почуваєшся в безпеці.'
-        });
-
-        addInteractable(towel, {
-            label: 'Рушник',
-            memory: 'Бабусин голос: "Цей рушник вишивала ще моя мати. Кожен візерунок — це молитва. Червоний — любов. Чорний — земля. Білий — чистота. Коли важко — подивись на нього. Він нагадає, хто ти і звідки."'
-        });
-
-        addInteractable(stove, {
-            label: 'Піч',
-            memory: 'Холодними вечорами ти залазив на піч і грівся. Бабуся давала тепле молоко з медом. За вікном вила хуртовина, а тут було тепло і затишно. Ти засинав під тріск дров і відчував, що світ не такий вже й великий і страшний.'
-        });
-
-        addInteractable(keyRing, {
-            label: 'Ключ',
-            memory: null,
-            isKey: true
-        });
-
-        addInteractable(door, {
-            label: 'Двері в підвал',
-            memory: null,
-            isDoor: true
-        });
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+        const dustMat = new THREE.PointsMaterial({ color: 0xccddee, size: 0.007, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending });
+        const dust = new THREE.Points(dustGeo, dustMat);
+        dust.position.set(1, 0, -2.5);
+        scene.add(dust);
 
         // ============================================================
-        // ЕТАП 2 — Керування
+        // ІНТЕРАКТИВ
         // ============================================================
+        const interactables = [];
+        function addInteract(mesh, data) { mesh.userData = data; interactables.push(mesh); }
+        addInteract(photoImg, { memory: 'Тобі 5 років. Ти складаєш вежу з кубиків. Бабуся сидить поруч і посміхається. «Ти в мене найрозумніший, Євгенку.» Це єдина фотографія, де вона щаслива.' });
+        addInteract(towel, { memory: '«Кожен візерунок — молитва. Червоний — любов. Чорний — земля. Білий — чистота. Бабуся вишивала цей рушник три зими, і тепер він оберігає наш дім.»' });
+        addInteract(stove, { memory: 'Холодними вечорами ти залазив на піч. Бабуся давала тепле молоко з медом. За вікном хуртовина. Тут було затишно, як ніде більше.' });
+        addInteract(keyGroup, { key: true, memory: 'Старий іржавий ключ. На кільці подряпина: «1943». Бабуся ніколи не розповідала, що сталося того року.' });
+        addInteract(door, { door: true });
 
-        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-        const PI_2 = Math.PI / 2;
+        let hasKey = false;
+        let selectedObj = null;
+        let inMemory = false;
+        let escaped = false;
+
+        // ============================================================
+        // УПРАВЛІННЯ
+        // ============================================================
+        let isLocked = false;
         let pitch = 0, yaw = 0;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
+        let fwd = false, bwd = false, left = false, right = false;
+
+        renderer.domElement.addEventListener('click', () => {
+            if (!isLocked && !inMemory) renderer.domElement.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = document.pointerLockElement === renderer.domElement;
+        });
 
         document.addEventListener('mousemove', e => {
-            if (document.pointerLockElement !== renderer.domElement) return;
-            const movementX = e.movementX || 0;
-            const movementY = e.movementY || 0;
-            yaw -= movementX * 0.002;
-            pitch -= movementY * 0.002;
-            pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
+            if (!isLocked) return;
+            yaw -= e.movementX * 0.0015;
+            pitch -= e.movementY * 0.0015;
+            pitch = Math.max(-1.4, Math.min(1.4, pitch));
             camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
         });
 
         document.addEventListener('keydown', e => {
-            switch(e.code) {
-                case 'KeyW': moveForward = true; break;
-                case 'KeyS': moveBackward = true; break;
-                case 'KeyA': moveLeft = true; break;
-                case 'KeyD': moveRight = true; break;
-                case 'KeyE': interact(); break;
-            }
+            if (e.code === 'KeyW') fwd = true;
+            if (e.code === 'KeyS') bwd = true;
+            if (e.code === 'KeyA') left = true;
+            if (e.code === 'KeyD') right = true;
+            if (e.code === 'KeyE') interact();
         });
         document.addEventListener('keyup', e => {
-            switch(e.code) {
-                case 'KeyW': moveForward = false; break;
-                case 'KeyS': moveBackward = false; break;
-                case 'KeyA': moveLeft = false; break;
-                case 'KeyD': moveRight = false; break;
-            }
+            if (e.code === 'KeyW') fwd = false;
+            if (e.code === 'KeyS') bwd = false;
+            if (e.code === 'KeyA') left = false;
+            if (e.code === 'KeyD') right = false;
         });
-
-        // ============================================================
-        // Керування — Drag (затисни мишу для огляду)
-        // ============================================================
-
-        let isDragging = false;
-        let dragMode = true;
-        isLocked = true;
-
-        document.addEventListener('mousemove', e => {
-            if (document.pointerLockElement === renderer.domElement) {
-                yaw -= e.movementX * 0.002;
-                pitch -= e.movementY * 0.002;
-                pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
-                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-                return;
-            }
-            if (isDragging && isLocked) {
-                yaw -= e.movementX * 0.003;
-                pitch -= e.movementY * 0.003;
-                pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
-                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-            }
-        });
-
-        document.addEventListener('mousedown', e => {
-            if (isLocked && !inMemory && e.button === 0) {
-                isDragging = true;
-            }
-        });
-        document.addEventListener('mouseup', e => {
-            if (e.button === 0) isDragging = false;
-        });
-        document.addEventListener('mouseleave', () => { isDragging = false; });
-
-        // Колізія зі стінами
-        function isInsideWalls(pos) {
-            if (pos.x > 2.3 || pos.x < -2.3) return false;
-            if (pos.z > 2.3 || pos.z < -2.3) return false;
-            // Отвір дверей
-            if (pos.x > 1.3 && pos.x < 2.3 && pos.z < 0.5 && pos.z > -0.5) return true;
-            return true;
-        }
-
-        function clampToWalls(pos) {
-            const margin = 0.3;
-            if (pos.x > 2.3 - margin) pos.x = 2.3 - margin;
-            if (pos.x < -2.3 + margin) pos.x = -2.3 + margin;
-            if (pos.z > 2.3 - margin) pos.z = 2.3 - margin;
-            if (pos.z < -2.3 + margin) pos.z = -2.3 + margin;
-            // Двері
-            if (pos.x > 1.3 - margin && pos.x < 2.3 && pos.z > -0.5 - margin && pos.z < 0.5 + margin) {
-                // дозволено
-            }
-            return pos;
-        }
-
-        // ============================================================
-        // Функції взаємодії
-        // ============================================================
 
         function interact() {
             if (inMemory) {
-                closeMemory();
+                document.getElementById('memory').style.display = 'none';
+                inMemory = false;
+                if (escaped) {
+                    setTimeout(() => showMem('Ти спускаєшся в підвал... тут темно. Пахне землею і часом. Десь далеко голос бабусі: «Не бійся, дитино...»'), 200);
+                }
                 return;
             }
-            if (!selectedObject || !selectedObject.userData) return;
-
-            const data = selectedObject.userData;
-
-            if (data.isKey && !hasKey) {
+            if (!selectedObj) return;
+            const d = selectedObj.userData;
+            if (d.key && !hasKey) {
                 hasKey = true;
-                scene.remove(keyRing);
-                scene.remove(keyShaft);
-                scene.remove(keyBit);
-                scene.remove(tile);
-                document.getElementById('slot0').classList.add('show', 'filled');
-                showMemory('Ти знайшов старий ключ. Він важкий, металевий, трохи іржавий. На кільці вигравірувано: "Підвал — 1943".');
+                scene.remove(keyGroup);
+                showMem(d.memory);
                 return;
             }
-
-            if (data.isDoor) {
-                if (hasKey) {
-                    showFinal();
-                } else {
-                    showMemory('Двері зачинені. Потрібен ключ. Бабуся казала: "Під третім кахлем біля печі..."');
-                }
+            if (d.door) {
+                showMem(hasKey
+                    ? 'Ти вставляєш ключ. Замок клацає глухо, наче його не відчиняли десятиліттями. Двері прочиняються. З підвалу тягне холодом і вогкістю. Знизу чути тихий голос: «Ти прийшов... я чекала.»'
+                    : 'Двері зачинені. Бабуся казала: «Під третім кахлем біля печі...»');
+                if (hasKey) escaped = true;
                 return;
             }
-
-            if (data.memory) {
-                showMemory(data.memory);
-            }
+            if (d.memory) showMem(d.memory);
         }
 
-        function showMemory(text) {
+        function showMem(text) {
+            document.getElementById('memText').textContent = `«${text}»`;
+            document.getElementById('memory').style.display = 'flex';
             inMemory = true;
-            const el = document.getElementById('memory');
-            el.querySelector('.text').textContent = `"${text}"`;
-            el.style.display = 'flex';
-            if (document.pointerLockElement) {
-                document.exitPointerLock();
-            }
-        }
-
-        function closeMemory() {
-            inMemory = false;
-            const el = document.getElementById('memory');
-            el.style.display = 'none';
-            renderer.domElement.requestPointerLock();
-        }
-
-        function showFinal() {
-            if (document.pointerLockElement) {
-                document.exitPointerLock();
-            }
-            document.getElementById('final').style.display = 'flex';
+            if (document.pointerLockElement) document.exitPointerLock();
         }
 
         // ============================================================
- 
-        // Промінь взаємодії
+        // RAYCASTER
         // ============================================================
+        const raycaster = new THREE.Raycaster();
 
-        function updateInteraction() {
-            if (inMemory || !isLocked) return;
-
-            const center = new THREE.Vector2(0, 0);
-            raycaster.setFromCamera(center, camera);
+        function updateSelection() {
+            if (inMemory || !isLocked) { selectedObj = null; return; }
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             raycaster.far = 3.0;
-
-            const meshes = interactables.filter(m => m.parent !== null);
-            const intersects = raycaster.intersectObjects(meshes);
-
-            if (selectedObject) {
-                if (selectedObject.userData.glow) {
-                    scene.remove(selectedObject.userData.glow);
-                    selectedObject.userData.glow = null;
-                }
-                selectedObject = null;
-            }
-
-            if (intersects.length > 0) {
-                const obj = intersects[0].object;
-                if (obj.userData && (obj.userData.memory !== undefined || obj.userData.isKey || obj.userData.isDoor)) {
-                    selectedObject = obj;
-                    // Glow effect
-                    const glow = new THREE.Mesh(obj.geometry.clone(), glowMat);
-                    glow.position.copy(obj.position);
-                    glow.rotation.copy(obj.rotation);
-                    glow.scale.copy(obj.scale).multiplyScalar(1.02);
-                    scene.add(glow);
-                    obj.userData.glow = glow;
-                }
-            }
+            const hits = raycaster.intersectObjects(interactables.filter(o => o.parent !== null));
+            selectedObj = hits.length > 0 ? hits[0].object : null;
         }
 
         // ============================================================
-        // Атмосфера — дощ (частинки)
+        // АНІМАЦІЯ
         // ============================================================
-
-        const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 800;
-        const rainPos = new Float32Array(rainCount * 3);
-        for (let i = 0; i < rainCount * 3; i += 3) {
-            rainPos[i] = (Math.random() - 0.5) * 14;
-            rainPos[i+1] = Math.random() * 8;
-            rainPos[i+2] = (Math.random() - 0.5) * 14;
-        }
-        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-
-        const rainMat = new THREE.PointsMaterial({
-            color: 0x8899bb,
-            size: 0.03,
-            transparent: true,
-            opacity: 0.4,
-            blending: THREE.AdditiveBlending
-        });
-        const rain = new THREE.Points(rainGeo, rainMat);
-        rain.position.set(0, 0, 0);
-        scene.add(rain);
-
-        // ============================================================
-        // Рендер-цикл
-        // ============================================================
-
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
+            const delta = Math.min(clock.getDelta(), 0.05);
             const time = clock.getElapsedTime();
 
             // Рух
             if (isLocked && !inMemory) {
-                velocity.x -= velocity.x * 8 * delta;
-                velocity.z -= velocity.z * 8 * delta;
-
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-
-                const speed = 2.5;
-                if (moveForward || moveBackward) {
-                    velocity.z -= direction.z * speed * delta;
+                const dir = new THREE.Vector3(Number(right) - Number(left), 0, Number(bwd) - Number(fwd));
+                if (dir.length() > 0) {
+                    dir.normalize();
+                    const speed = 2.0;
+                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                    forward.y = 0; forward.normalize();
+                    const side = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                    side.y = 0; side.normalize();
+                    const move = new THREE.Vector3();
+                    move.add(forward.multiplyScalar(dir.z * speed * delta));
+                    move.add(side.multiplyScalar(dir.x * speed * delta));
+                    camera.position.add(move);
+                    camera.position.x = Math.max(-2.0, Math.min(2.0, camera.position.x));
+                    camera.position.z = Math.max(-2.0, Math.min(2.0, camera.position.z));
+                    camera.position.y = 1.6;
                 }
-                if (moveLeft || moveRight) {
-                    velocity.x -= direction.x * speed * delta;
-                }
-
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                forward.y = 0;
-                forward.normalize();
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                right.y = 0;
-                right.normalize();
-
-                const move = new THREE.Vector3();
-                move.add(forward.clone().multiplyScalar(-velocity.z * delta * 5));
-                move.add(right.clone().multiplyScalar(velocity.x * delta * 5));
-
-                const newPos = camera.position.clone().add(move);
-                newPos.y = 1.6;
-
-                if (isInsideWalls(newPos)) {
-                    camera.position.copy(newPos);
-                } else {
-                    camera.position.x += move.x * 0.3;
-                    camera.position.z += move.z * 0.3;
-                    camera.position.x = Math.max(-2.3, Math.min(2.3, camera.position.x));
-                    camera.position.z = Math.max(-2.3, Math.min(2.3, camera.position.z));
-                }
-
-                updateInteraction();
+                updateSelection();
             }
 
-            // Дощ
-            const positions = rain.geometry.attributes.position.array;
-            for (let i = 1; i < positions.length; i += 3) {
-                positions[i] -= 2.5 * delta;
-                if (positions[i] < 0) {
-                    positions[i] = 7;
-                    positions[i-1] = (Math.random() - 0.5) * 12;
-                    positions[i+1] = (Math.random() - 0.5) * 12;
-                }
+            // Вогонь
+            const f = 0.6 + Math.sin(time * 3.7) * 0.3 + Math.sin(time * 8.3) * 0.12 + Math.sin(time * 15.1) * 0.05;
+            fireLight.intensity = f * 2.2;
+            fireMat.emissiveIntensity = 0.4 + f * 0.5;
+            fireMat.opacity = 0.5 + Math.sin(time * 2.8) * 0.15;
+
+            // Лампа ледь гойдається
+            lampLight.position.y = 2.5 + Math.sin(time * 0.5) * 0.015;
+
+            // Пил
+            const dp = dust.geometry.attributes.position.array;
+            for (let i = 0; i < dustCount; i++) {
+                dp[i*3] += Math.sin(time * dustData[i].s + dustData[i].p) * dustData[i].a;
+                dp[i*3+1] += Math.sin(time * dustData[i].s * 0.7 + dustData[i].p * 1.3) * dustData[i].a;
+                dp[i*3+2] += Math.sin(time * dustData[i].s * 0.5 + dustData[i].p * 0.9) * dustData[i].a * 0.5;
             }
-            rain.geometry.attributes.position.needsUpdate = true;
+            dust.geometry.attributes.position.needsUpdate = true;
 
-            // Мерехтіння печі
-            fireLight.intensity = 0.6 + Math.sin(time * 3) * 0.2 + Math.sin(time * 7) * 0.1;
-            stoveMatWarm.emissiveIntensity = 0.2 + Math.sin(time * 3) * 0.1;
+            // Ключ
+            if (keyGroup.parent) keyGroup.rotation.y = Math.sin(time * 0.4) * 0.08;
 
-            renderer.render(scene, camera);
+            composer.render();
         }
-
         animate();
 
         // ============================================================
-        // Ресайз
+        // РЕСАЙЗ
         // ============================================================
-
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        console.log('✅ Перехрестя');
     </script>
 </body>
 </html>
