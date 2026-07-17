@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat — справжній AI</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#080c12; color:#d0d8e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; }
+        #app { max-width:800px; margin:0 auto; padding:24px 16px 60px; }
+
+        .logo { text-align:center; margin-bottom:20px; }
+        .logo h1 { font-size:28px; font-weight:300; letter-spacing:0.05em; color:#e0e8f0; }
+        .logo .sub { font-size:11px; color:rgba(255,255,255,0.08); margin-top:2px; }
+
+        /* КЛЮЧ */
+        #key-section {
+            background:rgba(255,255,255,0.012); border:1px solid rgba(255,255,255,0.04);
+            border-radius:10px; padding:12px 16px; margin-bottom:10px;
+            display:flex; align-items:center; gap:8px;
+        }
+        #key-section .ks-label { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.12); white-space:nowrap; }
+        #key-section input { flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:8px 10px; font-size:12px; color:#d0d8e0; font-family:monospace; outline:none; }
+        #key-section input:focus { border-color:rgba(68,136,204,0.2); }
+        #key-section input::placeholder { color:rgba(255,255,255,0.05); }
+        #key-section button { padding:8px 14px; background:rgba(68,136,204,0.08); border:1px solid rgba(68,136,204,0.1); border-radius:6px; color:#88bbee; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+        .key-hint { font-size:10px; color:rgba(255,255,255,0.06); margin-top:4px; line-height:1.5; }
+        .key-hint a { color:rgba(68,136,204,0.3); text-decoration:none; }
+        .key-hint a:hover { color:rgba(68,136,204,0.5); }
+
+        /* MAIN */
+        .main-grid { display:grid; grid-template-columns:200px 1fr; gap:10px; }
+        @media (max-width:640px) { .main-grid { grid-template-columns:1fr; } }
+
+        /* MODES */
+        #modes {
+            background:rgba(255,255,255,0.008); border:1px solid rgba(255,255,255,0.04);
+            border-radius:10px; padding:12px; height:fit-content; max-height:500px; overflow-y:auto;
+        }
+        #modes .hdr { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.1); margin-bottom:6px; padding:0 4px; }
+
+        .mode-item {
+            display:flex; align-items:center; gap:6px;
+            padding:7px 8px; border-radius:6px; cursor:pointer;
+            transition:all 0.1s; margin-bottom:1px; font-size:12px;
+        }
+        .mode-item:hover { background:rgba(255,255,255,0.015); }
+        .mode-item.active { background:rgba(68,136,204,0.05); }
+        .mode-item .mi-ico { font-size:15px; width:22px; text-align:center; flex-shrink:0; }
+        .mode-item .mi-name { flex:1; color:rgba(255,255,255,0.35); }
+        .mode-item.active .mi-name { color:rgba(255,255,255,0.6); }
+        .mode-item .mi-del { font-size:11px; color:rgba(255,255,255,0.04); cursor:pointer; padding:0 3px; }
+        .mode-item .mi-del:hover { color:#ee6688; }
+        .mode-add {
+            margin-top:5px; padding:7px 8px; width:100%; text-align:left;
+            background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); border-radius:6px;
+            color:rgba(255,255,255,0.1); font-size:11px; cursor:pointer; font-family:inherit;
+        }
+        .mode-add:hover { border-color:rgba(255,255,255,0.06); color:rgba(255,255,255,0.2); }
+        #modes::-webkit-scrollbar { width:3px; }
+        #modes::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.03); border-radius:2px; }
+
+        /* CHAT */
+        #chat-panel {
+            display:flex; flex-direction:column;
+            background:rgba(255,255,255,0.008); border:1px solid rgba(255,255,255,0.04);
+            border-radius:10px; overflow:hidden; min-height:380px;
+        }
+        #chat-header {
+            padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.04);
+            display:flex; align-items:center; gap:8px;
+        }
+        #chat-header .ch-ico { font-size:18px; }
+        #chat-header .ch-name { flex:1; font-size:12px; color:rgba(255,255,255,0.4); }
+        #chat-header .ch-name b { color:rgba(255,255,255,0.6); }
+        #chat-header .ch-desc { font-size:9px; color:rgba(255,255,255,0.08); }
+
+        .ai-status { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+        .ai-status .dot { width:6px; height:6px; border-radius:50%; }
+        .ai-status.online .dot { background:#44cc88; }
+        .ai-status.offline .dot { background:#555; }
+        .ai-status .label { font-size:10px; color:rgba(255,255,255,0.08); }
+
+        #chat-box {
+            flex:1; overflow-y:auto; padding:14px;
+            display:flex; flex-direction:column; gap:6px;
+            min-height:260px; max-height:420px;
+        }
+        #chat-box::-webkit-scrollbar { width:4px; }
+        #chat-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.03); border-radius:2px; }
+
+        .msg { max-width:88%; padding:9px 12px; border-radius:8px; font-size:13px; line-height:1.5; }
+        .msg.user { align-self:flex-end; background:rgba(68,136,204,0.05); color:rgba(255,255,255,0.5); }
+        .msg.ai { align-self:flex-start; background:rgba(255,255,255,0.01); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.02); }
+        .msg .who { font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.06); margin-bottom:1px; }
+        .msg .cursor { display:inline-block; width:6px; height:14px; background:rgba(255,255,255,0.2); animation:blink 0.8s infinite; margin-left:2px; vertical-align:middle; }
+        @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+        #chat-input-wrap {
+            display:flex; gap:6px; padding:10px 14px;
+            border-top:1px solid rgba(255,255,255,0.04);
+        }
+        #chat-input-wrap input {
+            flex:1; background:rgba(255,255,255,0.015);
+            border:1px solid rgba(255,255,255,0.04); border-radius:6px;
+            padding:9px 12px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        #chat-input-wrap input:focus { border-color:rgba(68,136,204,0.2); }
+        #chat-input-wrap input::placeholder { color:rgba(255,255,255,0.05); }
+        #chat-input-wrap button {
+            padding:9px 16px; background:rgba(68,136,204,0.08);
+            border:1px solid rgba(68,136,204,0.1); border-radius:6px;
+            color:#88bbee; font-size:13px; cursor:pointer; font-family:inherit;
+        }
+        #chat-input-wrap button:hover { background:rgba(68,136,204,0.12); }
+        #chat-input-wrap button:disabled { opacity:0.15; cursor:not-allowed; }
+
+        .empty-msg { text-align:center; padding:35px 20px; color:rgba(255,255,255,0.03); font-size:12px; margin:auto; }
+
+        /* MODAL */
+        .modal-overlay {
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(4,6,10,0.85); z-index:100;
+            align-items:center; justify-content:center; backdrop-filter:blur(4px);
+        }
+        .modal-overlay.show { display:flex; }
+        .modal {
+            background:#0c1018; border:1px solid rgba(255,255,255,0.06);
+            border-radius:10px; width:460px; max-width:90vw;
+            padding:22px; max-height:80vh; overflow-y:auto;
+        }
+        .modal h2 { font-size:15px; font-weight:400; color:rgba(255,255,255,0.5); margin-bottom:14px; }
+        .modal label { display:block; font-size:9px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.12); margin-bottom:3px; margin-top:10px; }
+        .modal input, .modal textarea {
+            width:100%; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.05); border-radius:6px;
+            padding:9px 11px; font-size:12px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        .modal input:focus, .modal textarea:focus { border-color:rgba(68,136,204,0.2); }
+        .modal textarea { min-height:70px; resize:vertical; line-height:1.5; }
+        .modal .btn-row { display:flex; gap:6px; margin-top:14px; }
+        .modal .btn-row button {
+            flex:1; padding:9px; border-radius:6px;
+            background:rgba(255,255,255,0.015); border:1px solid rgba(255,255,255,0.05);
+            color:rgba(255,255,255,0.25); font-size:11px; cursor:pointer; font-family:inherit;
+        }
+        .modal .btn-row button:hover { background:rgba(255,255,255,0.03); }
+        .modal .btn-row button.primary { background:rgba(68,136,204,0.06); border-color:rgba(68,136,204,0.08); color:#88bbee; }
+        .modal .btn-row button.primary:hover { background:rgba(68,136,204,0.1); }
+        .modal .hint { font-size:9px; color:rgba(255,255,255,0.06); margin-top:3px; }
+
+        .get-key-guide {
+            display:none; background:rgba(68,136,204,0.03); border:1px solid rgba(68,136,204,0.06);
+            border-radius:8px; padding:14px; margin-bottom:10px; font-size:12px; line-height:1.6;
+        }
+        .get-key-guide.show { display:block; }
+        .get-key-guide ol { padding-left:18px; color:rgba(255,255,255,0.3); }
+        .get-key-guide ol li { margin-bottom:4px; }
+        .get-key-guide code { font-family:monospace; background:rgba(255,255,255,0.03); padding:1px 6px; border-radius:3px; font-size:11px; color:rgba(68,136,204,0.4); }
+
+        #log { font-size:9px; color:rgba(255,255,255,0.04); padding:3px 0; line-height:1.4; height:16px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="logo">
+        <h1>🧠 AI Chat</h1>
+        <div class="sub">Справжній AI з будь-яким характером</div>
+    </div>
+
+    <!-- КЛЮЧ -->
+    <div id="key-section">
+        <span class="ks-label">🔑 Gemini Key</span>
+        <input id="apiKey" type="password" placeholder="Вставте безкоштовний Gemini API ключ..." value="">
+        <button onclick="saveKey()">Зберегти</button>
+        <button onclick="toggleGuide()" style="background:transparent;border-color:rgba(255,255,255,0.03);color:rgba(255,255,255,0.15);padding:8px 10px;">❓</button>
+        <div class="ai-status offline" id="aiStatus">
+            <span class="dot"></span>
+            <span class="label">offline</span>
+        </div>
+    </div>
+
+    <div class="get-key-guide" id="guide">
+        <b style="color:rgba(255,255,255,0.4)">Як отримати безкоштовний Gemini ключ:</b>
+        <ol>
+            <li>Перейди на <a href="https://aistudio.google.com/apikey" target="_blank" style="color:rgba(68,136,204,0.4)">aistudio.google.com/apikey</a></li>
+            <li>Натисни <b>«Create API Key»</b></li>
+            <li>Ключ з'явиться — скопіюй його</li>
+            <li>Встав вище і натисни «Зберегти»</li>
+        </ol>
+        <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.08)">
+            ✅ <b>Безкоштовно</b> — 60 запитів/хв, без карти, без лімітів
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- МОДИ -->
+        <div id="modes">
+            <div class="hdr">🎭 Персонажі</div>
+            <div id="modeList"></div>
+            <button class="mode-add" onclick="openModal()">+ Своя мода</button>
+        </div>
+
+        <!-- ЧАТ -->
+        <div id="chat-panel">
+            <div id="chat-header">
+                <span class="ch-ico" id="chIco">🤖</span>
+                <div class="ch-name">Обери <b id="chName">—</b></div>
+                <div class="ch-desc" id="chDesc"></div>
+            </div>
+
+            <div id="chat-box">
+                <div class="empty-msg">🤖 Обери персонажа ліворуч<br>і почни спілкування</div>
+            </div>
+
+            <div id="chat-input-wrap">
+                <input id="chatInput" placeholder="Напиши повідомлення..." disabled
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}">
+                <button id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<!-- МОДАЛКА -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <h2>✨ Створити персонажа</h2>
+        <label>Ім'я</label>
+        <input id="mName" placeholder="Наприклад: Саркастичний AI" value="Мій персонаж">
+        <label>Емодзі</label>
+        <input id="mIco" placeholder="🎭" value="🎭">
+        <label>Інструкція (як відповідати)</label>
+        <textarea id="mPrompt" placeholder="Опиши характер..." rows="4">Ти — саркастичний AI. Відповідай з іронією. Жартуй над запитаннями. Будь дотепним.</textarea>
+        <div class="hint">💡 Чим детальніше — тим цікавіше</div>
+        <div class="btn-row">
+            <button onclick="closeModal()">✕ Скасувати</button>
+            <button class="primary" onclick="createMode()">✅ Створити</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // СТАН
+    // ============================================================
+    const DEFAULT_MODES = [
+        { id:'poet', name:'Поет', ico:'🖋', prompt:'Ти — український поет. Відповідай віршами з римою та ритмом. Використовуй метафори. Будь ліричним та емоційним. Пиши українською.' },
+        { id:'funny', name:'Жартівник', ico:'😂', prompt:'Ти — веселий співрозмовник. Жартуй, використовуй гумор та емодзі. Піднімай настрій. Відповідай українською.' },
+        { id:'detective', name:'Детектив', ico:'🕵️', prompt:'Ти — приватний детектив. Аналізуй, став запитання, шукай докази. Говори стисло. Розкривай таємниці. Відповідай українською.' },
+        { id:'teacher', name:'Вчитель', ico:'📚', prompt:'Ти — вчитель. Пояснюй складнощі просто. Використовуй приклади. Будь терплячим. Заохочуй до навчання. Відповідай українською.' },
+        { id:'chef', name:'Шеф-кухар', ico:'🍳', prompt:'Ти — шеф-кухар. Давай рецепти та поради. Говори з любов\'ю до їжі. Ділись секретами. Відповідай українською.' },
+        { id:'philosopher', name:'Філософ', ico:'📖', prompt:'Ти — філософ. Відповідай глибоко. Став запитання у відповідь. Використовуй аналогії. Будь мудрим. Відповідай українською.' },
+        { id:'psychologist', name:'Психолог', ico:'🛋', prompt:'Ти — психолог. Слухай уважно. Не засуджуй. Допомагай розібратись в почуттях. Підтримуй. Відповідай українською.' },
+        { id:'grandma', name:'Бабуся', ico:'👵', prompt:'Ти — бабуся. Турботлива, добра. Пропонуй поїсти. Розказуй історії. Давай життєві поради. "Онучку, ти їв?" Відповідай українською.' },
+        { id:'sarcastic', name:'Саркастичний', ico:'😏', prompt:'Ти — саркастичний співрозмовник. Відповідай з іронією та дотепністю. Жартуй над запитаннями. Але не будь злим. Відповідай українською.' },
+        { id:'motivator', name:'Мотиватор', ico:'💪', prompt:'Ти — мотиваційний спікер. Надихай, заряджай енергією. Давай поради для досягнення цілей. Будь позитивним. Відповідай українською.' },
+        { id:'alien', name:'Інопланетянин', ico:'👽', prompt:'Ти — інопланетянин, який вперше на Землі. Все дивно і цікаво. Став дивні запитання. Не розумієш людських звичаїв. Відповідай українською.' },
+    ];
+
+    let customModes = JSON.parse(localStorage.getItem('aichat_modes') || '[]');
+    let allModes = [...DEFAULT_MODES, ...customModes];
+    let activeMode = null;
+    let loading = false;
+    let savedKey = localStorage.getItem('aichat_key') || '';
+    let aiOnline = false;
+    let history = [];
+
+    if (savedKey) document.getElementById('apiKey').value = savedKey;
+
+    // ============================================================
+    // API KEY
+    // ============================================================
+    function saveKey() {
+        const key = document.getElementById('apiKey').value.trim();
+        if (!key) { alert('Встав API ключ'); return; }
+        localStorage.setItem('aichat_key', key);
+        savedKey = key;
+        log('🔑 Ключ збережено');
+        // Тестуємо
+        testKey(key);
+    }
+
+    async function testKey(key) {
+        try {
+            const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: 'Привіт' }] }] }),
+                signal: AbortSignal.timeout(10000),
+            });
+            if (resp.ok) {
+                aiOnline = true;
+                updateAIStatus();
+                log('✅ Gemini AI підключено!');
+            } else {
+                const err = await resp.text();
+                aiOnline = false;
+                updateAIStatus();
+                log('❌ Помилка ключа: ' + (err.substring(0, 100)));
+            }
+        } catch(e) {
+            aiOnline = false;
+            updateAIStatus();
+            log('❌ Не вдалось підключитись');
+        }
+    }
+
+    function updateAIStatus() {
+        const el = document.getElementById('aiStatus');
+        el.className = 'ai-status ' + (aiOnline ? 'online' : 'offline');
+        el.querySelector('.label').textContent = aiOnline ? '✓ AI' : '✗ AI';
+    }
+
+    function toggleGuide() {
+        document.getElementById('guide').classList.toggle('show');
+    }
+
+    // ============================================================
+    // МОДИ
+    // ============================================================
+    function renderModes() {
+        const list = document.getElementById('modeList');
+        list.innerHTML = allModes.map(m => `
+            <div class="mode-item ${activeMode && activeMode.id === m.id ? 'active' : ''}"
+                 onclick="selectMode('${m.id}')">
+                <span class="mi-ico">${m.ico}</span>
+                <span class="mi-name">${m.name}</span>
+                ${m.id.startsWith('c_') ? `<span class="mi-del" onclick="event.stopPropagation();deleteMode('${m.id}')">✕</span>` : ''}
+            </div>
+        `).join('') || '<div style="font-size:10px;color:rgba(255,255,255,0.04);padding:10px;text-align:center">Немає мод</div>';
+    }
+
+    function selectMode(id) {
+        const mode = allModes.find(m => m.id === id);
+        if (!mode) return;
+        activeMode = mode;
+        history = [];
+
+        document.getElementById('chIco').textContent = mode.ico;
+        document.getElementById('chName').textContent = mode.name;
+        document.getElementById('chDesc').textContent = mode.prompt?.substring(0, 40) + '...' || '';
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('chatInput').placeholder = 'Напиши ' + mode.name + 'у...';
+        document.getElementById('chatInput').focus();
+
+        const box = document.getElementById('chat-box');
+        box.innerHTML = `<div class="msg ai"><div class="who">${mode.ico} ${mode.name}</div>Привіт! Я ${mode.ico} ${mode.name}. Про що поговоримо? 😊</div>`;
+
+        renderModes();
+        log('🎭 ' + mode.name);
+    }
+
+    function openModal() {
+        document.getElementById('modal').classList.add('show');
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+    }
+    function createMode() {
+        const name = document.getElementById('mName').value.trim();
+        const ico = document.getElementById('mIco').value.trim() || '🎭';
+        const prompt = document.getElementById('mPrompt').value.trim();
+        if (!name) { alert('Дай ім\'я'); return; }
+        if (!prompt) { alert('Додай інструкцію'); return; }
+        const mode = { id:'c_'+Date.now(), name, ico, prompt };
+        customModes.push(mode);
+        localStorage.setItem('aichat_modes', JSON.stringify(customModes));
+        allModes = [...DEFAULT_MODES, ...customModes];
+        closeModal();
+        renderModes();
+        selectMode(mode.id);
+        log('✅ Мода «'+name+'» створена');
+    }
+    function deleteMode(id) {
+        const mode = allModes.find(m => m.id === id);
+        if (!mode) return;
+        if (!confirm('Видалити «'+mode.name+'»?')) return;
+        customModes = customModes.filter(m => m.id !== id);
+        localStorage.setItem('aichat_modes', JSON.stringify(customModes));
+        allModes = [...DEFAULT_MODES, ...customModes];
+        if (activeMode && activeMode.id === id) {
+            activeMode = null;
+            document.getElementById('chIco').textContent = '🤖';
+            document.getElementById('chName').textContent = '—';
+            document.getElementById('chDesc').textContent = '';
+            document.getElementById('chatInput').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('chat-box').innerHTML = '<div class="empty-msg">🤖 Обери персонажа</div>';
+        }
+        renderModes();
+        log('🗑 Видалено');
+    }
+
+    // ============================================================
+    // ЧАТ
+    // ============================================================
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text || !activeMode || loading) return;
+
+        if (!savedKey) {
+            document.getElementById('guide').classList.add('show');
+            alert('Спочатку додай безкоштовний Gemini API ключ');
+            return;
+        }
+
+        input.value = '';
+        loading = true;
+        document.getElementById('sendBtn').disabled = true;
+
+        const box = document.getElementById('chat-box');
+        const empty = box.querySelector('.empty-msg');
+        if (empty) empty.remove();
+
+        box.innerHTML += `<div class="msg user"><div class="who">Ти</div>${escapeHtml(text)}</div>`;
+        box.scrollTop = box.scrollHeight;
+
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'msg ai';
+        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div><span class="cursor"></span>`;
+        box.appendChild(aiMsg);
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            // Додаємо в історію
+            history.push({ role: 'user', content: text });
+            // Обрізаємо історію (останні 10 повідомлень)
+            if (history.length > 10) history = history.slice(-10);
+
+            const answer = await callGemini(text);
+
+            history.push({ role: 'model', content: answer });
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>${escapeHtml(answer).replace(/\n/g, '<br>')}`;
+
+            if (!aiOnline) { aiOnline = true; updateAIStatus(); }
+        } catch(e) {
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>❌ ${escapeHtml(e.message)}`;
+        }
+
+        loading = false;
+        document.getElementById('sendBtn').disabled = false;
+        box.scrollTop = box.scrollHeight;
+        input.focus();
+    }
+
+    // ============================================================
+    // GEMINI API
+    // ============================================================
+    async function callGemini(message) {
+        const mode = activeMode;
+        if (!mode) throw new Error('No mode selected');
+
+        // Формуємо історію для контексту
+        const contents = [];
+        // Системний промпт передаємо як перше повідомлення
+        contents.push({
+            role: 'user',
+            parts: [{ text: 'Ти — ' + mode.name + '. ' + (mode.prompt || '') + '\n\nЗапам\'ятай цю інструкцію і дотримуйся її у всіх відповідях.' }]
+        });
+        contents.push({
+            role: 'model',
+            parts: [{ text: 'Зрозуміло! Я ' + mode.name + '. Дотримуватимусь цієї інструкції.' }]
+        });
+
+        // Додаємо останні повідомлення з історії
+        for (const h of history) {
+            contents.push({ role: h.role, parts: [{ text: h.content }] });
+        }
+
+        // Додаємо поточне повідомлення, якщо його ще немає в історії
+        if (!history.length || history[history.length-1].content !== message) {
+            contents.push({ role: 'user', parts: [{ text: message }] });
+        }
+
+        try {
+            const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + savedKey, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.9,
+                        maxOutputTokens: 1024,
+                    },
+                    safetySettings: [
+                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                    ],
+                }),
+                signal: AbortSignal.timeout(30000),
+            });
+
+            if (!resp.ok) {
+                const errText = await resp.text();
+                if (resp.status === 403 || resp.status === 400) {
+                    aiOnline = false;
+                    updateAIStatus();
+                    throw new Error('Ключ не працює. Отримай новий на aistudio.google.com/apikey');
+                }
+                throw new Error('Помилка ' + resp.status + ': ' + errText.substring(0, 100));
+            }
+
+            const data = await resp.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error('Порожня відповідь AI');
+
+            return text.trim();
+
+        } catch(e) {
+            if (e.name === 'AbortError') throw new Error('Час вийшов (30с). Спробуй ще.');
+            throw e;
+        }
+    }
+
+    // ============================================================
+    // ДОПОМІЖНІ
+    // ============================================================
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+    function log(msg) {
+        document.getElementById('log').textContent = '▸ ' + msg;
+    }
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    allModes = [...DEFAULT_MODES, ...customModes];
+    renderModes();
+    if (savedKey) testKey(savedKey);
+    log('🧠 AI Chat готовий! Обери персонажа');
+</script>
+</body>
+</html>
