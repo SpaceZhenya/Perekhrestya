@@ -62,6 +62,7 @@
             top: 0;
             left: 0;
             z-index: 1;
+            pointer-events: none;
         }
         #ui {
             position: absolute;
@@ -575,6 +576,7 @@
             document.getElementById('blocker').style.display = 'none';
             document.getElementById('ui').classList.add('visible');
             isLocked = true;
+            renderer.domElement.style.pointerEvents = 'auto';
             renderer.domElement.requestPointerLock();
         }
 
