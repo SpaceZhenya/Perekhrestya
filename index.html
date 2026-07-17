@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Перехрестя — прототип</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Georgia', serif;
+        }
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #d4c5a9;
+            cursor: pointer;
+            z-index: 10;
+        }
+        #blocker h1 {
+            font-size: 3em;
+            margin-bottom: 0.2em;
+            letter-spacing: 0.2em;
+            font-weight: normal;
+        }
+        #blocker p {
+            font-size: 1.2em;
+            opacity: 0.7;
+        }
+        #blocker .sub {
+            margin-top: 2em;
+            font-size: 0.9em;
+            opacity: 0.5;
+        }
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #d4c5a9;
+            font-size: 0.85em;
+            background: rgba(0,0,0,0.5);
+            padding: 6px 16px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 5;
+            font-family: 'Courier New', monospace;
+        }
+        #ui.visible { opacity: 1; }
+        #memory {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #e8dcc8;
+            z-index: 20;
+            padding: 2em;
+            text-align: center;
+        }
+        #memory .text {
+            font-size: 1.5em;
+            max-width: 600px;
+            line-height: 1.6;
+            font-style: italic;
+        }
+        #memory .close-hint {
+            margin-top: 2em;
+            font-size: 0.8em;
+            opacity: 0.5;
+        }
+        #inventory {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+        .slot {
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(212,197,169,0.3);
+            background: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .slot.show { opacity: 1; }
+        .slot.filled { border-color: #d4c5a9; }
+        #final {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: black;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #d4c5a9;
+            z-index: 30;
+            text-align: center;
+        }
+        #final h2 {
+            font-size: 2.5em;
+            font-weight: normal;
+            letter-spacing: 0.1em;
+        }
+        #final p {
+            max-width: 500px;
+            line-height: 1.8;
+            font-style: italic;
+            opacity: 0.8;
+        }
+        #final .credits {
+            margin-top: 3em;
+            font-size: 0.7em;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="blocker">
+        <h1>ПЕРЕХРЕСТЯ</h1>
+        <p>Хата, яка пам'ятає</p>
+        <p class="sub">Натисни, щоб увійти</p>
+    </div>
+
+    <div id="ui">🪪 E — взаємодіяти</div>
+
+    <div id="memory">
+        <div class="text"></div>
+        <div class="close-hint">Натисни E, щоб закрити</div>
+    </div>
+
+    <div id="inventory">
+        <div class="slot" id="slot0">🔑</div>
+    </div>
+
+    <div id="final">
+        <h2>...</h2>
+        <p>Ти спускаєшся в підвал. Там темно. Пахне землею і часом.<br>
+        Десь далеко чути голос бабусі: «Не бійся, це всього лиш спогади.»</p>
+        <p class="credits">Перехрестя — прототип</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================================
+        // ЕТАП 1 — Базовий 3D-простір
+        // ============================================================
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 8, 16);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(2, 1.6, 4);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.8;
+        document.body.appendChild(renderer.domElement);
+
+        // --- Світло ---
+        const ambient = new THREE.AmbientLight(0x2a1f1a, 0.4);
+        scene.add(ambient);
+
+        const moon = new THREE.DirectionalLight(0x445566, 0.5);
+        moon.position.set(-5, 8, -5);
+        moon.castShadow = true;
+        scene.add(moon);
+
+        const lamp = new THREE.PointLight(0xff8844, 1.2, 6);
+        lamp.position.set(0, 2.5, -1);
+        lamp.castShadow = true;
+        scene.add(lamp);
+
+        // ============================================================
+        // ЕТАП 3 — Хата всередині
+        // ============================================================
+
+        // --- Підлога ---
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x4a3728,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 10), floorMat);
+        floor.position.set(0, -0.1, 0);
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- Стіни ---
+        const wallMat = new THREE.MeshStandardMaterial({
+            color: 0x8b7d6b,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        const wallMatDarker = new THREE.MeshStandardMaterial({
+            color: 0x6b5d4b,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+
+        function makeWall(w, h, x, y, z, rotY, mat) {
+            const g = new THREE.BoxGeometry(w, h, 0.15);
+            const m = new THREE.Mesh(g, mat || wallMat);
+            m.position.set(x, y, z);
+            m.rotation.y = rotY || 0;
+            m.receiveShadow = true;
+            m.castShadow = true;
+            scene.add(m);
+            return m;
+        }
+
+        // Кімната 5x5 (стіни всередині)
+        makeWall(5, 3, 0, 1.5, -2.5, 0);
+        makeWall(5, 3, 0, 1.5, 2.5, 0);
+        makeWall(5, 3, -2.5, 1.5, 0, Math.PI/2);
+        makeWall(5, 3, 2.5, 1.5, 0, Math.PI/2);
+
+        // --- Стеля ---
+        const ceilMat = new THREE.MeshStandardMaterial({
+            color: 0x3a2a1a,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        const ceil = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.1, 4.8), ceilMat);
+        ceil.position.set(0, 3.0, 0);
+        scene.add(ceil);
+
+        // --- Піч (грубка) ---
+        const stoveMat = new THREE.MeshStandardMaterial({
+            color: 0x5a4a3a,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const stoveMatDark = new THREE.MeshStandardMaterial({
+            color: 0x3a2a1a,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        const stoveMatWarm = new THREE.MeshStandardMaterial({
+            color: 0xcc6633,
+            roughness: 0.8,
+            metalness: 0.0,
+            emissive: 0x441100,
+            emissiveIntensity: 0.3
+        });
+
+        // Основне тіло печі
+        const stove = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.9), stoveMat);
+        stove.position.set(-1.5, 0.9, 1.2);
+        stove.castShadow = true;
+        stove.receiveShadow = true;
+        scene.add(stove);
+
+        // Топка (отвор)
+        const firebox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.1), stoveMatWarm);
+        firebox.position.set(-1.5, 0.5, 1.65);
+        scene.add(firebox);
+
+        // Труба
+        const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), stoveMatDark);
+        pipe.position.set(-1.5, 2.4, 1.2);
+        pipe.castShadow = true;
+        scene.add(pipe);
+
+        // Верх печі (лежанка)
+        const top = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.1, 0.6), stoveMatDark);
+        top.position.set(-1.5, 1.8, 1.5);
+        scene.add(top);
+
+        // Світло від печі
+        const fireLight = new THREE.PointLight(0xff6622, 0.8, 3);
+        fireLight.position.set(-1.5, 0.5, 1.4);
+        scene.add(fireLight);
+
+        // --- Стіл ---
+        const tableMat = new THREE.MeshStandardMaterial({
+            color: 0x6b4a2a,
+            roughness: 0.8,
+            metalness: 0.0
+        });
+        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.9), tableMat);
+        tableTop.position.set(1.0, 0.8, -0.5);
+        tableTop.receiveShadow = true;
+        tableTop.castShadow = true;
+        scene.add(tableTop);
+
+        // Ніжки
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 });
+        const legPos = [[0.7, 0.4, -0.9], [1.3, 0.4, -0.9], [0.7, 0.4, -0.1], [1.3, 0.4, -0.1]];
+        legPos.forEach(p => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6), legMat);
+            leg.position.set(p[0], p[1], p[2]);
+            scene.add(leg);
+        });
+
+        // --- Стілець ---
+        const chairMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
+        const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.4), chairMat);
+        chairSeat.position.set(0.3, 0.4, -0.5);
+        chairSeat.castShadow = true;
+        scene.add(chairSeat);
+
+        const chairBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.04), chairMat);
+        chairBack.position.set(0.3, 0.7, -0.3);
+        scene.add(chairBack);
+
+        // --- Вікно (отвір у стіні через скло) ---
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x112233,
+            transparent: true,
+            opacity: 0.3,
+            roughness: 0.1,
+            metalness: 0.0
+        });
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.05), glassMat);
+        glass.position.set(0, 1.6, -2.42);
+        scene.add(glass);
+
+        // Рама
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a });
+        const frameH = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.08), frameMat);
+        frameH.position.set(0, 1.6, -2.43);
+        scene.add(frameH);
+        const frameV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.96, 0.08), frameMat);
+        frameV.position.set(0, 1.6, -2.43);
+        scene.add(frameV);
+
+        // Світло з вікна (місячне)
+        const windowLight = new THREE.DirectionalLight(0x8899bb, 0.3);
+        windowLight.position.set(1, 3, -5);
+        scene.add(windowLight);
+
+        // --- Рушник на стіні ---
+        const towelMat = new THREE.MeshStandardMaterial({
+            color: 0xccaa88,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const towel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.03), towelMat);
+        towel.position.set(1.8, 1.2, -2.42);
+        scene.add(towel);
+
+        // Вишивка на рушнику (смужки)
+        const embroideryMat = new THREE.MeshStandardMaterial({ color: 0xcc3333 });
+        for (let i = -2; i <= 2; i++) {
+            const strip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.5, 0.04), embroideryMat);
+            strip.position.set(1.8 + i*0.08, 1.2, -2.4);
+            scene.add(strip);
+        }
+
+        // --- Фотографія на стіні ---
+        const photoMat = new THREE.MeshStandardMaterial({
+            color: 0xd4c5a9,
+            roughness: 0.7,
+            metalness: 0.0
+        });
+        const photo = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.03), photoMat);
+        photo.position.set(-1.0, 1.6, -2.42);
+        scene.add(photo);
+
+        // Рамка фото
+        const framePhotoMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a });
+        const frameP = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.04), framePhotoMat);
+        frameP.position.set(-1.0, 1.6, -2.41);
+        scene.add(frameP);
+
+        // ============================================================
+        // ЕТАП 5 — Ключ і двері
+        // ============================================================
+
+        let hasKey = false;
+
+        // Двері в підвал
+        const doorMat = new THREE.MeshStandardMaterial({
+            color: 0x4a3020,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x3a2010 });
+
+        // Дверна коробка
+        const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.0, 0.1), doorFrameMat);
+        doorFrame.position.set(1.8, 1.0, 0);
+        scene.add(doorFrame);
+
+        // Двері (відчинені або зачинені — група)
+        const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.7, 0.06), doorMat);
+        door.position.set(1.8, 1.0, 0);
+        door.castShadow = true;
+        scene.add(door);
+
+        // Ручка
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xccaa55, metalness: 0.6, roughness: 0.4 });
+        const handle = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), handleMat);
+        handle.position.set(1.8, 1.0, 0.08);
+        scene.add(handle);
+
+        // Ключ (схований біля печі, під "кахлем")
+        const keyMat = new THREE.MeshStandardMaterial({
+            color: 0xccaa55,
+            metalness: 0.8,
+            roughness: 0.3
+        });
+        const keyRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 10), keyMat);
+        keyRing.position.set(-1.2, 0.15, 1.1);
+        keyRing.rotation.x = Math.PI/2;
+        scene.add(keyRing);
+        const keyShaft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.02), keyMat);
+        keyShaft.position.set(-1.14, 0.15, 1.1);
+        scene.add(keyShaft);
+        const keyBit = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.02), keyMat);
+        keyBit.position.set(-1.08, 0.15, 1.1);
+        scene.add(keyBit);
+
+        // Кахель (приховує ключ)
+        const tileMat = new THREE.MeshStandardMaterial({
+            color: 0x6b4a2a,
+            roughness: 0.9,
+            metalness: 0.0,
+            transparent: true,
+            opacity: 0.3
+        });
+        const tile = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.3), tileMat);
+        tile.position.set(-1.2, 0.18, 1.1);
+        scene.add(tile);
+
+        // ============================================================
+        // Інтерактивні об'єкти
+        // ============================================================
+
+        const interactables = [];
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let selectedObject = null;
+        let isLocked = false;
+        let inMemory = false;
+
+        // Підсвічування
+        const glowMat = new THREE.MeshStandardMaterial({
+            color: 0xffcc66,
+            transparent: true,
+            opacity: 0.15,
+            emissive: 0xffcc66,
+            emissiveIntensity: 0.2
+        });
+
+        function addInteractable(mesh, data) {
+            mesh.userData = data;
+            interactables.push(mesh);
+        }
+
+        addInteractable(photo, {
+            label: 'Фотографія',
+            memory: 'Тобі років п\'ять. Ти сидиш на підлозі, складаєш вежу з кубиків. Бабуся сидить поруч на стільці. Вона посміхається і каже: "Ти в мене найрозумніший, Євгенку. Пам\'ятай це завжди." Світло падає з вікна. Пахне пиріжками. Ти почуваєшся в безпеці.'
+        });
+
+        addInteractable(towel, {
+            label: 'Рушник',
+            memory: 'Бабусин голос: "Цей рушник вишивала ще моя мати. Кожен візерунок — це молитва. Червоний — любов. Чорний — земля. Білий — чистота. Коли важко — подивись на нього. Він нагадає, хто ти і звідки."'
+        });
+
+        addInteractable(stove, {
+            label: 'Піч',
+            memory: 'Холодними вечорами ти залазив на піч і грівся. Бабуся давала тепле молоко з медом. За вікном вила хуртовина, а тут було тепло і затишно. Ти засинав під тріск дров і відчував, що світ не такий вже й великий і страшний.'
+        });
+
+        addInteractable(keyRing, {
+            label: 'Ключ',
+            memory: null,
+            isKey: true
+        });
+
+        addInteractable(door, {
+            label: 'Двері в підвал',
+            memory: null,
+            isDoor: true
+        });
+
+        // ============================================================
+        // ЕТАП 2 — Керування
+        // ============================================================
+
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        const PI_2 = Math.PI / 2;
+        let pitch = 0, yaw = 0;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        document.addEventListener('mousemove', e => {
+            if (document.pointerLockElement !== renderer.domElement) return;
+            const movementX = e.movementX || 0;
+            const movementY = e.movementY || 0;
+            yaw -= movementX * 0.002;
+            pitch -= movementY * 0.002;
+            pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
+            camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+        });
+
+        document.addEventListener('keydown', e => {
+            switch(e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'KeyE': interact(); break;
+            }
+        });
+        document.addEventListener('keyup', e => {
+            switch(e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        });
+
+        // Блокування курсора
+        document.getElementById('blocker').addEventListener('click', () => {
+            renderer.domElement.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            const blocker = document.getElementById('blocker');
+            if (document.pointerLockElement === renderer.domElement) {
+                blocker.style.display = 'none';
+                document.getElementById('ui').classList.add('visible');
+                isLocked = true;
+            } else if (!inMemory) {
+                blocker.style.display = 'flex';
+                isLocked = false;
+            }
+        });
+
+        // Колізія зі стінами
+        function isInsideWalls(pos) {
+            if (pos.x > 2.3 || pos.x < -2.3) return false;
+            if (pos.z > 2.3 || pos.z < -2.3) return false;
+            // Отвір дверей
+            if (pos.x > 1.3 && pos.x < 2.3 && pos.z < 0.5 && pos.z > -0.5) return true;
+            return true;
+        }
+
+        function clampToWalls(pos) {
+            const margin = 0.3;
+            if (pos.x > 2.3 - margin) pos.x = 2.3 - margin;
+            if (pos.x < -2.3 + margin) pos.x = -2.3 + margin;
+            if (pos.z > 2.3 - margin) pos.z = 2.3 - margin;
+            if (pos.z < -2.3 + margin) pos.z = -2.3 + margin;
+            // Двері
+            if (pos.x > 1.3 - margin && pos.x < 2.3 && pos.z > -0.5 - margin && pos.z < 0.5 + margin) {
+                // дозволено
+            }
+            return pos;
+        }
+
+        // ============================================================
+        // Функції взаємодії
+        // ============================================================
+
+        function interact() {
+            if (inMemory) {
+                closeMemory();
+                return;
+            }
+            if (!selectedObject || !selectedObject.userData) return;
+
+            const data = selectedObject.userData;
+
+            if (data.isKey && !hasKey) {
+                hasKey = true;
+                scene.remove(keyRing);
+                scene.remove(keyShaft);
+                scene.remove(keyBit);
+                scene.remove(tile);
+                document.getElementById('slot0').classList.add('show', 'filled');
+                showMemory('Ти знайшов старий ключ. Він важкий, металевий, трохи іржавий. На кільці вигравірувано: "Підвал — 1943".');
+                return;
+            }
+
+            if (data.isDoor) {
+                if (hasKey) {
+                    showFinal();
+                } else {
+                    showMemory('Двері зачинені. Потрібен ключ. Бабуся казала: "Під третім кахлем біля печі..."');
+                }
+                return;
+            }
+
+            if (data.memory) {
+                showMemory(data.memory);
+            }
+        }
+
+        function showMemory(text) {
+            inMemory = true;
+            const el = document.getElementById('memory');
+            el.querySelector('.text').textContent = `"${text}"`;
+            el.style.display = 'flex';
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+        }
+
+        function closeMemory() {
+            inMemory = false;
+            const el = document.getElementById('memory');
+            el.style.display = 'none';
+            renderer.domElement.requestPointerLock();
+        }
+
+        function showFinal() {
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            document.getElementById('final').style.display = 'flex';
+        }
+
+        // ============================================================
+ 
+        // Промінь взаємодії
+        // ============================================================
+
+        function updateInteraction() {
+            if (inMemory || !isLocked) return;
+
+            const center = new THREE.Vector2(0, 0);
+            raycaster.setFromCamera(center, camera);
+            raycaster.far = 3.0;
+
+            const meshes = interactables.filter(m => m.parent !== null);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (selectedObject) {
+                if (selectedObject.userData.glow) {
+                    scene.remove(selectedObject.userData.glow);
+                    selectedObject.userData.glow = null;
+                }
+                selectedObject = null;
+            }
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.userData && (obj.userData.memory !== undefined || obj.userData.isKey || obj.userData.isDoor)) {
+                    selectedObject = obj;
+                    // Glow effect
+                    const glow = new THREE.Mesh(obj.geometry.clone(), glowMat);
+                    glow.position.copy(obj.position);
+                    glow.rotation.copy(obj.rotation);
+                    glow.scale.copy(obj.scale).multiplyScalar(1.02);
+                    scene.add(glow);
+                    obj.userData.glow = glow;
+                }
+            }
+        }
+
+        // ============================================================
+        // Атмосфера — дощ (частинки)
+        // ============================================================
+
+        const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 800;
+        const rainPos = new Float32Array(rainCount * 3);
+        for (let i = 0; i < rainCount * 3; i += 3) {
+            rainPos[i] = (Math.random() - 0.5) * 14;
+            rainPos[i+1] = Math.random() * 8;
+            rainPos[i+2] = (Math.random() - 0.5) * 14;
+        }
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+
+        const rainMat = new THREE.PointsMaterial({
+            color: 0x8899bb,
+            size: 0.03,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending
+        });
+        const rain = new THREE.Points(rainGeo, rainMat);
+        rain.position.set(0, 0, 0);
+        scene.add(rain);
+
+        // ============================================================
+        // Рендер-цикл
+        // ============================================================
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // Рух
+            if (isLocked && !inMemory) {
+                velocity.x -= velocity.x * 8 * delta;
+                velocity.z -= velocity.z * 8 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const speed = 2.5;
+                if (moveForward || moveBackward) {
+                    velocity.z -= direction.z * speed * delta;
+                }
+                if (moveLeft || moveRight) {
+                    velocity.x -= direction.x * speed * delta;
+                }
+
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                forward.y = 0;
+                forward.normalize();
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                right.y = 0;
+                right.normalize();
+
+                const move = new THREE.Vector3();
+                move.add(forward.clone().multiplyScalar(-velocity.z * delta * 5));
+                move.add(right.clone().multiplyScalar(velocity.x * delta * 5));
+
+                const newPos = camera.position.clone().add(move);
+                newPos.y = 1.6;
+
+                if (isInsideWalls(newPos)) {
+                    camera.position.copy(newPos);
+                } else {
+                    camera.position.x += move.x * 0.3;
+                    camera.position.z += move.z * 0.3;
+                    camera.position.x = Math.max(-2.3, Math.min(2.3, camera.position.x));
+                    camera.position.z = Math.max(-2.3, Math.min(2.3, camera.position.z));
+                }
+
+                updateInteraction();
+            }
+
+            // Дощ
+            const positions = rain.geometry.attributes.position.array;
+            for (let i = 1; i < positions.length; i += 3) {
+                positions[i] -= 2.5 * delta;
+                if (positions[i] < 0) {
+                    positions[i] = 7;
+                    positions[i-1] = (Math.random() - 0.5) * 12;
+                    positions[i+1] = (Math.random() - 0.5) * 12;
+                }
+            }
+            rain.geometry.attributes.position.needsUpdate = true;
+
+            // Мерехтіння печі
+            fireLight.intensity = 0.6 + Math.sin(time * 3) * 0.2 + Math.sin(time * 7) * 0.1;
+            stoveMatWarm.emissiveIntensity = 0.2 + Math.sin(time * 3) * 0.1;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // ============================================================
+        // Ресайз
+        // ============================================================
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
