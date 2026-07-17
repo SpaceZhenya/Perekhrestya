@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Video — генератор відео з тексту</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14;
+            color: #d0d8e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            height: 100vh;
+        }
+
+        #viewport {
+            position: relative;
+            background: #060a10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #viewport canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .rec-indicator {
+            position: absolute; top: 16px; left: 16px;
+            display: none; align-items: center; gap: 6px;
+            font-size: 11px; color: #ee4466;
+        }
+        .rec-indicator .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #ee4466; animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        .time-display {
+            position: absolute; bottom: 16px; right: 16px;
+            font-size: 12px; color: rgba(255,255,255,0.15);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #panel {
+            background: #0c1016;
+            border-left: 1px solid rgba(255,255,255,0.04);
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+        }
+        #panel::-webkit-scrollbar { width: 4px; }
+        #panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 2px; }
+
+        .ph {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .ph h1 { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e0e8f0; }
+        .ph .sub { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 2px; }
+
+        .section {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .section label {
+            display: block; font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.08em; color: rgba(255,255,255,0.2); margin-bottom: 5px;
+        }
+        .section textarea {
+            width: 100%; background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 4px;
+            padding: 10px 12px; font-size: 13px; color: #d0d8e0;
+            font-family: inherit; outline: none; resize: vertical; min-height: 80px;
+            line-height: 1.6;
+        }
+        .section textarea:focus { border-color: rgba(68,136,204,0.3); }
+        .section textarea::placeholder { color: rgba(255,255,255,0.08); }
+
+        .section .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .section button {
+            flex: 1; min-width: 80px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #c8d0d8; padding: 8px 0; border-radius: 6px;
+            font-size: 12px; cursor: pointer; transition: all 0.15s;
+            font-family: inherit;
+        }
+        .section button:hover { background: rgba(255,255,255,0.06); }
+        .section button.green { background: rgba(68,204,136,0.12); border-color: rgba(68,204,136,0.15); color: #44cc88; }
+        .section button.green:hover { background: rgba(68,204,136,0.2); }
+        .section button.red { background: rgba(238,68,102,0.12); border-color: rgba(238,68,102,0.15); color: #ee4466; }
+        .section button.red:hover { background: rgba(238,68,102,0.2); }
+        .section button.blue { background: rgba(68,136,204,0.12); border-color: rgba(68,136,204,0.15); color: #4488cc; }
+        .section button.blue:hover { background: rgba(68,136,204,0.2); }
+
+        .progress-bar {
+            height: 3px; background: rgba(255,255,255,0.04);
+            border-radius: 2px; margin-top: 8px; overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%; background: #4488cc; width: 0%;
+            transition: width 0.3s; border-radius: 2px;
+        }
+
+        #log {
+            font-size: 10px; color: rgba(255,255,255,0.15);
+            max-height: 60px; overflow-y: auto; padding: 8px 0;
+            line-height: 1.5;
+        }
+        #log::-webkit-scrollbar { width: 3px; }
+        #log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); }
+
+        .tag-grid {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+        }
+        .tag-grid button {
+            flex: none; padding: 4px 10px; font-size: 10px;
+            background: rgba(255,255,255,0.02);
+            border-color: rgba(255,255,255,0.06);
+        }
+        .tag-grid button.active {
+            background: rgba(68,136,204,0.12);
+            border-color: rgba(68,136,204,0.2);
+            color: #88bbee;
+        }
+
+        .tag-grid button:hover { background: rgba(255,255,255,0.05); }
+
+        .dur-row {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .dur-row input[type="range"] {
+            flex: 1; -webkit-appearance: none;
+            background: rgba(255,255,255,0.06);
+            height: 3px; border-radius: 2px; border: none; padding: 0;
+        }
+        .dur-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 12px; height: 12px;
+            border-radius: 50%; background: #4488cc; cursor: pointer;
+        }
+        .dur-row span { font-size: 12px; color: rgba(255,255,255,0.3); min-width: 30px; text-align: right; }
+
+        #suggestions {
+            display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
+        }
+        #suggestions button {
+            flex: none; text-align: left; padding: 6px 10px;
+            font-size: 11px; color: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        #suggestions button:hover { color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.04); }
+
+        #mood-indicator {
+            display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;
+        }
+        #mood-indicator span {
+            font-size: 10px; padding: 3px 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.2);
+            display: none;
+        }
+        #mood-indicator span.active { display: inline-block; }
+        .mood-dark { border: 1px solid rgba(100,100,160,0.15); color: #8888aa !important; }
+        .mood-warm { border: 1px solid rgba(200,160,100,0.15); color: #ccaa88 !important; }
+        .mood-cold { border: 1px solid rgba(100,160,200,0.15); color: #88aacc !important; }
+        .mood-bright { border: 1px solid rgba(200,200,100,0.15); color: #cccc88 !important; }
+        .mood-urban { border: 1px solid rgba(200,100,100,0.15); color: #cc8888 !important; }
+        .mood-nature { border: 1px solid rgba(100,200,100,0.15); color: #88cc88 !important; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="viewport">
+        <canvas id="c"></canvas>
+        <div class="rec-indicator" id="recIndicator"><span class="dot"></span> REC</div>
+        <div class="time-display" id="timeDisplay">00:00</div>
+    </div>
+
+    <div id="panel">
+        <div class="ph">
+            <h1>🎬 Text2Video</h1>
+            <div class="sub">Мить — і текст стає відео</div>
+        </div>
+
+        <div class="section" style="flex:1">
+            <label>Напиши сцену</label>
+            <textarea id="prompt" placeholder="Опиши сцену: нічне місто, дощ, неонові вивіски...">Світанок у старому місті, туман стелиться над дахами, десь співають птахи</textarea>
+
+            <div class="tag-grid" id="quickTags">
+                <button onclick="setPrompt('Світанок у лісі, туман між деревами, м\'яке золоте світло')">🌲 Ліс</button>
+                <button onclick="setPrompt('Нічне місто, дощ, неонові вивіски, відображення в калюжах')">🌃 Місто</button>
+                <button onclick="setPrompt('Море, хвилі накочують на берег, захід сонця, чайки')">🌊 Море</button>
+                <button onclick="setPrompt('Зимовий вечір, сніг падає на ліхтарі, тепло світла')">❄️ Зима</button>
+                <button onclick="setPrompt('Стара кімната, пил у променях світла, шарудіння сторінок')">🕯️ Кімната</button>
+                <button onclick="setPrompt('Космос, туманності, далекі зорі, пил')">🌌 Космос</button>
+            </div>
+
+            <div id="mood-indicator">
+                <span class="mood-dark">🌑 Темна</span>
+                <span class="mood-warm">🔥 Тепла</span>
+                <span class="mood-cold">❄️ Холодна</span>
+                <span class="mood-bright">☀️ Яскрава</span>
+                <span class="mood-urban">🏙 Урбан</span>
+                <span class="mood-nature">🌿 Природа</span>
+            </div>
+
+            <div id="suggestions"></div>
+        </div>
+
+        <div class="section">
+            <label>Тривалість</label>
+            <div class="dur-row">
+                <input type="range" id="durSlider" min="5" max="20" value="10">
+                <span id="durLabel">10с</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Музика</label>
+            <select id="musicSel" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:8px 10px;font-size:12px;color:#d0d8e0;font-family:inherit;outline:none" onchange="setMusic(this.value)">
+                <option value="">Без звуку</option>
+                <option value="ambient">🌊 Ambient</option>
+                <option value="lofi">🎧 Lo-fi</option>
+                <option value="cinematic">🎬 Cinematic</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <div class="btn-row">
+                <button class="green" onclick="toggleRecord()" id="recBtn">⏺ Записати</button>
+                <button class="blue" onclick="downloadVideo()" id="dlBtn" disabled>💾 Скачати</button>
+                <button onclick="generatePreview()" id="genBtn">🔄 Згенерувати</button>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+            <div id="log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    let W, H;
+
+    function resize() {
+        const rect = document.getElementById('viewport').getBoundingClientRect();
+        c.width = rect.width * 2;
+        c.height = rect.height * 2;
+        c.style.width = rect.width + 'px';
+        c.style.height = rect.height + 'px';
+        W = c.width;
+        H = c.height;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ============================================================
+    // СТАН
+    // ============================================================
+    let recording = false;
+    let duration = 10;
+    let recordedChunks = [];
+    let recorder = null;
+    let stream = null;
+    let animId = null;
+    let audioCtx = null;
+    let audioSource = null;
+    let audioGain = null;
+    let time = 0;
+    let seed = Date.now();
+
+    document.getElementById('durSlider').addEventListener('input', e => {
+        duration = parseInt(e.target.value);
+        document.getElementById('durLabel').textContent = duration + 'с';
+    });
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        el.innerHTML += '▸ ' + msg + '<br>';
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // ============================================================
+    // ПРОМПТ → ПАРАМЕТРИ
+    // ============================================================
+    function parsePrompt(text) {
+        const t = text.toLowerCase();
+        const themes = { dark: 0.3, warm: 0.3, cold: 0.3, bright: 0.2, urban: 0.1, nature: 0.3, rain: 0.1, snow: 0.1, fog: 0.1, wind: 0.1, stars: 0.1, fire: 0.1 };
+        const words = t.split(/[\s,.\-!?]+/);
+
+        // Рахуємо ключові слова
+        function hasGroup(words) {
+            return words.some(w => t.includes(w));
+        }
+
+        if (hasGroup(['ніч','темн','чорн','тьма','пітьм','сутін','вечір'])) themes.dark += 0.4;
+        if (hasGroup(['світан','ранок','ранк','золот','сонц','світл','яскр','ден'])) themes.bright += 0.5;
+        if (hasGroup(['вогон','тепл','жовт','помаран','червон','золот','свіч','камін','гаряч'])) themes.warm += 0.5;
+        if (hasGroup(['холод','син','блакит','лід','мороз','зим','криг'])) themes.cold += 0.5;
+        if (hasGroup(['дощ','злив','крапл','мокр','калюж'])) themes.rain += 0.6;
+        if (hasGroup(['сніг','сніжин','замет','біл','мороз','зим'])) themes.snow += 0.6;
+        if (hasGroup(['туман','дим','імл','серп','розми'])) themes.fog += 0.5;
+        if (hasGroup(['міст','урбан','неон','вулиц','будин','архіт','вікн','дорог','ліхт'])) themes.urban += 0.6;
+        if (hasGroup(['ліс','дерев','зелен','трав','природ','парк','гай','росли'])) themes.nature += 0.5;
+        if (hasGroup(['зір','косм','галакти','планет','зор'])) themes.stars += 0.6;
+        if (hasGroup(['вогон','пожеж','гор','дим','жар','полум'])) themes.fire += 0.5;
+        if (hasGroup(['море','хвил','океан','пляж','берег','річк','озер','вод','течі'])) themes.water = 0.6;
+        if (hasGroup(['вітер','вітря'])) themes.wind += 0.4;
+        if (hasGroup(['стар','пил','час','забут','покину','кімнат','книж','сторін','вікн','стіл','крісл'])) {
+            themes.dark += 0.2; themes.warm += 0.2;
+        }
+
+        // Нормалізуємо
+        let total = 0;
+        for (const k in themes) total += themes[k];
+        for (const k in themes) themes[k] = themes[k] / total;
+
+        return themes;
+    }
+
+    // ============================================================
+    // МАЛЮВАННЯ ЗА ПРОМПТОМ
+    // ============================================================
+    function drawFromPrompt(prompt, t) {
+        const p = parsePrompt(prompt);
+        ctx.globalAlpha = 1;
+
+        // Колір фону
+        const r = Math.round(8 + p.dark * 8 + p.warm * 20 + p.cold * 5 + p.bright * 5 + p.urban * 3 + p.nature * 5 + p.fire * 15);
+        const g = Math.round(8 + p.dark * 4 + p.warm * 8 + p.cold * 12 + p.bright * 8 + p.urban * 2 + p.nature * 12 + p.fire * 3);
+        const b = Math.round(12 + p.dark * 6 + p.warm * 4 + p.cold * 18 + p.bright * 4 + p.urban * 6 + p.nature * 4 + p.fire * 0);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, W, H);
+
+        // Атмосферне освітлення
+        const grad = ctx.createRadialGradient(W * 0.3 + Math.sin(t * 0.05) * 100, H * 0.3 + Math.cos(t * 0.04) * 60, 0, W/2, H/2, W * 0.7);
+        const lightAlpha = 0.15 + p.bright * 0.2;
+        grad.addColorStop(0, `rgba(${r + 40 + p.warm * 60 + p.bright * 30},${g + 30 + p.warm * 30},${b + 30 + p.cold * 20},${lightAlpha})`);
+        grad.addColorStop(0.5, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Ключові елементи
+        if (p.rain > 0.08) drawRainDrop(t, p.rain);
+        if (p.snow > 0.08) drawSnowflakes(t, p.snow);
+        if (p.fog > 0.08) drawFog(t, p.fog, p.dark, p.cold);
+        if (p.stars > 0.08) drawStars(t, p.stars, p.bright);
+        if (p.fire > 0.08) drawFire(t, p.fire);
+        if (p.urban > 0.08) drawCity(t, p.urban, p.dark);
+        if (p.nature > 0.08) drawTrees(t, p.nature, p.wind, p.fog);
+        if (p.water > 0.08) drawWater(t, p.water, p.wind);
+        if (p.wind > 0.08) drawWind(t, p.wind);
+        if (p.rain < 0.08 && p.snow < 0.08 && p.fog < 0.08 && p.stars < 0.08 && p.fire < 0.08 && p.urban < 0.08 && p.nature < 0.08 && p.water < 0.08) {
+            // fallback — частинки
+            drawParticles(t, p);
+        }
+
+        // Віньєтка
+        const vig = ctx.createRadialGradient(W/2, H/2, W*0.2, W/2, H/2, W*0.7);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, `rgba(0,0,0,${0.3 + p.dark * 0.3})`);
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, W, H);
+
+        // Текст
+        drawPromptText(prompt, t, p);
+    }
+
+    function drawRainDrop(t, intensity) {
+        const n = Math.round(40 + intensity * 80);
+        for (let i = 0; i < n; i++) {
+            const x = (i * 156.7 + t * 0.6 + Math.sin(i * 2.3) * 5) % W;
+            const y = (i * 97.1 + t * 220 * (0.5 + intensity * 0.5)) % (H * 1.4) - H * 0.2;
+            const len = 12 + (i % 15);
+            const alpha = 0.04 + intensity * 0.06 + (i % 20) / 300;
+            ctx.strokeStyle = `rgba(180,210,255,${alpha})`;
+            ctx.lineWidth = 0.8 + intensity * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 1.5, y + len);
+            ctx.stroke();
+        }
+    }
+
+    function drawSnowflakes(t, intensity) {
+        const n = Math.round(30 + intensity * 80);
+        for (let i = 0; i < n; i++) {
+            const x = (i * 131 + t * 0.3 + Math.sin(t * 0.1 + i * 1.7) * 15) % (W + 20) - 10;
+            const y = (i * 167 + t * 50 * intensity + Math.sin(t * 0.08 + i * 0.7) * 10) % (H * 1.3) - H * 0.15;
+            const s = 1.5 + (i % 4) + intensity * 1;
+            const alpha = 0.2 + intensity * 0.3 + (i % 10) / 30;
+            ctx.fillStyle = `rgba(200,220,255,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x, y, s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawFog(t, intensity, dark, cold) {
+        const n = Math.round(6 + intensity * 14);
+        for (let i = 0; i < n; i++) {
+            const x = (W * 0.1 + i * W * 0.08 + Math.sin(t * 0.05 + i * 1.3) * W * 0.1) % (W * 1.2) - W * 0.1;
+            const y = H * 0.2 + (i * H * 0.08) + Math.sin(t * 0.08 + i * 0.7) * H * 0.05;
+            const r = 100 + (i % 4) * 40 + Math.sin(t * 0.04 + i * 1.1) * 30;
+            const alpha = 0.008 + intensity * 0.025 + dark * 0.01;
+            const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
+            const tone = cold > dark ? 180 : 140;
+            gr.addColorStop(0, `rgba(${tone - 20},${tone + 10},${tone + 30},${alpha})`);
+            gr.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawStars(t, intensity, bright) {
+        const n = Math.round(20 + intensity * 60);
+        for (let i = 0; i < n; i++) {
+            const x = (i * 173.5 + 37) % W;
+            const y = (i * 127.3 + 53) % (H * 0.6);
+            const s = 1 + (i % 3);
+            const twinkle = 0.2 + 0.8 * Math.sin(t * 0.4 + i * 2.1);
+            const alpha = (0.3 + intensity * 0.5 + bright * 0.2) * twinkle;
+            ctx.fillStyle = `rgba(180,200,255,${alpha})`;
+            ctx.fillRect(x, y, s, s);
+        }
+    }
+
+    function drawFire(t, intensity) {
+        const n = Math.round(8 + intensity * 25);
+        for (let i = 0; i < n; i++) {
+            const x = W * 0.5 + Math.sin(i * 1.7 + t * 0.6) * 60 + ((i * 31) % 80) - 40;
+            const y = H * 0.75 - i * 4 + Math.sin(t * 1.2 + i * 0.5) * 5;
+            const r = 6 + (i % 12) + intensity * 10;
+            const alpha = 0.1 - i * 0.004 + intensity * 0.05;
+            const colors = ['#ff4400', '#ff6600', '#ffaa00', '#ffdd00', '#ff4400'];
+            ctx.globalAlpha = Math.max(0, alpha);
+            ctx.fillStyle = colors[i % 5];
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 1.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Світло від вогню
+        const gr = ctx.createRadialGradient(W/2, H*0.75, 0, W/2, H*0.75, 120 + intensity * 80);
+        gr.addColorStop(0, `rgba(255,150,50,${0.02 + intensity * 0.03})`);
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawCity(t, intensity, dark) {
+        // Горизонт
+        const baseY = H * 0.5 + Math.sin(t * 0.02) * 5;
+        const n = Math.round(20 + intensity * 30);
+
+        for (let i = 0; i < n; i++) {
+            const x = i * (W / n) + Math.sin(i * 0.5) * 5;
+            const h = 30 + (i * 37 % 120) + intensity * 50;
+            const w = W / n - 1;
+            const alpha = 0.06 + intensity * 0.08 + dark * 0.05;
+            ctx.fillStyle = `rgba(10,10,20,${alpha})`;
+            ctx.fillRect(x, baseY - h, w, h);
+
+            // Вікна
+            if (i % 3 === 0) {
+                for (let wi = 0; wi < h / 15; wi++) {
+                    if (Math.sin(i * 7 + wi * 3 + t * 0.2) > 0.2) {
+                        ctx.fillStyle = `rgba(255,200,100,${0.02 + intensity * 0.02 + Math.sin(t + i + wi) * 0.01})`;
+                        ctx.fillRect(x + 2, baseY - h + wi * 15 + 4, w - 4, 6);
+                    }
+                }
+            }
+        }
+    }
+
+    function drawTrees(t, intensity, wind, fog) {
+        const n = Math.round(6 + intensity * 10);
+        for (let i = 0; i < n; i++) {
+            const x = (i * (W / n) + 20 + Math.sin(i * 1.3) * 20) % (W - 40) + 20;
+            const baseY = H * 0.7 + (i % 5) * 10 + Math.sin(t * 0.03 + i) * 5;
+            const h = 60 + (i * 23 % 80) + intensity * 50;
+            const sway = Math.sin(t * 0.4 + i * 1.7) * (2 + wind * 8);
+
+            // Стовбур
+            ctx.fillStyle = `rgba(20,15,10,${0.1 + intensity * 0.1})`;
+            ctx.fillRect(x - 3 + sway * 0.2, baseY - h * 0.6, 6, h * 0.6);
+
+            // Крона
+            for (let j = 0; j < 5; j++) {
+                const cx = x + sway + Math.sin(j * 1.1) * 18 + j * 2 - 10;
+                const cy = baseY - h * 0.4 + j * 12 - 25;
+                const cr = 15 + (j % 3) * 5 - j * 2 + intensity * 10;
+                const green = 40 + (i * 17 % 40) + fog * 20;
+                ctx.fillStyle = `rgba(10,${green},15,${0.05 + intensity * 0.06 + fog * 0.04})`;
+                ctx.beginPath();
+                ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    function drawWater(t, intensity, wind) {
+        for (let w = 0; w < 3; w++) {
+            ctx.beginPath();
+            ctx.moveTo(0, H * 0.6);
+            for (let x = 0; x <= W; x += 6) {
+                const y = H * 0.6 + Math.sin(x * 0.006 + t * (0.3 + w * 0.15) + w * 1.5) * (10 + w * 8 + intensity * 10 + wind * 5)
+                    + Math.sin(x * 0.015 + t * 0.5) * 5;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(10,30,60,${0.03 + intensity * 0.02 - w * 0.008})`;
+            ctx.fill();
+        }
+    }
+
+    function drawWind(t, intensity) {
+        const n = Math.round(3 + intensity * 8);
+        for (let i = 0; i < n; i++) {
+            const x = (i * 150 + t * 30 * intensity) % (W + 100) - 50;
+            const y = H * 0.2 + (i * 50) + Math.sin(t * 0.1 + i) * 15;
+            const len = 60 + (i % 4) * 30;
+            ctx.strokeStyle = `rgba(200,220,255,${0.005 + intensity * 0.01})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(x + len * 0.5, y - 5 + Math.sin(t + i) * 5, x + len, y);
+            ctx.stroke();
+        }
+    }
+
+    function drawParticles(t, p) {
+        const n = 20;
+        for (let i = 0; i < n; i++) {
+            const x = (i * 97 + t * 5 + Math.sin(i * 0.5 + t * 0.1) * 20) % W;
+            const y = (i * 131 + t * 3 + Math.cos(i * 0.3 + t * 0.08) * 15) % (H * 1.2) - H * 0.1;
+            ctx.fillStyle = `rgba(150,180,200,${0.01 + p.dark * 0.01})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawPromptText(prompt, t, p) {
+        if (!prompt) return;
+        const lines = prompt.split('\n').filter(l => l.trim());
+        if (lines.length === 0) return;
+
+        const text = lines[0];
+        const words = text.split(' ');
+        let line = '';
+        let lines2 = [];
+        for (const w of words) {
+            if ((line + ' ' + w).length > 40) {
+                lines2.push(line);
+                line = w;
+            } else {
+                line = (line ? line + ' ' : '') + w;
+            }
+        }
+        if (line) lines2.push(line);
+
+        const alpha = 0.03 + p.bright * 0.03;
+        ctx.font = '15px "Georgia", serif';
+        ctx.textAlign = 'center';
+        lines2.forEach((l, i) => {
+            ctx.fillStyle = `rgba(200,200,210,${alpha})`;
+            ctx.fillText(l, W/2, 36 + i * 22);
+        });
+    }
+
+    // ============================================================
+    // ГЕНЕРАЦІЯ / ПЕРЕДПЕРЕГЛЯД
+    // ============================================================
+    function generatePreview() {
+        seed = Date.now();
+        time = 0;
+        log('🎨 Згенеровано сцену');
+        updateMood();
+    }
+
+    function updateMood() {
+        const prompt = document.getElementById('prompt').value;
+        const p = parsePrompt(prompt);
+        const moods = document.querySelectorAll('#mood-indicator span');
+        moods.forEach(m => m.classList.remove('active'));
+
+        if (p.dark > 0.25) addMood('mood-dark');
+        if (p.warm > 0.25) addMood('mood-warm');
+        if (p.cold > 0.25) addMood('mood-cold');
+        if (p.bright > 0.25) addMood('mood-bright');
+        if (p.urban > 0.25) addMood('mood-urban');
+        if (p.nature > 0.25) addMood('mood-nature');
+
+        function addMood(cls) {
+            const el = document.querySelector('.' + cls);
+            if (el) el.classList.add('active');
+        }
+    }
+
+    function setPrompt(text) {
+        document.getElementById('prompt').value = text;
+        generatePreview();
+    }
+
+    // ============================================================
+    // АНІМАЦІЯ (preview + recording)
+    // ============================================================
+    let previewTime = 0;
+    let previewStart = 0;
+
+    function animate() {
+        if (!recording) {
+            previewTime = (performance.now() - previewStart) / 1000;
+            time = previewTime;
+        }
+        const prompt = document.getElementById('prompt').value || '...';
+        drawFromPrompt(prompt, time);
+        document.getElementById('timeDisplay').textContent = formatTime(time);
+        if (recording) {
+            const pct = Math.min(100, (time / duration) * 100);
+            document.getElementById('progressFill').style.width = pct + '%';
+        }
+        animId = requestAnimationFrame(animate);
+    }
+
+    previewStart = performance.now();
+    animate();
+
+    // ============================================================
+    // ЗАПИС
+    // ============================================================
+    async function toggleRecord() {
+        if (recording) { stopRecord(); return; }
+        await startRecord();
+    }
+
+    async function startRecord() {
+        recordedChunks = [];
+        time = 0;
+
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+        stream = c.captureStream(30);
+
+        // Аудіо
+        if (document.getElementById('musicSel').value) {
+            setMusic(document.getElementById('musicSel').value);
+            await new Promise(r => setTimeout(r, 100));
+            if (audioGain) {
+                const dest = audioCtx.createMediaStreamDestination();
+                audioGain.connect(dest);
+                const t = dest.stream.getAudioTracks()[0];
+                if (t) stream.addTrack(t);
+            }
+        }
+
+        const mime = 'video/webm;codecs=vp9';
+        let mimeType = '';
+        if (MediaRecorder.isTypeSupported(mime)) mimeType = mime;
+        else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
+        else mimeType = 'video/webm';
+
+        try {
+            recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6000000 });
+        } catch(e) {
+            log('❌ Помилка: ' + e.message);
+            return;
+        }
+
+        recorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        recorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            document.getElementById('recIndicator').style.display = 'none';
+            document.getElementById('recBtn').textContent = '⏺ Записати';
+            document.getElementById('recBtn').className = 'green';
+            document.getElementById('dlBtn').disabled = false;
+            log('✅ Відео готове!');
+        };
+
+        recording = true;
+        document.getElementById('recIndicator').style.display = 'flex';
+        document.getElementById('recBtn').textContent = '⏹ Стоп';
+        document.getElementById('recBtn').className = 'red';
+        document.getElementById('dlBtn').disabled = true;
+        recorder.start(100);
+        log('🔴 Запис ' + duration + 'с...');
+    }
+
+    function stopRecord() {
+        recording = false;
+        if (recorder && recorder.state === 'recording') recorder.stop();
+        document.getElementById('recIndicator').style.display = 'none';
+        document.getElementById('recBtn').textContent = '⏺ Записати';
+        document.getElementById('recBtn').className = 'green';
+        if (audioSource) { try { audioSource.stop(); } catch(e) {} audioSource = null; }
+    }
+
+    function downloadVideo() {
+        if (recordedChunks.length === 0) return;
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const name = document.getElementById('prompt').value.substring(0, 25).replace(/[^a-zA-Zа-яА-Я0-9_\s]/g, '').trim().replace(/\s+/g, '_') || 'video';
+        a.download = `${name}_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        log('💾 Завантажено: ' + name + '.webm');
+    }
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }
+
+    // ============================================================
+    // МУЗИКА
+    // ============================================================
+    function setMusic(val) {
+        if (audioSource) { try { audioSource.stop(); } catch(e) {} audioSource = null; }
+        if (!val) return;
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (val === 'ambient') genMusic(0.08, 0.2, 0.5);
+        else if (val === 'lofi') genMusic(0.12, 2.5, 1.0);
+        else if (val === 'cinematic') genMusic(0.15, 0.8, 0.2);
+    }
+
+    function genMusic(vol, speed, complexity) {
+        const dur = duration + 2;
+        const sr = audioCtx.sampleRate;
+        const len = sr * dur;
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            let s = 0;
+            for (let h = 0; h < 1 + complexity * 3; h++) {
+                s += Math.sin(2 * Math.PI * (80 + h * 60 + Math.sin(t * 0.1 + h) * 5) * t) * (0.1 - h * 0.02);
+            }
+            d[i] = (s + (Math.random() - 0.5) * 0.005 * complexity) *
+                Math.min(1, i / (sr * 2)) * Math.min(1, (len - i) / (sr * 2));
+        }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = buf;
+        audioSource.loop = false;
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = vol;
+        audioSource.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+        audioSource.start();
+    }
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    generatePreview();
+    log('🎬 Text2Video готовий. Напиши сцену → натисни Записати');
+</script>
+</body>
+</html>
