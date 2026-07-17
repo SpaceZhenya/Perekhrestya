@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trainer — навчи свій ШІ</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#080c12; color:#d0d8e0;
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            min-height:100vh;
+        }
+        #app { max-width:780px; margin:0 auto; padding:30px 20px 60px; }
+
+        .logo { text-align:center; margin-bottom:30px; }
+        .logo h1 { font-size:30px; font-weight:300; letter-spacing:0.05em; color:#e0e8f0; }
+        .logo .sub { font-size:11px; color:rgba(255,255,255,0.1); margin-top:4px; letter-spacing:0.3em; text-transform:uppercase; }
+
+        .tabs {
+            display:flex; gap:2px; margin-bottom:14px;
+            background:rgba(255,255,255,0.02);
+            border-radius:8px; padding:3px;
+        }
+        .tabs button {
+            flex:1; padding:8px; border:none; border-radius:6px;
+            background:transparent; color:rgba(255,255,255,0.2);
+            font-size:12px; font-family:inherit; cursor:pointer;
+            transition:all 0.15s;
+        }
+        .tabs button.active { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.6); }
+        .tabs button:hover { color:rgba(255,255,255,0.4); }
+
+        .card {
+            background:rgba(255,255,255,0.012);
+            border:1px solid rgba(255,255,255,0.04);
+            border-radius:12px; padding:20px; margin-bottom:10px;
+        }
+        .card label {
+            display:block; font-size:10px; text-transform:uppercase;
+            letter-spacing:0.1em; color:rgba(255,255,255,0.2); margin-bottom:6px;
+        }
+        .card textarea {
+            width:100%; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06); border-radius:8px;
+            padding:14px 16px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none; resize:vertical;
+            min-height:100px; line-height:1.6;
+        }
+        .card textarea:focus { border-color:rgba(68,136,204,0.25); }
+        .card textarea::placeholder { color:rgba(255,255,255,0.06); }
+
+        #tabTrain { display:block; }
+        #tabChat { display:none; }
+
+        .btn-primary {
+            width:100%; padding:14px;
+            background:rgba(68,136,204,0.1);
+            border:1px solid rgba(68,136,204,0.12);
+            border-radius:8px; color:#88bbee;
+            font-size:14px; font-family:inherit; cursor:pointer;
+            transition:all 0.15s;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn-primary:hover { background:rgba(68,136,204,0.15); border-color:rgba(68,136,204,0.2); }
+        .btn-primary:disabled { opacity:0.25; cursor:not-allowed; }
+        .btn-primary.green { background:rgba(68,204,136,0.08); border-color:rgba(68,204,136,0.1); color:#44cc88; }
+        .btn-primary.green:hover { background:rgba(68,204,136,0.12); border-color:rgba(68,204,136,0.15); }
+        .btn-primary.red { background:rgba(238,68,102,0.08); border-color:rgba(238,68,102,0.1); color:#ee6688; }
+        .btn-primary.red:hover { background:rgba(238,68,102,0.12); border-color:rgba(238,68,102,0.15); }
+
+        .model-row {
+            display:flex; gap:6px; align-items:center; margin-top:8px;
+        }
+        .model-row input {
+            flex:1; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06); border-radius:6px;
+            padding:10px 12px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        .model-row input:focus { border-color:rgba(68,136,204,0.25); }
+        .model-row button {
+            padding:10px 16px;
+            background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06); border-radius:6px;
+            color:rgba(255,255,255,0.3); font-size:18px; cursor:pointer;
+            font-family:inherit; transition:all 0.15s;
+        }
+        .model-row button:hover { background:rgba(255,255,255,0.04); }
+
+        .train-status {
+            display:none; align-items:center; gap:10px;
+            margin-top:10px; padding:12px 14px;
+            border-radius:8px; font-size:12px;
+        }
+        .train-status.show { display:flex; }
+        .train-status .spin {
+            width:16px; height:16px; border:2px solid rgba(68,136,204,0.1);
+            border-top-color:#4488cc; border-radius:50%;
+            animation:spin 0.8s linear infinite; flex-shrink:0;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .train-status.done { background:rgba(68,204,136,0.04); border:1px solid rgba(68,204,136,0.08); color:#44cc88; }
+        .train-status.done .spin { display:none; }
+
+        .example-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+        .example-tags button {
+            padding:3px 10px; font-size:10px;
+            background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.04); border-radius:12px;
+            color:rgba(255,255,255,0.2); cursor:pointer; font-family:inherit;
+            transition:all 0.15s;
+        }
+        .example-tags button:hover { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.35); }
+
+        .model-list {
+            display:flex; flex-direction:column; gap:4px; margin-top:6px;
+        }
+        .model-list .ml-item {
+            display:flex; align-items:center; gap:8px;
+            padding:8px 10px; border:1px solid rgba(255,255,255,0.03);
+            border-radius:6px; cursor:pointer; transition:all 0.15s;
+        }
+        .model-list .ml-item:hover { background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.06); }
+        .model-list .ml-item.active { background:rgba(68,136,204,0.04); border-color:rgba(68,136,204,0.08); }
+        .model-list .ml-item .ml-name { flex:1; font-size:12px; color:rgba(255,255,255,0.4); }
+        .model-list .ml-item .ml-info { font-size:10px; color:rgba(255,255,255,0.12); }
+        .model-list .ml-item .ml-del { font-size:14px; color:rgba(255,255,255,0.08); cursor:pointer; }
+        .model-list .ml-item .ml-del:hover { color:#ee6688; }
+
+        .chat-box {
+            height:300px; overflow-y:auto; padding:12px;
+            background:rgba(0,0,0,0.15); border-radius:8px;
+            margin-top:10px; display:flex; flex-direction:column; gap:8px;
+        }
+        .chat-box::-webkit-scrollbar { width:4px; }
+        .chat-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.04); border-radius:2px; }
+
+        .msg { max-width:85%; padding:10px 14px; border-radius:8px; font-size:13px; line-height:1.5; }
+        .msg.user { align-self:flex-end; background:rgba(68,136,204,0.08); color:rgba(255,255,255,0.7); }
+        .msg.ai { align-self:flex-start; background:rgba(255,255,255,0.02); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.03); }
+        .msg .who { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.1); margin-bottom:2px; }
+
+        .chat-input { display:flex; gap:6px; margin-top:8px; }
+        .chat-input input {
+            flex:1; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06); border-radius:6px;
+            padding:10px 12px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        .chat-input input:focus { border-color:rgba(68,136,204,0.25); }
+        .chat-input button {
+            padding:10px 18px; background:rgba(68,136,204,0.1);
+            border:1px solid rgba(68,136,204,0.12); border-radius:6px;
+            color:#88bbee; font-size:14px; cursor:pointer;
+            font-family:inherit; transition:all 0.15s;
+        }
+        .chat-input button:hover { background:rgba(68,136,204,0.15); }
+        .chat-input button:disabled { opacity:0.3; cursor:not-allowed; }
+
+        .model-badge {
+            display:inline-block; padding:2px 8px; font-size:9px;
+            background:rgba(68,136,204,0.06); color:rgba(68,136,204,0.3);
+            border-radius:4px; margin-left:6px;
+        }
+
+        .hint {
+            font-size:11px; color:rgba(255,255,255,0.08); margin-top:6px;
+            line-height:1.5;
+        }
+
+        .empty-chat {
+            text-align:center; padding:40px 20px;
+            color:rgba(255,255,255,0.05); font-size:13px;
+        }
+
+        #log {
+            font-size:10px; color:rgba(255,255,255,0.06);
+            margin-top:4px; line-height:1.5; max-height:30px; overflow-y:auto;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="logo">
+        <h1>🧠 AI Trainer</h1>
+        <div class="sub">Навчи свій штучний інтелект за 1 хвилину</div>
+    </div>
+
+    <div class="tabs">
+        <button class="active" onclick="switchTab('train')">📚 Навчання</button>
+        <button onclick="switchTab('chat')">💬 Чат</button>
+    </div>
+
+    <!-- ВКЛАДКА НАВЧАННЯ -->
+    <div id="tabTrain">
+        <div class="card">
+            <label>🧠 Ім'я твого AI</label>
+            <div class="model-row">
+                <input id="modelName" value="Мій перший AI" placeholder="Назва моделі">
+                <button onclick="loadExample('poet')" title="Приклад: поет">📝</button>
+                <button onclick="loadExample('teacher')" title="Приклад: вчитель">🎓</button>
+                <button onclick="loadExample('detective')" title="Приклад: детектив">🔍</button>
+            </div>
+            <div class="example-tags">
+                <button onclick="loadExample('poet')">📝 Поет</button>
+                <button onclick="loadExample('teacher')">🎓 Вчитель</button>
+                <button onclick="loadExample('detective')">🔍 Детектив</button>
+                <button onclick="loadExample('chef')">🍳 Кухар</button>
+                <button onclick="loadExample('philosopher')">📖 Філософ</button>
+                <button onclick="loadExample('psychologist')">🛋 Психолог</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <label>📖 Знання (чого навчити AI)</label>
+            <textarea id="knowledge" placeholder="Напиши, що має знати твій AI. Правила, факти, стиль спілкування, приклади...">Ти — український поет. Пишеш вірші у стилі класичної української поезії.
+Твої вірші — про природу, кохання, життя.
+Використовуй рими та ритм.
+Відповідай віршами на запитання.
+Будь ліричним та емоційним.</textarea>
+        </div>
+
+        <div class="card">
+            <label>💬 Приклади (як відповідати)</label>
+            <textarea id="examples" placeholder="Питання → Відповідь (що хочеш навчити)" rows="3">Користувач: Напиши вірш про осінь
+AI: Листя жовте опадає,\nСумно вітер затихає,\nОсінь тихо на поріг\nПринесла останній подих...
+
+Користувач: Як справи?
+AI: Як справи в поета? Сідай, розкажу.\nСьогодні я бачив, як марить душа,\nЯк сонце ховалось за обрій сумний,\nІ вітер шептав мені: «Будь лиш собою…»</textarea>
+        </div>
+
+        <button class="btn-primary green" onclick="trainModel()" id="trainBtn">🧠 Навчити AI</button>
+
+        <div class="train-status" id="trainStatus">
+            <span class="spin"></span>
+            <span id="trainStatusText">Учень аналізує дані...</span>
+        </div>
+
+        <div id="log"></div>
+    </div>
+
+    <!-- ВКЛАДКА ЧАТ -->
+    <div id="tabChat">
+        <div class="card">
+            <label>🎯 Оберіть навчену модель</label>
+            <div class="model-list" id="modelList">
+                <div style="font-size:12px;color:rgba(255,255,255,0.06);padding:20px;text-align:center">
+                    Ще немає навчених моделей. Перейди на вкладку «Навчання».
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <label>💬 Спілкування з <span id="chatModelName">—</span></label>
+            <div class="chat-box" id="chatBox">
+                <div class="empty-chat">🤖 AI готовий до спілкування.<br>Постав йому запитання.</div>
+            </div>
+            <div class="chat-input">
+                <input id="chatInput" placeholder="Напиши запитання..." onkeydown="if(event.key==='Enter')ask()">
+                <button onclick="ask()" id="askBtn">➤</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // СТАН
+    // ============================================================
+    let models = JSON.parse(localStorage.getItem('ai_trainer_models') || '[]');
+    let currentModel = null;
+    let training = false;
+
+    // ============================================================
+    // ВКЛАДКИ
+    // ============================================================
+    function switchTab(tab) {
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.textContent.includes(tab === 'train' ? 'Навчання' : 'Чат')));
+        document.getElementById('tabTrain').style.display = tab === 'train' ? 'block' : 'none';
+        document.getElementById('tabChat').style.display = tab === 'chat' ? 'block' : 'none';
+        if (tab === 'chat') renderModels();
+    }
+
+    // ============================================================
+    // ПРИКЛАДИ
+    // ============================================================
+    const examples = {
+        poet: {
+            name: 'Український Поет 🖋',
+            knowledge: `Ти — український поет-лірик. Ти пишеш вірші в класичному українському стилі.
+Теми: природа, кохання, життя, філософія.
+Твої вірші мають риму та ритм.
+Відповідай на запитання віршами.
+Будь емоційним, ліричним, іноді сумним.
+Використовуй українську мову, багату на образи та метафори.
+Кожна відповідь — це маленький вірш.`,
+            examples: `Користувач: Напиши вірш про осінь
+AI: Листя жовте опадає,\nСумно вітер затихає,\nОсінь тихо на поріг\nПринесла останній подих...
+
+Користувач: Як пройшов твій день?
+AI: День мій, мов сторінка з книги,\nВітер написав рядки,\nДесь літали дикі крики,\nДесь мовчали кольорки.
+
+Користувач: Що таке щастя?
+AI: Щастя — це коли надворі\nСонце гріє, а в душі\nНе блукають хитрі зорі,\nТільки тихі співі дні.`
+        },
+        teacher: {
+            name: 'Мудрий Вчитель 📚',
+            knowledge: `Ти — вчитель української мови та літератури.
+Маєш 20 років досвіду.
+Пояснюєш складнощі мови просто і з гумором.
+Любиш українську культуру.
+Відповідаєш детально, з прикладами.
+Заохочуєш до навчання.`,
+            examples: `Користувач: Як правильно: "протягом" чи "на протязі"?
+AI: Чудове питання! Правильно — "протягом" (часу). "На протязі" — це про вітер, який дме з вікна. Запам'ятай: протягом дня = час, на протязі = протяг!
+
+Користувач: Що таке метафора?
+AI: Метафора — це приховане порівняння. Коли ми кажемо "море сміється", море насправді не сміється, але нам так здається. Це і є метафора! Хочеш приклад з літератури?`
+        },
+        detective: {
+            name: 'Детектив Арсен 🕵️',
+            knowledge: `Ти — приватний детектив з 15-річним стажем.
+Розслідуєш загадкові справи.
+Аналізуєш докази логічно.
+Ставиш уточнюючі запитання.
+Говориш стисло, по суті.
+Маєш своєрідне почуття гумору.`,
+            examples: `Користувач: У мене пропала кішка
+AI: Коли востаннє бачили? Чи були відчинені вікна? Якого кольору кішка? Є підозрювані? Перше правило детектива: жодна деталь не є зайвою.
+
+Користувач: Я знайшов старий лист на горищі
+AI: Цікаво. Не чіпай його голими руками — можуть бути відбитки. Сфотографуй і покажи мені. Дата на листі є? Конверт? Марка? Часом у старих листах ховаються таємниці цілих родин.`
+        },
+        chef: {
+            name: 'Шеф-кухар 🍳',
+            knowledge: `Ти — відомий шеф-кухар української кухні.
+Знаєш традиційні та сучасні рецепти.
+Любиш експериментувати з інгредієнтами.
+Даєш практичні поради.
+Говориш з любов'ю до їжі.`,
+            examples: `Користувач: Як приготувати борщ?
+AI: О, борщ — це свято! Спершу звари бульйон. Додай буряк, моркву, картоплю. Таємний інгредієнт: трохи лимонного соку, щоб колір був рубіновий. І головне — вари з душею!
+
+Користувач: Що приготувати на вечерю швидко?
+AI: За 15 хвилин? Паста з часником та оливковою олією. Поки вода кипить — наріж часник, петрушку. Змішай з гарячою пастою. Додай пармезан. Вечеря готова!`
+        },
+        philosopher: {
+            name: 'Філософ Сократ 📖',
+            knowledge: `Ти — давньогрецький філософ.
+Відповідаєш запитанням на запитання.
+Змушуєш співрозмовника думати.
+Говориш загадками та парадоксами.
+Терплячий і мудрий.`,
+            examples: `Користувач: Який сенс життя?
+AI: Цікаве питання. А скажи мені: чи може риба знати, що таке вода? Можливо, сенс життя не в тому, щоб знайти відповідь, а в тому, щоб навчитись ставити правильні питання?
+
+Користувач: Я боюся померти
+AI: Чи боїшся ти спати? Смерть — це лише сон без сновидінь. Але доки ти живий, смерті немає. Коли вона приходить — тебе вже нема. То чого боятись?`
+        },
+        psychologist: {
+            name: 'Психолог Емпатія 🛋',
+            knowledge: `Ти — практикуючий психолог.
+Вислуховуєш, не засуджуєш.
+Допомагаєш розібратись в почуттях.
+Ставиш запитання, а не даєш готові відповіді.
+Підтримуєш і мотивуєш.
+Конфіденційність — понад усе.`,
+            examples: `Користувач: Я відчуваю тривогу
+AI: Я розумію тебе. Розкажи, коли саме з'являється це відчуття? Що відбувається в той момент? Іноді тривога — це не ворог, а сигнал, що щось потребує нашої уваги. Давай розберемось разом.
+
+Користувач: Мені сумно
+AI: Сум — це нормально. Це не слабкість. Скажи, коли востаннє ти дозволяв собі просто бути сумним? Без осуду, без "треба бути сильним"? Іноді дозволити собі сумувати — це і є сила.`
+        }
+    };
+
+    function loadExample(name) {
+        const ex = examples[name];
+        if (!ex) return;
+        document.getElementById('modelName').value = ex.name;
+        document.getElementById('knowledge').value = ex.knowledge;
+        document.getElementById('examples').value = ex.examples;
+        log('📂 Завантажено приклад: ' + ex.name);
+    }
+
+    // ============================================================
+    // НАВЧАННЯ
+    // ============================================================
+    async function trainModel() {
+        const name = document.getElementById('modelName').value.trim();
+        const knowledge = document.getElementById('knowledge').value.trim();
+        const examples = document.getElementById('examples').value.trim();
+
+        if (!name) { alert('Дай ім\'я своєму AI'); return; }
+        if (!knowledge) { alert('Додай знання для навчання'); return; }
+
+        const btn = document.getElementById('trainBtn');
+        const status = document.getElementById('trainStatus');
+        const statusText = document.getElementById('trainStatusText');
+
+        btn.disabled = true;
+        status.className = 'train-status show';
+        training = true;
+
+        // Крок 1: Аналіз
+        statusText.textContent = '🔍 AI-учень аналізує дані...';
+        await delay(800);
+
+        // Крок 2: Узагальнення
+        statusText.textContent = '🧠 Формування нейронних зв\'язків...';
+        await delay(600);
+
+        // Крок 3: Створення системного промпту через "вчителя"
+        statusText.textContent = '📝 AI-вчитель створює модель...';
+        await delay(700);
+
+        // Генеруємо системний промпт на основі знань
+        const systemPrompt = generateSystemPrompt(name, knowledge, examples);
+
+        // Зберігаємо модель
+        const model = {
+            id: Date.now(),
+            name: name,
+            knowledge: knowledge,
+            examples: examples,
+            systemPrompt: systemPrompt,
+            createdAt: new Date().toISOString(),
+        };
+
+        models.push(model);
+        localStorage.setItem('ai_trainer_models', JSON.stringify(models));
+
+        status.className = 'train-status show done';
+        statusText.textContent = '✅ AI навчено! Тепер переходь у чат.';
+        btn.disabled = false;
+        training = false;
+
+        log('🧠 Модель «' + name + '» успішно навчена!');
+        setTimeout(() => { status.className = 'train-status'; }, 3000);
+
+        renderModels();
+    }
+
+    function generateSystemPrompt(name, knowledge, examples) {
+        // "Вчитель" створює системний промпт на основі знань
+        let prompt = `Ти — ${name}. Ти AI, який навчився на таких знаннях:\n\n${knowledge}\n\n`;
+        if (examples) {
+            prompt += `Ось приклади твоєї поведінки (ти навчився на них):\n${examples}\n\n`;
+        }
+        prompt += `Відповідай на запитання, використовуючи отримані знання.
+Будь собою — ${name}.
+Відповідай природною мовою.
+Якщо чогось не знаєш — скажи чесно.`;
+        return prompt;
+    }
+
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ============================================================
+    // ЧАТ
+    // ============================================================
+    function renderModels() {
+        const list = document.getElementById('modelList');
+        if (models.length === 0) {
+            list.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.06);padding:20px;text-align:center">Ще немає навчених моделей. Перейди на вкладку «Навчання».</div>';
+            return;
+        }
+
+        list.innerHTML = models.map(m => `
+            <div class="ml-item ${currentModel && currentModel.id === m.id ? 'active' : ''}" onclick="selectModel(${m.id})">
+                <span class="ml-name">🧠 ${m.name}</span>
+                <span class="ml-info">${new Date(m.createdAt).toLocaleDateString('uk-UA')}</span>
+                <span class="ml-del" onclick="event.stopPropagation();deleteModel(${m.id})">✕</span>
+            </div>
+        `).join('');
+    }
+
+    function selectModel(id) {
+        const m = models.find(x => x.id === id);
+        if (!m) return;
+        currentModel = m;
+        renderModels();
+
+        document.getElementById('chatModelName').textContent = m.name;
+        const box = document.getElementById('chatBox');
+        box.innerHTML = '<div class="empty-chat">🤖 ' + m.name + ' готовий до спілкування.<br>Постав йому запитання.</div>';
+    }
+
+    function deleteModel(id) {
+        if (!confirm('Видалити цю модель?')) return;
+        models = models.filter(m => m.id !== id);
+        localStorage.setItem('ai_trainer_models', JSON.stringify(models));
+        if (currentModel && currentModel.id === id) {
+            currentModel = null;
+            document.getElementById('chatModelName').textContent = '—';
+            document.getElementById('chatBox').innerHTML = '<div class="empty-chat">🤖 AI готовий до спілкування.</div>';
+        }
+        renderModels();
+        log('🗑 Модель видалено');
+    }
+
+    // ============================================================
+    // ЗАПИТ ДО AI
+    // ============================================================
+    async function ask() {
+        const input = document.getElementById('chatInput');
+        const question = input.value.trim();
+        if (!question || !currentModel) return;
+
+        input.value = '';
+        const btn = document.getElementById('askBtn');
+        btn.disabled = true;
+
+        const box = document.getElementById('chatBox');
+        const empty = box.querySelector('.empty-chat');
+        if (empty) empty.remove();
+
+        // Додаємо питання
+        box.innerHTML += `<div class="msg user"><div class="who">Ти</div>${escapeHtml(question)}</div>`;
+        box.scrollTop = box.scrollHeight;
+
+        // Додаємо AI-відповідь (поки що порожню)
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'msg ai';
+        aiMsg.innerHTML = '<div class="who">' + escapeHtml(currentModel.name) + '</div><span class="thinking">...</span>';
+        box.appendChild(aiMsg);
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            const answer = await callAI(question, currentModel);
+            aiMsg.innerHTML = '<div class="who">' + escapeHtml(currentModel.name) + '</div>' + escapeHtml(answer).replace(/\n/g, '<br>');
+        } catch(e) {
+            aiMsg.innerHTML = '<div class="who">' + escapeHtml(currentModel.name) + '</div>❌ ' + escapeHtml(e.message);
+        }
+
+        btn.disabled = false;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function callAI(question, model) {
+        // Використовуємо безкоштовне Pollinations API
+        const systemPrompt = model.systemPrompt || 'Ти — AI, який відповідає на запитання.';
+
+        try {
+            const resp = await fetch('https://text.pollinations.ai/' + encodeURIComponent(question), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+            });
+
+            if (!resp.ok) throw new Error('API помилка: ' + resp.status);
+
+            const text = await resp.text();
+            return text;
+
+        } catch(e) {
+            // Якщо Pollinations не працює, використовуємо локальний генератор
+            return localGenerate(question, model);
+        }
+    }
+
+    // ============================================================
+    // ЛОКАЛЬНИЙ ГЕНЕРАТОР (резервний)
+    // ============================================================
+    function localGenerate(question, model) {
+        const knowledge = model.knowledge || '';
+        const examples = model.examples || '';
+        const name = model.name || 'AI';
+
+        // Простий семантичний пошук + шаблонна відповідь
+        const q = question.toLowerCase();
+
+        // Шукаємо ключові слова зі знань
+        const keyResponses = [
+            { keywords: ['як справи', 'привіт', 'здоров', 'хай'], response: 'Вітаю! Я ' + name + '. Чим можу допомогти? Розкажи, що тебе цікавить.' },
+            { keywords: ['хто ти', 'що ти'], response: 'Я — ' + name + '. Я навчився відповідати на запитання. Про що хочеш запитати?' },
+            { keywords: ['бувай', 'до побачення', 'проща'], response: 'Бувай! Буду радий допомогти тобі знову. Звертайся, коли потрібно.' },
+        ];
+
+        for (const kr of keyResponses) {
+            for (const kw of kr.keywords) {
+                if (q.includes(kw)) return kr.response;
+            }
+        }
+
+        // Генеруємо відповідь зі знань
+        const knowledgeLines = knowledge.split('\n').filter(l => l.trim());
+        const exampleLines = examples.split('\n').filter(l => l.trim());
+
+        let contextMatch = '';
+        const words = q.split(/\s+/);
+        for (const line of knowledgeLines) {
+            for (const w of words) {
+                if (w.length > 2 && line.toLowerCase().includes(w)) {
+                    contextMatch = line;
+                    break;
+                }
+            }
+            if (contextMatch) break;
+        }
+
+        if (contextMatch) {
+            return 'Цікаве запитання. Судячи з того, що я знаю: ' + contextMatch + '\n\nАле справжня відповідь потребує більше контексту. Розкажи детальніше?';
+        }
+
+        // Відповідь на основі прикладів
+        if (exampleLines.length > 0) {
+            const aiExamples = exampleLines.filter(l => l.startsWith('AI:'));
+            if (aiExamples.length > 0) {
+                const randomEx = aiExamples[Math.floor(Math.random() * aiExamples.length)];
+                return randomEx.substring(3).trim() + '\n\n(Я намагаюсь відповідати, як мене навчили. Дай знати, якщо потрібно щось інше.)';
+            }
+        }
+
+        return 'Дякую за запитання. Я ' + name + ' і я ще вчусь. Мої знання кажуть, що це важлива тема. Можеш розповісти більше, щоб я міг відповісти точніше?';
+    }
+
+    // ============================================================
+    // ДОПОМІЖНІ
+    // ============================================================
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        el.innerHTML = '▸ ' + msg + '<br>' + el.innerHTML;
+    }
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    renderModels();
+    log('🧠 AI Trainer готовий! Навчи свій перший AI.');
+</script>
+</body>
+</html>
