@@ -477,22 +477,58 @@
     document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-    // Pointer lock по кліку
-    document.addEventListener('click', () => {
-        if (game.running && !document.pointerLockElement) renderer.domElement.requestPointerLock();
+    // Керування мишею — працює завжди!
+    let mouseDown = false;
+    let pointerLocked = false;
+
+    document.addEventListener('pointerlockchange', () => {
+        pointerLocked = !!document.pointerLockElement;
     });
 
+    document.addEventListener('click', () => {
+        if (game.running) renderer.domElement.requestPointerLock();
+    });
+
+    // Зберігаємо попередню позицію миші для режиму без pointer lock
+    let prevMouseX = 0, prevMouseY = 0;
+
     document.addEventListener('mousemove', e => {
-        if (!document.pointerLockElement || !game.running) return;
+        if (!game.running) return;
+
         const sens = 0.002;
-        camera.rotation.y -= e.movementX * sens;
-        camera.rotation.x -= e.movementY * sens;
+
+        if (document.pointerLockElement) {
+            // Режим pointer lock — використовуємо movementX/Y
+            camera.rotation.y -= e.movementX * sens;
+            camera.rotation.x -= e.movementY * sens;
+        } else if (mouseDown) {
+            // Без pointer lock — використовуємо різницю позицій
+            if (prevMouseX !== 0 || prevMouseY !== 0) {
+                const dx = e.clientX - prevMouseX;
+                const dy = e.clientY - prevMouseY;
+                camera.rotation.y -= dx * sens;
+                camera.rotation.x -= dy * sens;
+            }
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        } else {
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        }
+
         camera.rotation.x = Math.max(-1.2, Math.min(1.2, camera.rotation.x));
     });
 
-    let mouseDown = false;
-    document.addEventListener('mousedown', e => { if (e.button === 0 && game.running) { mouseDown = true; shoot(); } });
-    document.addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
+    document.addEventListener('mousedown', e => {
+        if (e.button === 0) {
+            mouseDown = true;
+            if (game.running) {
+                shoot();
+                renderer.domElement.requestPointerLock();
+            }
+        }
+    });
+    document.addEventListener('mouseup', e => { if (e.button === 0) { mouseDown = false; prevMouseX = 0; prevMouseY = 0; } });
 
     function shoot() {
         if (!game.running || !player.alive || player.shootCooldown > 0) return;
