@@ -3,175 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Останній потяг — Last Train</title>
+    <title>Останній потяг — сюжетна гра</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #050508; overflow: hidden; font-family: 'Georgia', serif; user-select: none; }
-        canvas { display: block; }
-
-        #ui {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 12px; align-items: center;
-            background: rgba(6,6,10,0.7); padding: 6px 14px;
-            border-radius: 20px; border: 1px solid rgba(200,180,160,0.08);
-            backdrop-filter: blur(4px); z-index: 10;
-        }
-        #ui button {
-            background: rgba(200,180,160,0.06);
-            border: 1px solid rgba(200,180,160,0.1);
-            color: #c8b4a0; width: 32px; height: 32px;
-            border-radius: 50%; font-size: 16px;
-            cursor: pointer; transition: all 0.15s;
-        }
-        #ui button:hover { background: rgba(200,180,160,0.15); }
-        #scene-name {
-            color: rgba(200,180,160,0.4);
-            font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
-            margin: 0 10px; min-width: 120px; text-align: center;
-        }
-        #inv {
-            display: flex; gap: 3px; margin-left: 6px;
-        }
-        #inv span {
-            width: 28px; height: 28px;
-            border: 1px solid rgba(200,180,160,0.08);
-            border-radius: 3px; display: flex; align-items: center;
-            justify-content: center; font-size: 14px;
-        }
-        #inv span.has { border-color: rgba(200,180,160,0.2); background: rgba(200,180,160,0.04); }
-
-        #dialog {
-            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 500px;
-            background: rgba(6,6,10,0.92); border: 1px solid rgba(200,180,160,0.06);
-            border-radius: 8px; padding: 16px 20px;
-            color: #d0c0b0; font-size: 14px; line-height: 1.6;
-            display: none; z-index: 20;
-            backdrop-filter: blur(6px);
-        }
-        #dialog .speaker {
-            font-size: 10px; text-transform: uppercase;
-            letter-spacing: 0.2em; opacity: 0.3; margin-bottom: 4px;
-        }
-        #dialog .choices { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-        #dialog .choices button {
-            background: rgba(200,180,160,0.06);
-            border: 1px solid rgba(200,180,160,0.1);
-            color: #c8b4a0; padding: 5px 14px; border-radius: 4px;
-            font-size: 13px; font-family: 'Georgia', serif;
-            cursor: pointer; transition: all 0.15s;
-        }
-        #dialog .choices button:hover { background: rgba(200,180,160,0.12); border-color: rgba(200,180,160,0.25); }
-
-        #hint {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            color: rgba(200,180,160,0.25);
-            font-size: 13px; z-index: 10;
-            pointer-events: none;
-            transition: opacity 1s;
-            font-style: italic;
-        }
-
-        #start-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: #06060a; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 50;
-            cursor: pointer; transition: opacity 0.8s;
-        }
-        #start-screen h1 {
-            color: #c8b4a0; font-size: 2.4em; font-weight: normal;
-            letter-spacing: 0.3em; margin-bottom: 6px;
-        }
-        #start-screen .sub { color: rgba(200,180,160,0.35); font-size: 0.9em; letter-spacing: 0.15em; }
-        #start-screen .btn {
-            margin-top: 30px; padding: 10px 36px;
-            border: 1px solid rgba(200,180,160,0.15);
-            border-radius: 4px; color: #c8b4a0; font-size: 1em;
+        body {
+            background: #06060a;
             font-family: 'Georgia', serif;
-            background: rgba(200,180,160,0.03); cursor: pointer;
+            overflow: hidden;
+            height: 100vh;
+            color: #d0c0b0;
+        }
+
+        #game {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px; height: 600px;
+            background: #0d0d12;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        canvas { display: block; width: 800px; height: 500px; cursor: pointer; }
+
+        /* UI низ */
+        #ui-bot {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 100px;
+            background: linear-gradient(0deg, #0a0a0f 0%, #0e0e14 100%);
+            border-top: 1px solid rgba(200,180,160,0.06);
+            padding: 8px 16px;
+            display: grid;
+            grid-template-columns: 60px 1fr 120px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #inventory {
+            display: flex; gap: 4px; flex-wrap: wrap;
+        }
+        #inventory .slot {
+            width: 44px; height: 44px;
+            border: 1px solid rgba(200,180,160,0.08);
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            background: rgba(255,255,255,0.02);
+            transition: all 0.2s;
+        }
+        #inventory .slot.has { border-color: rgba(200,180,160,0.15); background: rgba(200,180,160,0.03); }
+
+        #scene-name {
+            text-align: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(200,180,160,0.25);
+        }
+
+        #nav-buttons {
+            display: flex; gap: 6px; justify-content: flex-end;
+        }
+        #nav-buttons button {
+            background: rgba(200,180,160,0.04);
+            border: 1px solid rgba(200,180,160,0.08);
+            color: #c8b4a0;
+            padding: 6px 16px;
+            border-radius: 3px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Georgia', serif;
+            line-height: 1;
+        }
+        #nav-buttons button:hover { background: rgba(200,180,160,0.1); border-color: rgba(200,180,160,0.2); }
+
+        /* Діалог */
+        #dialog {
+            position: absolute;
+            bottom: 105px; left: 10px; right: 10px;
+            background: rgba(6,6,10,0.95);
+            border: 1px solid rgba(200,180,160,0.06);
+            border-radius: 6px;
+            padding: 14px 18px;
+            display: none;
+            z-index: 20;
+            backdrop-filter: blur(6px);
+            max-height: 200px;
+        }
+        #dialog .d-name {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.3;
+            margin-bottom: 4px;
+        }
+        #dialog .d-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: rgba(200,180,160,0.85);
+        }
+        #dialog .d-choices {
+            margin-top: 10px;
+            display: flex; flex-wrap: wrap;
+            gap: 6px;
+        }
+        #dialog .d-choices button {
+            background: rgba(200,180,160,0.04);
+            border: 1px solid rgba(200,180,160,0.08);
+            color: #c8b4a0;
+            padding: 6px 16px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #dialog .d-choices button:hover { background: rgba(200,180,160,0.1); border-color: rgba(200,180,160,0.2); }
+
+        /* Затемнення для тексту */
+        #text-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 100px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(6,6,10,0.88);
+            z-index: 15;
+            padding: 40px;
+            text-align: center;
+        }
+        #text-overlay .t-text {
+            font-size: 18px;
+            line-height: 1.8;
+            color: rgba(200,180,160,0.8);
+            max-width: 600px;
+        }
+        #text-overlay .t-sub {
+            font-size: 12px;
+            color: rgba(200,180,160,0.25);
+            margin-top: 16px;
+            letter-spacing: 0.1em;
+        }
+        #text-overlay .t-close {
+            margin-top: 20px;
+            background: rgba(200,180,160,0.06);
+            border: 1px solid rgba(200,180,160,0.1);
+            color: #c8b4a0;
+            padding: 8px 24px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+        }
+        #text-overlay .t-close:hover { background: rgba(200,180,160,0.1); }
+
+        /* Початок */
+        #start {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: #06060a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            cursor: pointer;
+            transition: opacity 1.2s;
+        }
+        #start h1 {
+            font-size: 2.6em;
+            font-weight: normal;
+            letter-spacing: 0.3em;
+            color: #c8b4a0;
+            text-shadow: 0 0 40px rgba(200,180,160,0.1);
+        }
+        #start .sub {
+            color: rgba(200,180,160,0.25);
+            font-size: 0.8em;
+            letter-spacing: 0.2em;
+            margin-top: 8px;
+        }
+        #start .btn {
+            margin-top: 36px;
+            padding: 12px 40px;
+            border: 1px solid rgba(200,180,160,0.12);
+            border-radius: 4px;
+            color: #c8b4a0;
+            font-size: 1.1em;
+            font-family: 'Georgia', serif;
+            background: rgba(200,180,160,0.02);
+            cursor: pointer;
             transition: all 0.3s;
         }
-        #start-screen .btn:hover { background: rgba(200,180,160,0.1); border-color: rgba(200,180,160,0.3); }
+        #start .btn:hover { background: rgba(200,180,160,0.06); border-color: rgba(200,180,160,0.25); }
 
-        #end-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(6,6,10,0.96); display: none;
-            flex-direction: column; align-items: center;
-            justify-content: center; z-index: 50; padding: 40px; text-align: center;
+        /* Кінець */
+        #end {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(6,6,10,0.96);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            padding: 40px;
+            text-align: center;
         }
-        #end-screen h2 { color: #c8b4a0; font-weight: normal; letter-spacing: 0.2em; margin-bottom: 14px; font-size: 1.4em; }
-        #end-screen p { color: rgba(200,180,160,0.5); font-size: 0.9em; max-width: 480px; line-height: 1.6; }
+        #end h2 { font-weight: normal; letter-spacing: 0.2em; color: #c8b4a0; margin-bottom: 12px; font-size: 1.3em; }
+        #end p { color: rgba(200,180,160,0.5); font-size: 0.9em; max-width: 500px; line-height: 1.7; }
+        #end .restart {
+            margin-top: 24px;
+            padding: 10px 30px;
+            border: 1px solid rgba(200,180,160,0.12);
+            background: none;
+            color: #c8b4a0;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #end .restart:hover { background: rgba(200,180,160,0.05); }
+
+        /* Секретна кнопка */
+        #secret-hint {
+            position: absolute;
+            top: 4px; right: 4px;
+            width: 14px; height: 14px;
+            background: rgba(200,180,160,0.02);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 5;
+            border: 1px solid rgba(200,180,160,0.04);
+        }
+        #secret-hint:hover { background: rgba(200,180,160,0.06); }
+        #secret-hint::after {
+            content: '?';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8px;
+            color: rgba(200,180,160,0.1);
+        }
+
+        @media (max-width: 820px) {
+            #game { width: 100vw; height: 100vh; border-radius: 0; }
+            canvas { width: 100vw; height: calc(100vh - 100px); }
+        }
     </style>
 </head>
 <body>
 
-<div id="start-screen">
-    <h1>ОСТАННІЙ ПОТЯГ</h1>
-    <div class="sub">— Last Train —</div>
-    <div class="btn">🚂 Почати</div>
+<div id="game">
+    <div id="start">
+        <h1>ОСТАННІЙ ПОТЯГ</h1>
+        <div class="sub">— останній рейс —</div>
+        <div class="btn">🚂 Почати</div>
+    </div>
+
+    <div id="end">
+        <h2 id="endTitle"></h2>
+        <p id="endText"></p>
+        <button class="restart" onclick="location.reload()">🔄 Заново</button>
+    </div>
+
+    <div id="secret-hint" onclick="showSecret()"></div>
+
+    <div id="text-overlay">
+        <div>
+            <div class="t-text" id="tText"></div>
+            <div class="t-sub" id="tSub">— натисни щоб продовжити —</div>
+            <button class="t-close" id="tCloseBtn">Продовжити</button>
+        </div>
+    </div>
+
+    <canvas id="c" width="800" height="500"></canvas>
+
+    <div id="dialog">
+        <div class="d-name" id="dName"></div>
+        <div class="d-text" id="dText"></div>
+        <div class="d-choices" id="dChoices"></div>
+    </div>
+
+    <div id="ui-bot">
+        <div id="inventory"></div>
+        <div id="scene-name">Купе №3</div>
+        <div id="nav-buttons">
+            <button id="btnPrev">◀</button>
+            <button id="btnNext">▶</button>
+        </div>
+    </div>
 </div>
 
-<div id="end-screen">
-    <h2>🚂 КІНЕЦЬ</h2>
-    <p id="end-text"></p>
-</div>
+<script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const W = 800, H = 500;
 
-<div id="hint">🖱 Тягни мишу — озирнутись • Клік — взаємодія</div>
-
-<div id="dialog">
-    <div class="speaker" id="dSpeaker"></div>
-    <div id="dText"></div>
-    <div class="choices" id="dChoices"></div>
-</div>
-
-<div id="ui">
-    <button id="btnPrev">‹</button>
-    <span id="scene-name">Купе 1</span>
-    <button id="btnNext">›</button>
-    <span id="inv"></span>
-</div>
-
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-}
-</script>
-
-<script type="module">
-    import * as THREE from 'three';
-
-    // ============================================================
-    // СЦЕНА
-    // ============================================================
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x080810);
-    scene.fog = new THREE.FogExp2(0x080810, 0.02);
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 30);
-    camera.position.set(0, 1.6, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.5;
-    document.body.prepend(renderer.domElement);
-
-    // ============================================================
-    // ОСВІТЛЕННЯ
-    // ============================================================
-    const ambient = new THREE.AmbientLight(0x445566, 1.5);
-    scene.add(ambient);
-    const lamp = new THREE.PointLight(0xffcc88, 2.0, 8);
-    lamp.position.set(0, 2.5, 0);
-    scene.add(lamp);
-    // Додаткове світло з вікон
-    const moon = new THREE.DirectionalLight(0x8899cc, 0.8);
-    moon.position.set(2, 4, -3);
-    scene.add(moon);
+    // Елементи UI
+    const invEl = document.getElementById('inventory');
+    const dialog = document.getElementById('dialog');
+    const dName = document.getElementById('dName');
+    const dText = document.getElementById('dText');
+    const dChoices = document.getElementById('dChoices');
+    const sceneName = document.getElementById('scene-name');
+    const textOverlay = document.getElementById('text-overlay');
+    const tText = document.getElementById('tText');
+    const tClose = document.getElementById('tCloseBtn');
+    const tSub = document.getElementById('tSub');
+    const start = document.getElementById('start');
 
     // ============================================================
     // СТАН
@@ -179,488 +317,775 @@
     const inv = [];
     const flags = {};
     let dialogOpen = false;
-    let currentCar = 0;
-    let isLocked = false;
-    let yaw = 0;
-    let canClick = true;
+    let overlayOpen = false;
+    let currentScene = 'car';
+    let lookAngle = 0; // 0-2 (ліворуч, центр, праворуч)
+    let gameStarted = false;
+    let isTransitioning = false;
 
-    function hasItem(item) { return inv.includes(item); }
-    function addItem(item) { if (!inv.includes(item)) { inv.push(item); renderUI(); } }
-    function flag(name) { return flags[name] || false; }
-    function setFlag(name) { flags[name] = true; }
+    const LOCATIONS = ['corridor', 'car', 'restaurant', 'luggage', 'roof'];
+
+    function has(item) { return inv.includes(item); }
+    function flag(f) { return flags[f] || false; }
+    function setFlag(f) { flags[f] = true; }
 
     // ============================================================
-    // ПОБУДОВА ВАГОНІВ
+    // МАЛЮВАННЯ КІМНАТ
     // ============================================================
-    const carGroups = [];
-
-    function makeFloor(group, w, d) {
-        const geo = new THREE.PlaneGeometry(w, d);
-        const mat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.95 });
-        const m = new THREE.Mesh(geo, mat);
-        m.rotation.x = -Math.PI/2;
-        m.position.y = -0.01;
-        m.receiveShadow = true;
-        group.add(m);
+    function drawVignette() {
+        const g = ctx.createRadialGradient(400, 200, 100, 400, 200, 500);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(0.6, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.45)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
     }
 
-    function makeWall(group, w, h, x, y, z, ry, color = 0x5a4a3a) {
-        const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, side: THREE.DoubleSide });
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-        m.position.set(x, y, z);
-        m.rotation.y = ry;
-        group.add(m);
+    function drawFloor(y) {
+        ctx.fillStyle = '#1e1812';
+        ctx.fillRect(0, y, W, H - y);
+        for (let x = 0; x < W; x += 40) {
+            ctx.fillStyle = (Math.floor(x/40) % 2 === 0) ? '#221a14' : '#1c1610';
+            ctx.fillRect(x, y, 40, H - y);
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x < W; x += 40) { ctx.strokeRect(x, y, 40, H - y); }
     }
 
-    function makeSeat(group, x, z, left = true) {
-        const mat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 });
-        const m = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.6), mat);
-        m.position.set(x, 0.4, z);
-        m.castShadow = true;
-        group.add(m);
-        const mat2 = new THREE.MeshStandardMaterial({ color: 0x4a3828, roughness: 0.85 });
-        const top = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.6), mat2);
-        top.position.set(x, 0.8, z);
-        group.add(top);
+    function drawWindow(x, y, w, h, hasMoon = true) {
+        ctx.fillStyle = '#0a1520';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#0d1a2a';
+        ctx.fillRect(x+3, y+3, w-6, h-6);
+        if (hasMoon) {
+            ctx.fillStyle = 'rgba(200,200,230,0.04)';
+            ctx.beginPath();
+            ctx.arc(x + w*0.3, y + h*0.3, 8, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        ctx.beginPath();
+        ctx.moveTo(x + w/2, y); ctx.lineTo(x + w/2, y + h);
+        ctx.moveTo(x, y + h/2); ctx.lineTo(x + w, y + h/2);
+        ctx.stroke();
     }
 
-    function makeWindow(group, x, z) {
-        const mat = new THREE.MeshStandardMaterial({
-            color: 0x0a1520, emissive: 0x0a1a30, emissiveIntensity: 0.2,
-            transparent: true, opacity: 0.4, roughness: 0.1
-        });
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), mat);
-        m.position.set(x, 1.3, z);
-        group.add(m);
-        // Рамка
-        const rm = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 });
-        const hg = 0.72, wg = 0.72, t = 0.03;
-        [ [x, 1.66, z], [x, 0.94, z] ].forEach(p => {
-            const h = new THREE.Mesh(new THREE.BoxGeometry(wg + 0.04, t, t), rm);
-            h.position.set(p[0], p[1], p[2]);
-            group.add(h);
-        });
-        [ [x - 0.35, z], [x + 0.35, z] ].forEach(p => {
-            const v = new THREE.Mesh(new THREE.BoxGeometry(t, hg + 0.04, t), rm);
-            v.position.set(p[0], 1.3, p[1]);
-            group.add(v);
-        });
-    }
-
-    function makeTable(group, x, z) {
-        const mat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 });
-        const top = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.3), mat);
-        top.position.set(x, 0.75, z);
-        top.castShadow = true;
-        group.add(top);
-        const lm = new THREE.MeshStandardMaterial({ color: 0x4a3020 });
-        [[-0.2, 0.38, -0.1], [0.2, 0.38, -0.1], [-0.2, 0.38, 0.1], [0.2, 0.38, 0.1]].forEach(p => {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.7, 4), lm);
-            leg.position.set(x + p[0], p[1], z + p[2]);
-            group.add(leg);
-        });
-    }
-
-    function makeLamp(group, x, z) {
-        const light = new THREE.PointLight(0xffaa55, 0.3, 3);
-        light.position.set(x, 2.2, z);
-        group.add(light);
+    function drawPerson(x, y, colors) {
+        const {skin='#d4b898', clothes='#3a2a2a', hair='#1a1a1a'} = colors;
+        ctx.fillStyle = clothes;
+        ctx.fillRect(x-10, y-30, 20, 38);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.arc(x, y-42, 12, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = hair;
+        ctx.beginPath();
+        ctx.arc(x, y-47, 12, Math.PI*1.2, Math.PI*1.8);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x-4, y-44, 3, 0, Math.PI*2);
+        ctx.arc(x+4, y-44, 3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(x-3, y-43, 1.5, 0, Math.PI*2);
+        ctx.arc(x+5, y-43, 1.5, 0, Math.PI*2);
+        ctx.fill();
     }
 
     // ============================================================
-    // ВАГОН 1 — КУПЕ
+    // СЦЕНИ
     // ============================================================
-    function buildCar1() {
-        const g = new THREE.Group();
-        const Wc = 3.6, Dc = 3.0, Hc = 2.6;
+    function drawCorridor(angle) {
+        const o = angle * 100;
+        ctx.fillStyle = '#1a1610';
+        ctx.fillRect(0, 0, W, 350);
+        for (let x = 0; x < W; x += 30) {
+            ctx.fillStyle = (Math.floor(x/30) % 2 === 0) ? '#201a14' : '#1c1610';
+            ctx.fillRect(x, 0, 30, 350);
+        }
 
-        makeFloor(g, Wc, Dc);
-        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0);
-        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0);
-        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2);
-        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2);
+        ctx.fillStyle = '#151008';
+        ctx.fillRect(0, 0, W, 30);
 
-        // Стеля
-        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Dc),
-            new THREE.MeshStandardMaterial({ color: 0x1e1a14, roughness: 0.95, side: THREE.DoubleSide }));
-        ceil.rotation.x = Math.PI/2;
-        ceil.position.y = Hc;
-        g.add(ceil);
+        // Лампи
+        for (let i = 0; i < 3; i++) {
+            const lx = 100 + i*280 + o*0.1;
+            ctx.fillStyle = '#ffddaa';
+            ctx.globalAlpha = 0.04 + Math.sin(Date.now()/500 + i) * 0.01;
+            ctx.fillRect(lx, 28, 8, 4);
+            ctx.fillStyle = '#ffeecc';
+            ctx.globalAlpha = 0.02;
+            ctx.fillRect(lx-15, 30, 38, 20);
+            ctx.globalAlpha = 1;
+        }
+
+        drawFloor(350);
+
+        // Двері
+        for (let i = 0; i < 3; i++) {
+            const dx = 80 + i*240 + o*0.2;
+            ctx.fillStyle = '#2a1a10';
+            ctx.fillRect(dx, 80, 55, 270);
+            ctx.strokeStyle = 'rgba(60,40,30,0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(dx, 80, 55, 270);
+        }
+
+        // Вікно в кінці
+        drawWindow(700, 60, 60, 90, true);
+
+        // Провідник у кінці коридору
+        if (!flag('conductorTalked2')) {
+            drawPerson(650 + o*0.1, 310, {skin:'#d4b898', clothes:'#1a1a2a', hair:'#1a2020'});
+            ctx.fillStyle = 'rgba(200,180,160,0.03)';
+            ctx.font = '9px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('провідник', 650 + o*0.1, 285);
+        }
+
+        drawVignette();
+
+        ctx.fillStyle = 'rgba(200,180,160,0.08)';
+        ctx.font = '28px Georgia';
+        ctx.textAlign = 'left'; ctx.fillText('‹', 12, H/2);
+        ctx.textAlign = 'right'; ctx.fillText('›', W-12, H/2);
+    }
+
+    function drawCar(angle) {
+        const o = angle * 80;
+        ctx.fillStyle = '#262016';
+        ctx.fillRect(0, 0, W, 350);
+        ctx.fillStyle = '#221c14';
+        ctx.fillRect(0, 0, W, 350);
+
+        // Стіни — ліва і права
+        ctx.fillStyle = '#282218';
+        ctx.fillRect(0, 0, 180 + o*0.2, 350);
+        ctx.fillStyle = '#262016';
+        ctx.fillRect(620 + o*0.2, 0, W, 350);
+
+        ctx.fillStyle = '#1c1610';
+        ctx.fillRect(0, 0, W, 28);
+
+        drawFloor(350);
 
         // Сидіння
-        makeSeat(g, -0.8, 0.6);
-        makeSeat(g, 0.8, 0.6);
+        const seatColor = '#3a2a1a';
+        ctx.fillStyle = seatColor;
+        ctx.fillRect(80 + o*0.2, 220, 80, 100);
+        ctx.fillRect(640 + o*0.2, 220, 80, 100);
+        ctx.fillStyle = '#4a3828';
+        ctx.fillRect(80 + o*0.2, 220, 80, 10);
+        ctx.fillRect(640 + o*0.2, 220, 80, 10);
 
         // Столик
-        makeTable(g, 0, 0.3);
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(350 + o*0.3, 200, 100, 5);
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(395 + o*0.3, 205, 10, 70);
 
         // Вікно
-        makeWindow(g, 0.8, -Dc/2 + 0.05);
+        drawWindow(340, 60, 120, 150, true);
 
-        // Багажна полиця
-        const sm = new THREE.MeshStandardMaterial({ color: 0x3a2a1a });
-        const shelf = new THREE.Mesh(new THREE.BoxGeometry(Wc - 0.6, 0.04, 0.2), sm);
-        shelf.position.set(0, 1.8, -0.3);
-        g.add(shelf);
+        // Багаж
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(80 + o*0.1, 32, 640, 10);
 
-        // Людина — бізнесмен
-        const personGroup = makePerson(0x3a2a2a, 0xd4b898, 0x1a1a1a);
-        personGroup.position.set(-0.8, 0, 0.6);
-        g.add(personGroup);
+        // Пальто
+        ctx.fillStyle = '#2a2015';
+        ctx.fillRect(200 + o*0.1, 35, 20, 50);
 
-        // Чемодан (інтерактивний)
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.25),
-            new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.85 }));
-        trunk.position.set(1.2, 0.1, -0.7);
-        trunk.userData = { interact: true, id: 'suitcase',
-            action: () => { setFlag('ticketTaken'); addItem('🎫');
-                showText('🧳 Чемодан', 'Старий квиток. «Купе 3, місце 7. 23:55.» На звороті: «Не віддавай нікому.»'); } };
-        g.add(trunk);
+        // Сусід
+        if (!flag('neighborGone')) {
+            drawPerson(120 + o*0.2, 260, {skin:'#d4b898', clothes:'#3a2a2a', hair:'#222222'});
+            ctx.fillStyle = 'rgba(200,180,160,0.03)';
+            ctx.font = '9px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('сусід', 120 + o*0.2, 230);
+        }
 
-        // Фото на стіні
-        const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.25),
-            new THREE.MeshStandardMaterial({ color: 0xd4c5a9, roughness: 0.6 }));
-        photo.position.set(-0.3, 1.2, -Dc/2 + 0.03);
-        photo.userData = { interact: true, id: 'photo',
-            action: () => { setFlag('photoTaken'); addItem('🖼');
-                showText('🖼 Фото', 'Родина біля моря. 2007. На звороті: «Наш останній потяг». Ти впізнаєш себе.'); } };
-        g.add(photo);
+        // Чемодан
+        if (!flag('ticketTaken')) {
+            ctx.fillStyle = '#3a2a1a';
+            ctx.fillRect(700, 275, 40, 35);
+            ctx.fillStyle = '#4a3a2a';
+            ctx.fillRect(700, 275, 40, 5);
+        }
 
-        g.position.set(0, 0, 0);
-        scene.add(g);
-        carGroups.push(g);
-        return g;
+        drawVignette();
     }
 
-    // ============================================================
-    // ВАГОН 2 — РЕСТОРАН
-    // ============================================================
-    function buildCar2() {
-        const g = new THREE.Group();
-        const Wc = 3.6, Dc = 3.0, Hc = 2.6;
+    function drawRestaurant(angle) {
+        const o = angle * 60;
+        ctx.fillStyle = '#1e1a14';
+        ctx.fillRect(0, 0, W, 350);
+        ctx.fillStyle = '#1c1610';
+        ctx.fillRect(0, 0, W, 28);
+        drawFloor(350);
 
-        makeFloor(g, Wc, Dc);
-        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0);
-        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0);
-        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2);
-        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2);
+        // Стійка
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(340 + o, 160, 120, 190);
+        ctx.fillStyle = '#4a3828';
+        ctx.fillRect(330 + o, 160, 140, 8);
 
-        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Dc),
-            new THREE.MeshStandardMaterial({ color: 0x1a1610, roughness: 0.95, side: THREE.DoubleSide }));
-        ceil.rotation.x = Math.PI/2; ceil.position.y = Hc; g.add(ceil);
-
-        // Стійка бару
-        const barMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.85 });
-        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.4), barMat);
-        bar.position.set(0, 0.8, 0.8);
-        g.add(bar);
-        const barTop = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.04, 0.45), barMat);
-        barTop.position.set(0, 1.6, 0.8);
-        g.add(barTop);
+        // Пляшки
+        for (let i = 0; i < 5; i++) {
+            ctx.fillStyle = ['#2a3a2a','#3a2a2a','#2a2a3a','#4a3a2a','#2a3a2a'][i];
+            ctx.fillRect(358 + i*12 + o, 140, 8, 20);
+        }
 
         // Столики
-        makeTable(g, -0.8, -0.6);
-        makeTable(g, 0.8, -0.6);
+        [{x:80,y:260,w:60},{x:500,y:260,w:60}].forEach(t => {
+            ctx.fillStyle = '#5a4030';
+            ctx.fillRect(t.x + o*0.3, t.y, t.w, 4);
+            ctx.fillStyle = '#4a3020';
+            ctx.fillRect(t.x + o*0.3 + 8, t.y+4, 5, 50);
+            ctx.fillRect(t.x + o*0.3 + t.w-13, t.y+4, 5, 50);
+        });
 
         // Вікна
-        makeWindow(g, -0.8, -Dc/2 + 0.05);
-        makeWindow(g, 0.8, -Dc/2 + 0.05);
+        drawWindow(100, 100, 60, 100, true);
+        drawWindow(550, 100, 60, 100, true);
 
         // Провідник
-        const cond = makePerson(0x2a2a3a, 0xc8b898, 0x2a2018);
-        cond.position.set(0, 0, 0.8);
-        g.add(cond);
+        if (!flag('conductorGone')) {
+            drawPerson(400 + o, 170, {skin:'#c8b898', clothes:'#1a1a2a', hair:'#2a2018'});
+            ctx.fillStyle = 'rgba(200,180,160,0.03)';
+            ctx.font = '9px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('провідник', 400 + o, 145);
+            // Кашкет
+            ctx.fillStyle = '#1a1a2a';
+            ctx.fillRect(386 + o, 118, 28, 5);
+            ctx.fillRect(383 + o, 115, 34, 4);
+        }
 
-        // Меню на стійці
-        const menu = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.12),
-            new THREE.MeshStandardMaterial({ color: 0xd4c5a9 }));
-        menu.position.set(0.3, 1.2, 1.02);
-        menu.userData = { interact: true, id: 'menu',
-            action: () => showText('📋 Меню', '«Чай — безкоштовно. Компот — 1 руб. 2006 р.» Ціни з минулого.') };
-        g.add(menu);
-
-        g.position.set(0, 0, 0);
-        scene.add(g);
-        carGroups.push(g);
-        return g;
+        drawVignette();
     }
 
-    // ============================================================
-    // ВАГОН 3 — ВАНТАЖНИЙ
-    // ============================================================
-    function buildCar3() {
-        const g = new THREE.Group();
-        const Wc = 3.6, Dc = 3.0, Hc = 2.6;
-
-        makeFloor(g, Wc, Dc);
-        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0, 0x3a3030);
-        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0, 0x3a3030);
-        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2, 0x3a3030);
-        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2, 0x3a3030);
-
-        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Dc),
-            new THREE.MeshStandardMaterial({ color: 0x0e0c14, roughness: 0.95, side: THREE.DoubleSide }));
-        ceil.rotation.x = Math.PI/2; ceil.position.y = Hc; g.add(ceil);
+    function drawLuggage(angle) {
+        const o = angle * 80;
+        ctx.fillStyle = '#121018';
+        ctx.fillRect(0, 0, W, 350);
+        ctx.fillStyle = '#0e0c14';
+        ctx.fillRect(0, 0, W, 28);
+        drawFloor(350);
 
         // Ящики
-        const boxMat = new THREE.MeshStandardMaterial({ color: 0x1e1a14, roughness: 0.9 });
         for (let i = 0; i < 3; i++) {
-            const bx = new THREE.Mesh(new THREE.BoxGeometry(0.3 + i*0.08, 0.25 + i*0.03, 0.3 + i*0.08), boxMat);
-            bx.position.set(-0.6 + i*0.6, 0.12 + i*0.02, -0.3);
-            g.add(bx);
+            const bx = 100 + i*180 + o*0.2;
+            const by = 230 - i*15;
+            ctx.fillStyle = '#1e1a14';
+            ctx.fillRect(bx, by, 70 + i*15, 70 + i*6);
+            ctx.strokeStyle = 'rgba(60,40,30,0.2)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(bx, by, 70 + i*15, 70 + i*6);
         }
 
-        // Маленьке вікно
-        makeWindow(g, -1.2, -Dc/2 + 0.05);
+        // Мале вікно
+        drawWindow(30, 60, 40, 50, true);
 
-        // Тінь (таємнича фігура)
-        const shadowMat = new THREE.MeshStandardMaterial({ color: 0x0a0810, emissive: 0x0a0a20, emissiveIntensity: 0.1 });
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.3, 8), shadowMat);
-        body.position.set(0, 0.15, 0.2);
-        g.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), shadowMat);
-        head.position.set(0, 0.35, 0.2);
-        g.add(head);
-        // Очі (світяться)
-        const eyeMat = new THREE.MeshStandardMaterial({ color: 0x4466aa, emissive: 0x4466aa, emissiveIntensity: 0.3 });
-        [-0.03, 0.03].forEach(ox => {
-            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), eyeMat);
-            eye.position.set(ox, 0.36, 0.25);
-            g.add(eye);
-        });
+        // Світло
+        ctx.fillStyle = '#ffddaa';
+        ctx.globalAlpha = 0.04 + Math.sin(Date.now()/600) * 0.01;
+        ctx.fillRect(385, 0, 30, 4);
+        ctx.globalAlpha = 1;
 
-        // Ящик з листами
-        const letterBox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.3),
-            new THREE.MeshStandardMaterial({ color: 0x1e1a14 }));
-        letterBox.position.set(0.6, 0.1, -0.5);
-        letterBox.userData = { interact: true, id: 'box',
-            action: () => {
-                if (hasItem('🔑') && !flag('boxOpened')) {
-                    setFlag('boxOpened');
-                    showText('📦 Ящик', 'Старі листи. Фото батьків. Дитинство. Все чекало на тебе тут.');
-                } else if (!hasItem('🔑')) {
-                    showText('📦 Ящик', 'Замкнено. Потрібен ключ.');
-                }
-            } };
-        g.add(letterBox);
-
-        // Двері виходу
-        const doorMat = new THREE.MeshStandardMaterial({ color: 0x3a2515, roughness: 0.9 });
-        const door = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.04), doorMat);
-        door.position.set(1.5, 0.8, 0);
-        door.userData = { interact: true, id: 'exit',
-            action: () => {
-                if (flag('boxOpened') && !flag('escaped')) {
-                    setFlag('escaped');
-                    showText('🚪 Двері', 'Ти виходиш. Холодне повітря. Потяг сповільнюється. Станція «2007». Дім.');
-                    setTimeout(() => {
-                        document.getElementById('end-screen').style.display = 'flex';
-                        document.getElementById('end-text').textContent = 'Ти вийшов з потяга. Теплий вітер, запах моря. Попереду — будинок, де чекають. Ти встиг попрощатись.';
-                    }, 3000);
-                } else {
-                    showText('🚪 Двері', 'Потяг мчить надто швидко. Рано виходити.');
-                }
-            } };
-        g.add(door);
-
-        g.position.set(0, 0, 0);
-        scene.add(g);
-        carGroups.push(g);
-        return g;
-    }
-
-    // ============================================================
-    // ПЕРСОНАЖ (проста 3D)
-    // ============================================================
-    function makePerson(clothesColor, skinColor, hairColor) {
-        const g = new THREE.Group();
-
-        // Тіло
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.35, 8),
-            new THREE.MeshStandardMaterial({ color: clothesColor }));
-        body.position.y = 0.17;
-        g.add(body);
-
-        // Голова
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10),
-            new THREE.MeshStandardMaterial({ color: skinColor }));
-        head.position.y = 0.38;
-        g.add(head);
-
-        // Очі
-        const w = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        const b = new THREE.MeshStandardMaterial({ color: 0x222222 });
-        [-0.025, 0.025].forEach(ox => {
-            const wh = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), w);
-            wh.position.set(ox, 0.39, 0.07);
-            g.add(wh);
-            const bl = new THREE.Mesh(new THREE.SphereGeometry(0.01, 6, 6), b);
-            bl.position.set(ox, 0.39, 0.08);
-            g.add(bl);
-        });
-
-        // Волосся
-        const hr = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8),
-            new THREE.MeshStandardMaterial({ color: hairColor }));
-        hr.position.y = 0.425;
-        hr.scale.y = 0.5;
-        g.add(hr);
-
-        return g;
-    }
-
-    // ============================================================
-    // ПОБУДУВАТИ ВСІ ВАГОНИ
-    // ============================================================
-    buildCar1();
-    buildCar2();
-    buildCar3();
-
-    // Сховати всі, показати перший
-    carGroups.forEach((g, i) => g.visible = i === 0);
-
-    // ============================================================
-    // УПРАВЛІННЯ
-    // ============================================================
-    function switchCar(idx) {
-        carGroups.forEach((g, i) => g.visible = i === idx);
-        currentCar = idx;
-        yaw = 0;
-        camera.quaternion.identity();
-        const names = ['Купе 1', 'Вагон-ресторан', 'Вантажний'];
-        document.getElementById('scene-name').textContent = names[idx] || '';
-    }
-
-    document.getElementById('btnPrev').addEventListener('click', () => {
-        if (dialogOpen) return;
-        if (currentCar > 0) switchCar(currentCar - 1);
-    });
-    document.getElementById('btnNext').addEventListener('click', () => {
-        if (dialogOpen) return;
-        if (currentCar < carGroups.length - 1) switchCar(currentCar + 1);
-    });
-
-    let isDragging = false;
-    let prevX = 0;
-
-    renderer.domElement.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; });
-    window.addEventListener('mousemove', e => {
-        if (!isDragging || dialogOpen) return;
-        const dx = e.clientX - prevX;
-        prevX = e.clientX;
-        yaw -= dx * 0.005;
-        camera.quaternion.setFromEuler(new THREE.Euler(0, yaw, 0, 'YXZ'));
-    });
-    window.addEventListener('mouseup', () => { isDragging = false; });
-
-    // Touch
-    renderer.domElement.addEventListener('touchstart', e => { isDragging = true; prevX = e.touches[0].clientX; });
-    renderer.domElement.addEventListener('touchmove', e => {
-        if (!isDragging || dialogOpen) return;
-        const dx = e.touches[0].clientX - prevX;
-        prevX = e.touches[0].clientX;
-        yaw -= dx * 0.005;
-        camera.quaternion.setFromEuler(new THREE.Euler(0, yaw, 0, 'YXZ'));
-    });
-    renderer.domElement.addEventListener('touchend', () => { isDragging = false; });
-
-    // ============================================================
-    // КЛІК — ВЗАЄМОДІЯ
-    // ============================================================
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    renderer.domElement.addEventListener('click', e => {
-        if (dialogOpen) { closeDialog(); return; }
-        if (isDragging) return;
-
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        raycaster.far = 2.5;
-
-        const car = carGroups[currentCar];
-        const hits = raycaster.intersectObjects(car.children, true);
-        for (const hit of hits) {
-            let obj = hit.object;
-            while (obj && !obj.userData.interact) obj = obj.parent;
-            if (obj && obj.userData.action) {
-                obj.userData.action();
-                return;
-            }
+        // Тінь (таємнича постать)
+        if (!flag('shadowGone')) {
+            const sx = 400 + o*0.2;
+            ctx.fillStyle = '#08060e';
+            ctx.beginPath();
+            ctx.arc(sx, 200, 18, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillRect(sx - 16, 200, 32, 40);
+            ctx.fillStyle = 'rgba(100,130,200,0.15)';
+            ctx.beginPath();
+            ctx.arc(sx-5, 198, 3, 0, Math.PI*2);
+            ctx.arc(sx+5, 198, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(200,180,160,0.03)';
+            ctx.font = '9px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('?', sx, 255);
         }
-    });
 
-    // ============================================================
-    // ДІАЛОГИ
-    // ============================================================
-    function showText(speaker, text) {
-        document.getElementById('dSpeaker').textContent = speaker;
-        document.getElementById('dText').textContent = text;
-        document.getElementById('dChoices').innerHTML = '';
-        document.getElementById('dialog').style.display = 'block';
-        dialogOpen = true;
+        drawVignette();
     }
 
-    function showDialog(speaker, text, choices) {
-        document.getElementById('dSpeaker').textContent = speaker;
-        document.getElementById('dText').textContent = text;
-        const cont = document.getElementById('dChoices');
-        cont.innerHTML = '';
+    function drawRoof(angle) {
+        const o = angle * 80;
+        ctx.fillStyle = '#08060c';
+        ctx.fillRect(0, 0, W, H);
+
+        // Зорі
+        for (let i = 0; i < 40; i++) {
+            const sx = (i*137 + 50) % W;
+            const sy = (i*97 + 30) % 250;
+            ctx.fillStyle = `rgba(200,210,255,${0.1 + Math.sin(Date.now()/1000 + i) * 0.05})`;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 0.5 + Math.sin(i)*0.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // Місяць
+        ctx.fillStyle = 'rgba(200,200,220,0.06)';
+        ctx.beginPath();
+        ctx.arc(600, 60, 40, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(200,200,220,0.02)';
+        ctx.beginPath();
+        ctx.arc(600, 60, 60, 0, Math.PI*2);
+        ctx.fill();
+
+        // Потяг (дах)
+        ctx.fillStyle = '#0a0810';
+        ctx.fillRect(0, 280, W, 220);
+
+        // Край даху
+        ctx.fillStyle = '#0e0c14';
+        ctx.fillRect(0, 280, W, 8);
+
+        // Рух
+        for (let i = 0; i < 10; i++) {
+            ctx.fillStyle = `rgba(255,255,255,${0.01 + Math.sin(Date.now()/300 + i*0.5) * 0.005})`;
+            ctx.fillRect(i*80 + (Date.now()/200 % 80) - 80 + o*0.1, 290 + i*15, 20, 3);
+        }
+
+        // Тінь (та сама)
+        if (!flag('shadowGoneRoof')) {
+            const sx = 350 + o*0.2;
+            ctx.fillStyle = '#0a0810';
+            ctx.beginPath();
+            ctx.arc(sx, 310, 16, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillRect(sx - 14, 310, 28, 35);
+            ctx.fillStyle = 'rgba(100,130,200,0.1)';
+            ctx.beginPath();
+            ctx.arc(sx-4, 308, 2.5, 0, Math.PI*2);
+            ctx.arc(sx+4, 308, 2.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        drawVignette();
+    }
+
+    // ============================================================
+    // ХОТСПОТИ
+    // ============================================================
+    function getHotspots(scene, angle) {
+        const o = angle * (scene === 'corridor' ? 100 : scene === 'restaurant' ? 60 : 80);
+
+        const all = {
+            corridor: [
+                { id:'conductor', x:600, y:250, w:100, h:80,
+                  label:'👨‍✈️ провідник', show:() => !flag('conductorTalked2'),
+                  action:() => talkConductor2() },
+                { id:'door1', x:80, y:100, w:55, h:250,
+                  label:'🚪 купе', show:() => true,
+                  action:() => switchScene('car') },
+                { id:'door2', x:320, y:100, w:55, h:250,
+                  label:'🍽️ ресторан', show:() => true,
+                  action:() => switchScene('restaurant') },
+                { id:'door3', x:560, y:100, w:55, h:250,
+                  label:'📦 багаж', show:() => true,
+                  action:() => switchScene('luggage') },
+                { id:'endWindow', x:700, y:60, w:60, h:90,
+                  label:'🌙 вікно', show:() => true,
+                  action:() => showText('Вікно', 'Темрява. Лише місяць. Потяг мчить крізь ніч. Здається, ми десь між світами.') },
+            ],
+            car: [
+                { id:'neighbor', x:80, y:210, w:100, h:80,
+                  label:'👤 сусід', show:() => !flag('neighborGone') && !flag('neighborDead'),
+                  action:() => talkNeighbor() },
+                { id:'neighborDead', x:80, y:210, w:100, h:80,
+                  label:'🕊️ сусід', show:() => flag('neighborDead'),
+                  action:() => showText('🕊️ Сусід', 'Він сидить нерухомо. Його очі відкриті, але він не дихає. Записка в руці: «Вони знають, що ти пам\'ятаєш.»') },
+                { id:'suitcase', x:700, y:275, w:40, h:35,
+                  label:'🧳 чемодан', show:() => !flag('ticketTaken'),
+                  action:() => { setFlag('ticketTaken'); addItem('🎫');
+                      showText('🧳 Чемодан', 'Старий квиток. Купе №3, місце 7. Сьогодні, 23:55. І напис: «Не віддавай нікому». Номер — твій день народження?'); } },
+                { id:'window', x:340, y:60, w:120, h:150,
+                  label:'🪟 вікно', show:() => true,
+                  action:() => showText('Вікно', 'Темрява за вікном. Раптом — вогник! Ні, здалося. Ми їдемо вже дуже довго. Але годинник показує 23:55. Щоночі.') },
+                { id:'photo', x:250, y:35, w:40, h:45,
+                  label:'🖼 фото', show:() => !flag('photoTaken'),
+                  action:() => { setFlag('photoTaken'); addItem('🖼');
+                      showText('🖼 Фото', 'Родина біля моря. 2007. Мама, тато, дівчинка. На звороті: «Наш останній потяг до моря». Дівчинка — це ти.'); } },
+            ],
+            restaurant: [
+                { id:'conductor', x:360, y:120, w:80, h:80,
+                  label:'👨‍✈️ провідник', show:() => !flag('conductorGone'),
+                  action:() => talkConductor() },
+                { id:'menu', x:330, y:168, w:140, h:10,
+                  label:'📋 меню', show:() => true,
+                  action:() => showText('📋 Меню', 'Чай — безкоштовно. Кава — 5 руб. 2006 р. Бутерброд — 3 руб. Компот — 1 руб. Ціни з минулого. Або... з іншого часу?') },
+                { id:'bottles', x:358, y:140, w:60, h:20,
+                  label:'🍾 пляшки', show:() => !flag('bottleSecret'),
+                  action:() => { setFlag('bottleSecret'); addItem('🍾');
+                      showText('🍾 Пляшка', 'За пляшками — захований лист. «Я знаю правду. Потяг не зупиниться, поки ти не згадаєш. Приходь на дах. Там відповіді.»'); } },
+            ],
+            luggage: [
+                { id:'shadow', x:360, y:180, w:80, h:70,
+                  label:'👤 тінь', show:() => !flag('shadowGone'),
+                  action:() => talkShadow() },
+                { id:'boxes', x:100, y:215, w:85, h:85,
+                  label:'📦 ящики', show:() => !flag('boxChecked'),
+                  action:() => { setFlag('boxChecked');
+                      if (has('🔑')) {
+                          showText('📦 Ящик', 'Ключ підходить! Всередині — старі листи. Листи від батька. «Я чекаю на станції. Ти маєш згадати, хто ти, інакше потяг повернеться.» І фото — те саме, що в купе.');
+                      } else {
+                          showText('📦 Ящик', 'Замкнено. Великий латунний замок. Мабуть, у провідника є ключ.');
+                      } },
+                  action:() => { setFlag('boxChecked'); if (has('🔑')) {
+                      showText('📦 Ящик', 'Ключ підходить! Всередині — листи. Листи від батька. «Я чекаю на станції. Ти маєш згадати.»'); } else {
+                      showText('📦 Ящик', 'Замкнено. Потрібен ключ.'); } } },
+                { id:'smallBox', x:280, y:200, w:85, h:85,
+                  label:'📦 малий ящик', show:() => true,
+                  action:() => showText('📦 Ящик', 'Всередині — старі газети. 2007 рік. «Потяг №7 зник безвісти. 33 пасажири. Тіла не знайдені.» Ти здригаєшся.') },
+            ],
+            roof: [
+                { id:'shadow', x:310, y:280, w:80, h:65,
+                  label:'👤 тінь', show:() => !flag('shadowGoneRoof'),
+                  action:() => talkShadowRoof() },
+                { id:'edge', x:20, y:280, w:60, h:200,
+                  label:'🌌 край', show:() => true,
+                  action:() => showText('Край даху', 'Вітер. Темрява. Внизу — рейки, що світяться у місячному світлі. Стрибнути? Але потяг мчить надто швидко. Чи... це вже не важливо?') },
+            ],
+        };
+
+        return all[scene] || [];
+    }
+
+    // ============================================================
+    // ДІАЛОГИ ТА СЮЖЕТ
+    // ============================================================
+    function talkNeighbor() {
+        if (!flag('neighborTalked')) {
+            setFlag('neighborTalked');
+            openDialog('👤 Сусід', 'Чоловік років 40, у м\'ятому костюмі. Він дивиться у вікно, але здається, не бачить нічого. «Ти теж не спиш? Даремно. У цьому потязі сни — єдиний порятунок. Але... ти ж не спиш, правда? Бо боїшся, що не прокинєшся.»', [
+                { text: 'Чому я тут?', next: () => showText('👤 Сусід', '«Ти не пам\'ятаєш? Ніхто не пам\'ятає. Але всі відчувають. Цей потяг — не між містами. Він між життям і... ну, ти зрозумів.»') },
+                { text: 'Ти знаєш провідника?', next: () => showText('👤 Сусід', '«Знаю. Він — єдиний, хто тут справжній. Решта — ми. Пасажири. Ті, хто застряг. Не бери в нього чай. Ніколи.» Він відвертається. Розмова закінчена.') },
+            ]);
+        } else {
+            openDialog('👤 Сусід', 'Він мовчки дивиться у вікно. Потім тихо: «Ти ще тут? Дивно. Зазвичай пасажири довго не затримуються.»', [
+                { text: 'Чому?', next: () => showText('👤 Сусід', '«Ті, хто пам\'ятають — виходять. Ті, хто забули — залишаються назавжди.»') },
+                { text: 'Як вийти?', next: () => showText('👤 Сусід', '«Знайди ключ. Але справжній ключ — не в дверях. Він у твоїй пам\'яті. Згадай, хто ти. Згадай 2007 рік.»') },
+            ]);
+        }
+    }
+
+    function talkConductor() {
+        if (!flag('conductorTalked1')) {
+            setFlag('conductorTalked1');
+            openDialog('👨‍✈️ Провідник', 'Він стоїть за стійкою. Його посмішка надто широка. «Чаю? Всі пасажири його п\'ють. Це традиція. Ти ж не хочеш бути єдиним, хто відмовився?»', [
+                { text: '💀 Взяти чай', next: () => { setFlag('tookTea'); setFlag('neighborDead');
+                    showText('👨‍✈️ Провідник', 'Рідина темна, гірка. Ти робиш ковток — і світ на мить тьмяніє. Коли отямлюєшся, провідник усміхається. «Ласкаво просимо до команди.» Коли повертаєшся в купе, сусід не дихає.'); } },
+                { text: 'Відмовитись', next: () => showText('👨‍✈️ Провідник', 'Він знизує плечима. «Як хочеш. Але знай: у цьому потязі всі рано чи пізно беруть чай. Питання часу.» Він відвертається і починає протирати склянку.') },
+            ]);
+        } else if (!flag('gotKey') && flag('tookTea')) {
+            openDialog('👨‍✈️ Провідник', 'Він дивиться на тебе з підозрою. «Ти ще тут. Дивно. Зазвичай після чаю пасажири заспокоюються... і зникають. Чого ти хочеш?»', [
+                { text: '🔑 Дай ключ.', next: () => { setFlag('gotKey'); addItem('🔑');
+                    showText('🔑 Ключ', 'Провідник довго вагається. Потім дістає латунний ключ. «Вантажний вагон. Але тобі туди не треба. Там — правда. А правда — це біль.»'); } },
+                { text: 'Хто ми?', next: () => showText('👨‍✈️ Провідник', '«Ви — пасажири останнього рейсу. 2007 рік. Потяг №7. Ви — ті, хто не доїхав. І не доїде, поки не згадаєте.»') },
+            ]);
+        } else if (!flag('gotKey')) {
+            openDialog('👨‍✈️ Провідник', 'Він протирає склянку. Знову і знову. «Ти щось шукаєш? Тут нічого немає. Лише ми, ніч і цей клятий потяг.»', [
+                { text: 'Дай ключ.', next: () => showText('👨‍✈️ Провідник', '«Ха! Ключ? Навіщо тобі ключ, якщо виходу немає? Але якщо дуже треба... принеси щось цінне. Обмін.»') },
+            ]);
+        } else if (flag('gotKey') && !flag('conductorGone')) {
+            showText('👨‍✈️ Провідник', 'Він стоїть, схрестивши руки. «Ключ у тебе. Але двері нікуди не ведуть. Ти зрозумієш, коли знайдеш ящик.»');
+        } else {
+            showText('👨‍✈️ Провідник', 'Він дивиться крізь тебе. Здається, він уже не тут.');
+        }
+    }
+
+    function talkConductor2() {
+        if (flag('conductorTalked2')) {
+            showText('👨‍✈️ Провідник', 'Він стоїть біля вікна, не зворухнувшись.');
+            return;
+        }
+        setFlag('conductorTalked2');
+        openDialog('👨‍✈️ Провідник', 'Він стоїть біля вікна в кінці коридору. Дивиться в темряву. «Ти дістався далі, ніж інші. Дехто каже, що дах — це відповідь. Але чи готовий ти почути правду?»', [
+            { text: 'Як потрапити на дах?', next: () => showText('👨‍✈️ Провідник', '«Через вантажний вагон. Там є сходи. Але будь обережний. Тінь, що там живе... вона знає більше, ніж я. Вона знає, хто ти.»') },
+            { text: 'Чому ти мені допомагаєш?', next: () => showText('👨‍✈️ Провідник', '«Тому що я втомився. Я веду цей потяг уже 17 років. Щоночі — те саме. Я хочу, щоб хтось вийшов. Щоб це закінчилося.»') },
+        ]);
+    }
+
+    function talkShadow() {
+        if (!flag('shadowTalked')) {
+            setFlag('shadowTalked');
+            openDialog('👤 Тінь', 'З темряви лунає голос. Тихий, надтріснутий, але чомусь такий рідний. «Нарешті. Я чекав. Я знаю, хто ти. Я знаю, чому ти тут. Але чи готовий ти це почути?»', [
+                { text: 'Хто я?', next: () => showText('👤 Тінь', '«Ти — пасажир. Але не звичайний. Ти — єдиний, хто може вийти. Бо ти — не пасажир. Ти — машиніст. Ти вів цей потяг 2007 року. Ти — останній, хто вижив.»') },
+                { text: 'Хто ти?', next: () => showText('👤 Тінь', '«Я — твій батько. Я не встиг попрощатись тоді. Тепер у нас є час. Але небагато. Потяг наближається до станції. Якщо ти не вийдеш — залишишся назавжди.»') },
+            ]);
+        } else {
+            openDialog('👤 Тінь', 'Голос тихий: «Ти все ще тут? Пам\'ятай: ключ — не у дверях. Ключ — у твоїй пам\'яті. Згадай 23:55. Згадай, що сталося тоді.»', [
+                { text: 'Що сталося?', next: () => showText('👤 Тінь', '«Аварія. На мосту. 33 пасажири. Ти вижив. Але частина тебе залишилась у цьому потязі. Та частина, яка пам\'ятає. Якщо хочеш вийти — прийми це.»') },
+                { text: 'Як вийти?', next: () => showText('👤 Тінь', '«Дах. Там, де вітер і зорі. Стрибни, коли побачиш вогні. Але тільки якщо справді готовий прокинутись.»') },
+            ]);
+        }
+    }
+
+    function talkShadowRoof() {
+        setFlag('shadowGoneRoof');
+        openDialog('👤 Тінь', 'На даху вітер майже збиває з ніг. Тінь стоїть на краю. Її обличчя — твоє обличчя. «Тепер ти знаєш правду. Ти — я. Я — ти. Останній пасажир. Останній машиніст. Останній, хто пам\'ятає. Готовий прокинутись?»', [
+            { text: '✅ Так. Я готовий.', next: () => { setFlag('choseToWake');
+                showEnding('🕊️ Вільний', 'Ти закриваєш очі. Вітер стихає. Ти чуєш голоси — мама, тато, дівчинка на пляжі. 2007 рік. Ти відкриваєш очі в лікарні. Монітор показує пульс. Медсестра усміхається: «З поверненням.»') },
+            { text: '❌ Ні. Я залишусь.', next: () => { setFlag('choseToStay');
+                showEnding('🚂 Навіки', 'Ти повертаєшся в купе. Сусід сидить на місці. Він усміхається. «Я знав, що ти залишишся. Ласкаво просимо додому. Назавжди.» Потяг мчить у темряву. Щоночі — 23:55. Назавжди.') },
+        ]);
+    }
+
+    // ============================================================
+    // СЕКРЕТНА СЦЕНА
+    // ============================================================
+    function showSecret() {
+        const codes = ['2007', '23:55', '№7', 'пам\'ятай', 'останній'];
+        const msg = codes[Math.floor(Math.random() * codes.length)];
+        showText('🔮 Секрет', `Шепіт з темряви: «${msg}»`);
+    }
+
+    // ============================================================
+    // КІНЦІВКИ
+    // ============================================================
+    function showEnding(title, text) {
+        document.getElementById('endTitle').textContent = title;
+        document.getElementById('endText').textContent = text;
+        document.getElementById('end').style.display = 'flex';
+    }
+
+    // ============================================================
+    // ФУНКЦІЇ UI
+    // ============================================================
+    function addItem(item) {
+        if (!inv.includes(item)) {
+            inv.push(item);
+            renderInv();
+        }
+    }
+
+    function renderInv() {
+        invEl.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const s = document.createElement('div');
+            s.className = 'slot' + (inv[i] ? ' has' : '');
+            s.textContent = inv[i] || '';
+            invEl.appendChild(s);
+        }
+    }
+
+    function showText(name, text, noOverlay = false) {
+        if (overlayOpen) return;
+        if (noOverlay) {
+            dName.textContent = name;
+            dText.textContent = text;
+            dChoices.innerHTML = '<button onclick="closeDialog()">Продовжити</button>';
+            dialog.style.display = 'block';
+            dialogOpen = true;
+        } else {
+            tText.textContent = text;
+            tSub.textContent = '— ' + name + ' —';
+            textOverlay.style.display = 'flex';
+            overlayOpen = true;
+        }
+    }
+
+    function openDialog(name, text, choices) {
+        if (overlayOpen) return;
+        dName.textContent = name;
+        dText.textContent = text;
+        dChoices.innerHTML = '';
         choices.forEach(c => {
             const btn = document.createElement('button');
             btn.textContent = c.text;
-            btn.onclick = () => { dialogOpen = false; document.getElementById('dialog').style.display = 'none'; if (c.next) c.next(); };
-            cont.appendChild(btn);
+            btn.onclick = () => {
+                dialog.style.display = 'none';
+                dialogOpen = false;
+                if (c.next) c.next();
+            };
+            dChoices.appendChild(btn);
         });
-        document.getElementById('dialog').style.display = 'block';
+        dialog.style.display = 'block';
         dialogOpen = true;
     }
 
     function closeDialog() {
-        document.getElementById('dialog').style.display = 'none';
+        dialog.style.display = 'none';
         dialogOpen = false;
     }
 
-    // ============================================================
-    // UI
-    // ============================================================
-    function renderUI() {
-        let html = '';
-        for (let i = 0; i < 4; i++) {
-            html += '<span' + (inv[i] ? ' class="has"' : '') + '>' + (inv[i] || '') + '</span>';
+    document.getElementById('tCloseBtn').addEventListener('click', () => {
+        textOverlay.style.display = 'none';
+        overlayOpen = false;
+    });
+
+    document.querySelector('#start .btn').addEventListener('click', () => {
+        start.style.opacity = '0';
+        setTimeout(() => { start.style.display = 'none'; }, 800);
+        gameStarted = true;
+        showText('🚂 2007', 'Ти прокидаєшся в купе. За вікном — ніч. Потяг мчить. Годинник — 23:55. У кишені папірець: «Згадай останній рейс №7.» Ти не пам\'ятаєш, як сюди потрапив. Але щось у цьому потязі... знайоме.');
+    });
+
+    // Кнопки навігації
+    document.getElementById('btnPrev').addEventListener('click', () => {
+        if (dialogOpen || overlayOpen) return;
+        const locs = LOCATIONS;
+        const idx = locs.indexOf(currentScene);
+        if (idx > 0) switchScene(locs[idx - 1]);
+    });
+    document.getElementById('btnNext').addEventListener('click', () => {
+        if (dialogOpen || overlayOpen) return;
+        const locs = LOCATIONS;
+        const idx = locs.indexOf(currentScene);
+        if (idx < locs.length - 1) switchScene(locs[idx + 1]);
+    });
+
+    function switchScene(scene) {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        currentScene = scene;
+        lookAngle = 0;
+        if (dialogOpen) closeDialog();
+        // Якщо гравець вийшов на дах — секретна умова
+        if (scene === 'roof' && !flag('foundRoof')) {
+            setFlag('foundRoof');
+            addItem('🌙');
+            setTimeout(() => {
+                showText('🌙 Дах', 'Холодний вітер. Зорі. Ти вийшов на дах рухомого потяга. Внизу — темрява. Але далеко попереду — вогні. Станція? Чи щось інше?');
+            }, 500);
         }
-        document.getElementById('inv').innerHTML = html;
+        setTimeout(() => { isTransitioning = false; }, 300);
     }
+
+    // ============================================================
+    // РЕНДЕР
+    // ============================================================
+    function render() {
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, W, H);
+
+        if (!gameStarted) { requestAnimationFrame(render); return; }
+
+        // Малювання сцени
+        switch(currentScene) {
+            case 'corridor': drawCorridor(lookAngle); break;
+            case 'car': drawCar(lookAngle); break;
+            case 'restaurant': drawRestaurant(lookAngle); break;
+            case 'luggage': drawLuggage(lookAngle); break;
+            case 'roof': drawRoof(lookAngle); break;
+            default: drawCar(0);
+        }
+
+        // Назва сцени
+        const names = {
+            corridor: 'коридор', car: 'купе №3', restaurant: 'вагон-ресторан',
+            luggage: 'вантажний', roof: 'дах'
+        };
+        sceneName.textContent = (names[currentScene] || currentScene).toUpperCase();
+
+        // Обробка кліків через canvas (промальована)
+        if (gameStarted && !isTransitioning) {
+            const hs = getHotspots(currentScene, lookAngle);
+            if (mousePos) {
+                let found = false;
+                for (const h of hs) {
+                    if (!h.show || !h.show()) continue;
+                    const {x,y,w,h:hh} = h;
+                    if (mousePos.x >= x && mousePos.x <= x+w && mousePos.y >= y && mousePos.y <= y+hh) {
+                        // Підрамка
+                        ctx.strokeStyle = 'rgba(200,180,160,0.12)';
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3,3]);
+                        ctx.strokeRect(x, y, w, hh);
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = 'rgba(6,6,10,0.6)';
+                        ctx.font = '9px Georgia';
+                        ctx.textAlign = 'center';
+                        const tw = ctx.measureText(h.label).width + 12;
+                        ctx.fillRect(x + w/2 - tw/2, y - 18, tw, 14);
+                        ctx.fillStyle = '#c8b4a0';
+                        ctx.fillText(h.label, x + w/2, y - 8);
+                        found = true;
+                        break;
+                    }
+                }
+                canvas.style.cursor = found ? 'pointer' : 'default';
+            }
+        }
+
+        requestAnimationFrame(render);
+    }
+
+    // ============================================================
+    // МИША
+    // ============================================================
+    let mousePos = null;
+
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mousePos = {
+            x: (e.clientX - rect.left) * (W / rect.width),
+            y: (e.clientY - rect.top) * (H / rect.height)
+        };
+    });
+
+    canvas.addEventListener('mouseleave', () => { mousePos = null; canvas.style.cursor = 'default'; });
+
+    canvas.addEventListener('click', e => {
+        if (!gameStarted || dialogOpen || overlayOpen || isTransitioning) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (W / rect.width);
+        const y = (e.clientY - rect.top) * (H / rect.height);
+
+        const hs = getHotspots(currentScene, lookAngle);
+        for (const h of hs) {
+            if (!h.show || !h.show()) continue;
+            if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.hh) {
+                h.action();
+                return;
+            }
+        }
+
+        // Край — переміщення
+        if (x < 30) {
+            const locs = LOCATIONS;
+            const idx = locs.indexOf(currentScene);
+            if (idx > 0) switchScene(locs[idx - 1]);
+        } else if (x > W - 30) {
+            const locs = LOCATIONS;
+            const idx = locs.indexOf(currentScene);
+            if (idx < locs.length - 1) switchScene(locs[idx + 1]);
+        }
+    });
+
+    // Клавіші
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft' && !dialogOpen && !overlayOpen) {
+            const locs = LOCATIONS; const idx = locs.indexOf(currentScene);
+            if (idx > 0) switchScene(locs[idx - 1]);
+        }
+        if (e.key === 'ArrowRight' && !dialogOpen && !overlayOpen) {
+            const locs = LOCATIONS; const idx = locs.indexOf(currentScene);
+            if (idx < locs.length - 1) switchScene(locs[idx + 1]);
+        }
+        if (e.key === 'Escape') {
+            if (dialogOpen) closeDialog();
+            if (overlayOpen) { textOverlay.style.display = 'none'; overlayOpen = false; }
+        }
+    });
 
     // ============================================================
     // СТАРТ
     // ============================================================
-    document.querySelector('#start-screen .btn').addEventListener('click', () => {
-        document.getElementById('start-screen').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('start-screen').style.display = 'none';
-            showText('🚂', 'Ти прокидаєшся в купе. За вікном — ніч. Потяг мчить крізь темряву. Ти не пам\'ятаєш, як сюди потрапив. Годинник: 23:55.');
-        }, 800);
-    });
-
-    // ============================================================
-    // АНІМАЦІЯ
-    // ============================================================
-    function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-    }
-    animate();
-
-    // ============================================================
-    // РЕСАЙЗ
-    // ============================================================
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    renderInv();
+    render();
 </script>
 </body>
 </html>
