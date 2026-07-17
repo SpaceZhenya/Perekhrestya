@@ -187,7 +187,7 @@
     <div id="start">
         <h1>КІМНАТА</h1>
         <div class="sub">— останній гість —</div>
-        <div class="btn">🚪 Увійти</div>
+        <div class="btn" onclick="startGame()">🚪 Увійти</div>
     </div>
     <div id="end">
         <h2 id="endTitle"></h2>
@@ -643,7 +643,8 @@
     }
 
     document.querySelector('#start .btn').addEventListener('click', startGame);
-    document.getElementById('start').addEventListener('click', e => { if (e.target === e.currentTarget) startGame(); });
+    // Також клік на фоні старту
+    document.getElementById('start').addEventListener('click', e => { if (!gameStarted && e.target === e.currentTarget) startGame(); });
 
     // Інвентар
     function addItem(item) { if(!inv.includes(item)){inv.push(item);renderInv();} }
