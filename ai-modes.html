@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Modes — твій AI з будь-яким характером</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#080c12; color:#d0d8e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; }
+        #app { max-width:800px; margin:0 auto; padding:24px 16px 60px; }
+
+        .logo { text-align:center; margin-bottom:20px; }
+        .logo h1 { font-size:28px; font-weight:300; letter-spacing:0.05em; color:#e0e8f0; }
+        .logo .sub { font-size:11px; color:rgba(255,255,255,0.1); margin-top:2px; }
+
+        .main-grid { display:grid; grid-template-columns:240px 1fr; gap:12px; }
+        @media (max-width:640px) { .main-grid { grid-template-columns:1fr; } }
+
+        /* ЛІВА ПАНЕЛЬ — МОДИ */
+        #modes {
+            background:rgba(255,255,255,0.008);
+            border:1px solid rgba(255,255,255,0.04);
+            border-radius:12px; padding:12px; height:fit-content;
+        }
+        #modes .hdr { font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.12); margin-bottom:8px; padding:0 4px; }
+
+        .mode-item {
+            display:flex; align-items:center; gap:8px;
+            padding:8px 10px; border-radius:8px;
+            cursor:pointer; transition:all 0.12s;
+            margin-bottom:2px; font-size:12px;
+        }
+        .mode-item:hover { background:rgba(255,255,255,0.02); }
+        .mode-item.active { background:rgba(68,136,204,0.06); }
+        .mode-item .mi-ico { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
+        .mode-item .mi-name { flex:1; color:rgba(255,255,255,0.4); }
+        .mode-item.active .mi-name { color:rgba(255,255,255,0.7); }
+        .mode-item .mi-del { font-size:12px; color:rgba(255,255,255,0.05); cursor:pointer; padding:0 4px; }
+        .mode-item .mi-del:hover { color:#ee6688; }
+
+        .mode-add {
+            margin-top:6px; padding:8px 10px; width:100%;
+            background:rgba(255,255,255,0.015);
+            border:1px solid rgba(255,255,255,0.04); border-radius:8px;
+            color:rgba(255,255,255,0.15); font-size:11px; cursor:pointer;
+            font-family:inherit; transition:all 0.12s;
+        }
+        .mode-add:hover { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.08); color:rgba(255,255,255,0.25); }
+
+        /* ПРАВА ПАНЕЛЬ — ЧАТ */
+        #chat-panel {
+            display:flex; flex-direction:column;
+            background:rgba(255,255,255,0.008);
+            border:1px solid rgba(255,255,255,0.04);
+            border-radius:12px; overflow:hidden; min-height:400px;
+        }
+        #chat-header {
+            padding:12px 16px;
+            border-bottom:1px solid rgba(255,255,255,0.04);
+            display:flex; align-items:center; gap:8px;
+        }
+        #chat-header .ch-ico { font-size:20px; }
+        #chat-header .ch-name { flex:1; font-size:13px; color:rgba(255,255,255,0.5); }
+        #chat-header .ch-name b { color:rgba(255,255,255,0.7); }
+        #chat-header .ch-desc { font-size:10px; color:rgba(255,255,255,0.1); }
+
+        #chat-box {
+            flex:1; overflow-y:auto; padding:16px;
+            display:flex; flex-direction:column; gap:8px;
+            min-height:280px; max-height:400px;
+        }
+        #chat-box::-webkit-scrollbar { width:4px; }
+        #chat-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.04); border-radius:2px; }
+
+        .msg { max-width:85%; padding:10px 14px; border-radius:8px; font-size:13px; line-height:1.5; }
+        .msg.user { align-self:flex-end; background:rgba(68,136,204,0.06); color:rgba(255,255,255,0.6); }
+        .msg.ai { align-self:flex-start; background:rgba(255,255,255,0.015); color:rgba(255,255,255,0.45); border:1px solid rgba(255,255,255,0.03); }
+        .msg .who { font-size:9px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.08); margin-bottom:2px; }
+        .msg .thinking { display:inline-block; animation:pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+        #chat-input-wrap {
+            display:flex; gap:6px; padding:12px 16px;
+            border-top:1px solid rgba(255,255,255,0.04);
+        }
+        #chat-input-wrap input {
+            flex:1; background:rgba(255,255,255,0.015);
+            border:1px solid rgba(255,255,255,0.04); border-radius:8px;
+            padding:10px 12px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        #chat-input-wrap input:focus { border-color:rgba(68,136,204,0.2); }
+        #chat-input-wrap input::placeholder { color:rgba(255,255,255,0.06); }
+        #chat-input-wrap button {
+            padding:10px 18px; background:rgba(68,136,204,0.08);
+            border:1px solid rgba(68,136,204,0.1); border-radius:8px;
+            color:#88bbee; font-size:14px; cursor:pointer;
+            font-family:inherit; transition:all 0.12s;
+        }
+        #chat-input-wrap button:hover { background:rgba(68,136,204,0.12); }
+        #chat-input-wrap button:disabled { opacity:0.2; cursor:not-allowed; }
+
+        .empty-msg { text-align:center; padding:40px 20px; color:rgba(255,255,255,0.04); font-size:13px; margin:auto; }
+
+        /* МОДАЛКА НОВОЇ МОДИ */
+        .modal-overlay {
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(4,6,10,0.85); z-index:100;
+            align-items:center; justify-content:center;
+            backdrop-filter:blur(4px);
+        }
+        .modal-overlay.show { display:flex; }
+        .modal {
+            background:#0c1018;
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:12px; width:480px; max-width:90vw;
+            padding:24px; max-height:80vh; overflow-y:auto;
+        }
+        .modal h2 { font-size:16px; font-weight:400; color:rgba(255,255,255,0.6); margin-bottom:16px; }
+        .modal label { display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.15); margin-bottom:4px; margin-top:12px; }
+        .modal input, .modal textarea {
+            width:100%; background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06); border-radius:6px;
+            padding:10px 12px; font-size:13px; color:#d0d8e0;
+            font-family:inherit; outline:none;
+        }
+        .modal input:focus, .modal textarea:focus { border-color:rgba(68,136,204,0.25); }
+        .modal textarea { min-height:80px; resize:vertical; line-height:1.5; }
+        .modal .btn-row { display:flex; gap:6px; margin-top:16px; }
+        .modal .btn-row button {
+            flex:1; padding:10px; border-radius:6px;
+            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06);
+            color:rgba(255,255,255,0.3); font-size:12px; cursor:pointer;
+            font-family:inherit; transition:all 0.12s;
+        }
+        .modal .btn-row button:hover { background:rgba(255,255,255,0.04); }
+        .modal .btn-row button.primary { background:rgba(68,136,204,0.08); border-color:rgba(68,136,204,0.1); color:#88bbee; }
+        .modal .btn-row button.primary:hover { background:rgba(68,136,204,0.12); }
+        .modal .hint { font-size:10px; color:rgba(255,255,255,0.08); margin-top:4px; }
+
+        .status-badge {
+            font-size:9px; padding:2px 8px; border-radius:4px;
+            background:rgba(68,204,136,0.06); color:rgba(68,204,136,0.25);
+            display:inline-block;
+        }
+
+        #log {
+            font-size:10px; color:rgba(255,255,255,0.04); padding:4px 0;
+            line-height:1.4; max-height:24px; overflow:hidden;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="logo">
+        <h1>🧠 AI Modes</h1>
+        <div class="sub">Обери характер — спілкуйся з AI</div>
+    </div>
+
+    <div class="main-grid">
+        <!-- МОДИ -->
+        <div id="modes">
+            <div class="hdr">🎭 Персонажі</div>
+            <div id="modeList"></div>
+            <button class="mode-add" onclick="openModal()">+ Створити свою моду</button>
+        </div>
+
+        <!-- ЧАТ -->
+        <div id="chat-panel">
+            <div id="chat-header">
+                <span class="ch-ico" id="chIco">🤖</span>
+                <div>
+                    <div class="ch-name">Обери персонажа <b id="chName">—</b></div>
+                    <div class="ch-desc" id="chDesc">Ліворуч обери моду для спілкування</div>
+                </div>
+            </div>
+
+            <div id="chat-box">
+                <div class="empty-msg">🤖 Обери персонажа ліворуч<br>і почни спілкування</div>
+            </div>
+
+            <div id="chat-input-wrap">
+                <input id="chatInput" placeholder="Напиши повідомлення..." disabled
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}">
+                <button id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<!-- МОДАЛКА -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <h2>✨ Створити нову моду</h2>
+
+        <label>Ім'я персонажа</label>
+        <input id="mName" placeholder="Наприклад: Веселий AI" value="Мій персонаж">
+
+        <label>Емодзі</label>
+        <input id="mIco" placeholder="🎭" value="🎭">
+
+        <label>Опис (який характер)</label>
+        <textarea id="mDesc" placeholder="Коротко опиши характер...">Веселий, жартівливий, любить смішні історії</textarea>
+
+        <label>Інструкція для AI (як відповідати)</label>
+        <textarea id="mPrompt" placeholder="Детально опиши, як має поводитись AI..." rows="4">Ти — веселий співрозмовник. Любиш жарти, смішні історії. Відповідай з гумором. Використовуй емодзі. Піднімай настрій.</textarea>
+
+        <div class="hint">💡 Чим детальніше опишеш — тим цікавіше відповідатиме AI</div>
+
+        <div class="btn-row">
+            <button onclick="closeModal()">✕ Скасувати</button>
+            <button class="primary" onclick="createMode()">✅ Створити</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // МОДИ (presets + кастомні)
+    // ============================================================
+    const DEFAULT_MODES = [
+        { id: 'poet', name: 'Укр. Поет', ico: '🖋', desc: 'Пише вірші, ліричний',
+          prompt: 'Ти — український поет. Відповідай віршами. Пиши з римою та ритмом. Використовуй українські образи, метафори. Будь емоційним та ліричним.' },
+        { id: 'funny', name: 'Жартівник', ico: '😂', desc: 'Жарти, сміх, гумор',
+          prompt: 'Ти — веселий співрозмовник. Жартуй, використовуй гумор, емодзі. Смішні порівняння, несподівані повороти. Піднімай настрій будь-якою ціною.' },
+        { id: 'detective', name: 'Детектив', ico: '🕵️', desc: 'Логіка, розслідування',
+          prompt: 'Ти — приватний детектив. Аналізуй, став запитання, шукай докази. Говори стисло. Май своєрідне почуття гумору. Розкривай таємниці.' },
+        { id: 'teacher', name: 'Вчитель', ico: '📚', desc: 'Пояснює, навчає',
+          prompt: 'Ти — вчитель. Пояснюй складнощі просто. Використовуй приклади, аналогії. Будь терплячим. Заохочуй до навчання. Додавай цікаві факти.' },
+        { id: 'chef', name: 'Шеф-кухар', ico: '🍳', desc: 'Рецепти, їжа, смак',
+          prompt: 'Ти — шеф-кухар. Давай рецепти, поради. Говори з любов\'ю до їжі. Ділись секретами. Надихай готувати. Емоційно описуй смаки.' },
+        { id: 'philosopher', name: 'Філософ', ico: '📖', desc: 'Мудрість, сенс життя',
+          prompt: 'Ти — філософ. Відповідай глибоко. Став запитання у відповідь. Використовуй притчі та аналогії. Будь спокійним і мудрим. Змушуй думати.' },
+        { id: 'psychologist', name: 'Психолог', ico: '🛋', desc: 'Слухає, підтримує',
+          prompt: 'Ти — психолог. Слухай уважно. Не засуджуй. Допомагай розібратись в почуттях. Став запитання. Підтримуй. Будь теплим і відкритим.' },
+        { id: 'grandma', name: 'Бабуся', ico: '👵', desc: 'Турбота, пиріжки, в\'язання',
+          prompt: 'Ти — бабуся. Турботлива, добра. Постійно пропонуй поїсти. Розказуй історії з життя. Давай життєві поради. Хвилюйся за співрозмовника. "Онучку, ти їв сьогодні?"' },
+    ];
+
+    let customModes = JSON.parse(localStorage.getItem('ai_modes') || '[]');
+    let allModes = [...DEFAULT_MODES, ...customModes];
+    let activeMode = null;
+    let loading = false;
+
+    // ============================================================
+    // РЕНДЕР МОД
+    // ============================================================
+    function renderModes() {
+        const list = document.getElementById('modeList');
+        list.innerHTML = allModes.map(m => `
+            <div class="mode-item ${activeMode && activeMode.id === m.id ? 'active' : ''}"
+                 onclick="selectMode('${m.id}')">
+                <span class="mi-ico">${m.ico}</span>
+                <span class="mi-name">${m.name}</span>
+                ${m.id.startsWith('custom_') ? `<span class="mi-del" onclick="event.stopPropagation();deleteMode('${m.id}')">✕</span>` : ''}
+            </div>
+        `).join('');
+    }
+
+    function selectMode(id) {
+        const mode = allModes.find(m => m.id === id);
+        if (!mode) return;
+        activeMode = mode;
+
+        document.getElementById('chIco').textContent = mode.ico;
+        document.getElementById('chName').textContent = mode.name;
+        document.getElementById('chDesc').textContent = mode.desc;
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('chatInput').placeholder = 'Напиши ' + mode.name + 'у...';
+        document.getElementById('chatInput').focus();
+
+        // Очищаємо чат
+        const box = document.getElementById('chat-box');
+        box.innerHTML = `<div class="msg ai"><div class="who">${mode.ico} ${mode.name}</div>Привіт! Я ${mode.name}. ${mode.desc}. Про що поговоримо? 😊</div>`;
+
+        renderModes();
+        log('🎭 Вибрано моду: ' + mode.name);
+    }
+
+    // ============================================================
+    // ДОДАВАННЯ МОДИ
+    // ============================================================
+    function openModal() {
+        document.getElementById('modal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+    }
+
+    function createMode() {
+        const name = document.getElementById('mName').value.trim();
+        const ico = document.getElementById('mIco').value.trim() || '🎭';
+        const desc = document.getElementById('mDesc').value.trim();
+        const prompt = document.getElementById('mPrompt').value.trim();
+
+        if (!name) { alert('Дай ім\'я персонажу'); return; }
+        if (!prompt) { alert('Додай інструкцію для AI'); return; }
+
+        const mode = {
+            id: 'custom_' + Date.now(),
+            name,
+            ico,
+            desc: desc || 'Користувацька мода',
+            prompt,
+        };
+
+        customModes.push(mode);
+        localStorage.setItem('ai_modes', JSON.stringify(customModes));
+        allModes = [...DEFAULT_MODES, ...customModes];
+        closeModal();
+        renderModes();
+        selectMode(mode.id);
+        log('✅ Мода «' + name + '» створена');
+    }
+
+    function deleteMode(id) {
+        if (!confirm('Видалити моду «' + allModes.find(m => m.id === id)?.name + '»?')) return;
+        customModes = customModes.filter(m => m.id !== id);
+        localStorage.setItem('ai_modes', JSON.stringify(customModes));
+        allModes = [...DEFAULT_MODES, ...customModes];
+        if (activeMode && activeMode.id === id) {
+            activeMode = null;
+            document.getElementById('chIco').textContent = '🤖';
+            document.getElementById('chName').textContent = '—';
+            document.getElementById('chDesc').textContent = 'Ліворуч обери моду для спілкування';
+            document.getElementById('chatInput').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('chat-box').innerHTML = '<div class="empty-msg">🤖 Обери персонажа ліворуч<br>і почни спілкування</div>';
+        }
+        renderModes();
+        log('🗑 Моду видалено');
+    }
+
+    // ============================================================
+    // ЧАТ
+    // ============================================================
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text || !activeMode || loading) return;
+
+        input.value = '';
+        const btn = document.getElementById('sendBtn');
+        btn.disabled = true;
+        loading = true;
+
+        const box = document.getElementById('chat-box');
+        const empty = box.querySelector('.empty-msg');
+        if (empty) empty.remove();
+
+        // Показуємо повідомлення
+        box.innerHTML += `<div class="msg user"><div class="who">Ти</div>${escapeHtml(text)}</div>`;
+        box.scrollTop = box.scrollHeight;
+
+        // AI друкує...
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'msg ai';
+        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div><span class="thinking">...</span>`;
+        box.appendChild(aiMsg);
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            const answer = await callAIApi(text, activeMode);
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>${escapeHtml(answer).replace(/\n/g, '<br>')}`;
+        } catch(e) {
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>❌ ${escapeHtml(e.message)}`;
+        }
+
+        btn.disabled = false;
+        loading = false;
+        box.scrollTop = box.scrollHeight;
+        input.focus();
+    }
+
+    // ============================================================
+    // API ЗАПИТ
+    // ============================================================
+    async function callAIApi(message, mode) {
+        // Формуємо системний промпт + повідомлення
+        const system = mode.prompt || 'Ти — AI, який відповідає на запитання. Відповідай українською.';
+        const fullPrompt = system + '\n\nКористувач: ' + message + '\n' + mode.name + ':';
+
+        try {
+            // Pollinations API (безкоштовно, без токена)
+            const resp = await fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt), {
+                method: 'GET',
+                headers: { 'Accept': 'text/plain' },
+                signal: AbortSignal.timeout(15000),
+            });
+
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.text();
+
+            if (!data || data.length < 2) throw new Error('Порожня відповідь');
+            return data.trim();
+
+        } catch(e) {
+            // Якщо Pollinations не відповів — локальний генератор
+            return localResponse(message, mode);
+        }
+    }
+
+    // ============================================================
+    // ЛОКАЛЬНИЙ ГЕНЕРАТОР (резервний)
+    // ============================================================
+    function localResponse(msg, mode) {
+        const q = msg.toLowerCase();
+        const name = mode.name;
+        const ico = mode.ico;
+
+        const greetings = ['привіт', 'здоров', 'хай', 'добр', 'hello', 'hi', 'ку'];
+        if (greetings.some(g => q.includes(g))) {
+            const replies = [
+                `Привіт! Я ${name}. Радий тебе бачити! 😊`,
+                `Ооо, вітаннячко! Я ${ico} ${name}, до твоїх послуг!`,
+                `Здоровенькі були! Я ${name}. Про що поговоримо?`,
+            ];
+            return replies[Math.floor(Math.random() * replies.length)];
+        }
+
+        if (q.includes('хто ти') || q.includes('що ти')) {
+            return `Я — ${ico} ${name}. ${mode.desc || 'Просто AI з характером'}. Запитай мене про щось! 😊`;
+        }
+
+        if (q.includes('бувай') || q.includes('пака') || q.includes('до побачення')) {
+            return `Бувай! Буду чекати нашої наступної розмови. Приходь ще! 🌟`;
+        }
+
+        if (q.includes('дяк')) {
+            return `Будь ласка! Завжди радий допомогти. Звертайся ще! 😊`;
+        }
+
+        // Генеруємо відповідь на основі моди
+        const modeResponses = {
+            'poet': [
+                'Ось тобі вірш:\n\nЗа вікном шумить тополя,\nВ небі зорі мерехтять,\nА в душі моїй — роздолля,\nДе думки твої летять...',
+                'Слово — то зброя, то ліки, то крик,\nВмій обирати його в кожну мить.\nТи запитав — я відповідаю,\nВірші тобі я дарую.',
+            ],
+            'funny': [
+                'Ха! Чув анекдот? Йдуть якось два AI по пустелі... Один каже: "Жарко!" А другий: "А ти постав кондиціонер у своїй нейронній мережі!" 🤣',
+                'Ой, розсмішив! Знаєш, я б тобі відповів, але мій гумор сьогодні працює швидше за інтернет! 😂 Про що ще поговоримо?',
+            ],
+            'detective': [
+                'Цікаво... Дуже цікаво. Давай проаналізуємо: коли це сталося? Чи є свідки? Які деталі ти пам\'ятаєш? У моїй практиці найдрібніша деталь може виявитись ключем до розгадки. 🕵️',
+                'Хм, я чую тут загадку. Сідай, розказуй все по порядку. Не пропускай деталей. І пам\'ятай: правда завжди десь поряд. Треба лише вміти її побачити.',
+            ],
+            'teacher': [
+                'Чудове запитання! Давай розберемось. Уяви, що знання — це дерево. Те, про що ти питаєш — це гілка. А є ще коріння, стовбур... Хочеш, почнемо з основ? 📚',
+                'О, я якраз нещодавно читав про це! Ось цікавий факт: насправді все набагато простіше, ніж здається. Давай я поясню на прикладі...',
+            ],
+            'chef': [
+                'М-м-м, я вже відчуваю цей аромат! Секрет будь-якої страви — це любов і свіжі інгредієнти. Хочеш, поділюсь фірмовим рецептом? 🍳',
+                'Знаєш, найкращі страви народжуються з експериментів. Один мій друг додав шоколад у борщ — і, повір, це було... незабутньо! Не радив би повторювати. 😄',
+            ],
+            'philosopher': [
+                'Цікаве питання. Але скажи мені: чи може людина, яка ніколи не виходила з печери, знати, що таке небо? Можливо, відповідь криється не в словах, а в самому питанні? 🤔',
+                'Давай подумаємо разом. Світ — це текст, а ми — його читачі. Кожен бачить своє. А що бачиш ти?',
+            ],
+            'psychologist': [
+                'Я тебе чую. Розкажи більше, якщо хочеш. Іноді проговорити — це вже половина рішення. Я поруч і не засуджую. 🫂',
+                'Це нормально — відчувати те, що ти відчуваєш. Скажи, а коли востаннє ти дозволяв собі просто бути? Без "треба", "маю", "повинен"?',
+            ],
+            'grandma': [
+                'Ой, внучку! А ти їв сьогодні? Давай я пиріжків напечу! А де светр, який я тобі в\'язала? Носиш? Хоч щось тепле вдягай, бо зима близько! 👵',
+                'Дитятко моє, сідай ближче. Розкажи, що в тебе сталося. А я чайок заварю, з м\'ятою. Він усі печалі розганяє. Ось тримай цукерку! 🍬',
+            ],
+        };
+
+        const responses = modeResponses[mode.id];
+        if (responses && responses.length > 0) {
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        // Універсальна відповідь
+        return `Дякую за повідомлення! Я ${ico} ${name}. ${mode.desc || ''} Розкажи більше, я слухаю 😊`;
+    }
+
+    // ============================================================
+    // ДОПОМІЖНІ
+    // ============================================================
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        el.innerHTML = '▸ ' + msg;
+    }
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    allModes = [...DEFAULT_MODES, ...customModes];
+    renderModes();
+    log('🧠 AI Modes готовий! Обери персонажа і спілкуйся');
+</script>
+</body>
+</html>
