@@ -125,35 +125,38 @@
         #overlay .ob:hover { background: rgba(200,180,160,0.1); }
 
         #start {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: #06060a;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 30;
-            transition: opacity 1.2s;
-            cursor: pointer;
-        }
-        #start h1 {
-            font-size: 3em; font-weight: normal;
-            letter-spacing: 0.25em; color: #d0c0b0;
-            text-shadow: 0 0 40px rgba(200,180,160,0.08);
-        }
-        #start .sub { color: rgba(200,180,160,0.2); font-size: 0.8em; letter-spacing: 0.15em; margin-top: 8px; }
-        #start .btn {
-            margin-top: 36px;
-            padding: 12px 44px;
-            border: 1px solid rgba(200,180,160,0.1);
-            border-radius: 4px;
-            color: #d0c0b0;
-            font-size: 1.1em;
-            font-family: 'Georgia', serif;
-            background: rgba(200,180,160,0.02);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        #start .btn:hover { background: rgba(200,180,160,0.06); border-color: rgba(200,180,160,0.2); }
+            #start {
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: #06060a;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 999;
+                cursor: pointer;
+            }
+            #start h1 {
+                font-size: 3em; font-weight: normal;
+                letter-spacing: 0.25em; color: #d0c0b0;
+                text-shadow: 0 0 40px rgba(200,180,160,0.08);
+                pointer-events: none;
+            }
+            #start .sub { color: rgba(200,180,160,0.2); font-size: 0.8em; letter-spacing: 0.15em; margin-top: 8px; pointer-events: none; }
+            #start .btn {
+                margin-top: 36px;
+                padding: 12px 44px;
+                border: 1px solid rgba(200,180,160,0.1);
+                border-radius: 4px;
+                color: #d0c0b0;
+                font-size: 1.1em;
+                font-family: 'Georgia', serif;
+                background: rgba(200,180,160,0.02);
+                cursor: pointer;
+                transition: all 0.3s;
+                z-index: 1000;
+                position: relative;
+            }
+            #start .btn:hover { background: rgba(200,180,160,0.06); border-color: rgba(200,180,160,0.2); }
 
         #end {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -174,6 +177,35 @@
             border-radius: 4px;
         }
         #end .rb:hover { background: rgba(200,180,160,0.05); }
+
+        #start {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: #06060a;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 999; cursor: pointer;
+        }
+        #start h1 {
+            font-size: 3em; font-weight: normal;
+            letter-spacing: 0.25em; color: #d0c0b0;
+            text-shadow: 0 0 40px rgba(200,180,160,0.08);
+            pointer-events: none;
+        }
+        #start .sub {
+            color: rgba(200,180,160,0.2); font-size: 0.8em;
+            letter-spacing: 0.15em; margin-top: 8px;
+            pointer-events: none;
+        }
+        #start .btn {
+            margin-top: 36px; padding: 12px 44px;
+            border: 1px solid rgba(200,180,160,0.1);
+            border-radius: 4px; color: #d0c0b0;
+            font-size: 1.1em; font-family: 'Georgia', serif;
+            background: rgba(200,180,160,0.02);
+            cursor: pointer; transition: all 0.3s;
+            position: relative; z-index: 1000;
+        }
+        #start .btn:hover { background: rgba(200,180,160,0.06); border-color: rgba(200,180,160,0.2); }
 
         @media (max-width: 820px) {
             #game { width: 100vw; height: 100vh; border-radius: 0; }
@@ -634,17 +666,15 @@
     document.getElementById('bn').addEventListener('click',()=>{if(!dialogOpen&&!overlayOpen)angle=Math.min(2,angle+1);});
 
     // Старт
-    function startGame() {
-        start.style.opacity = '0';
-        start.style.pointerEvents = 'none';
-        setTimeout(()=>{start.style.display='none';},800);
+    window.startGame = function() {
+        var s = document.getElementById('start');
+        if (!s || s.style.display === 'none') return;
+        s.style.display = 'none';
         gameStarted = true;
         showT('🚪 Кімната №7','Ти відчиняєш двері. Стара кімната. Пахне пилом і часом. Лампа горить. Ліжко тепле. Здається, тебе чекали. На столі — ключ. У дзеркалі — не ти. Що сталося в цій кімнаті?');
-    }
-
-    document.querySelector('#start .btn').addEventListener('click', startGame);
-    // Також клік на фоні старту
-    document.getElementById('start').addEventListener('click', e => { if (!gameStarted && e.target === e.currentTarget) startGame(); });
+    };
+    // Клік на фоні старту
+    document.getElementById('start').addEventListener('click', window.startGame);
 
     // Інвентар
     function addItem(item) { if(!inv.includes(item)){inv.push(item);renderInv();} }
