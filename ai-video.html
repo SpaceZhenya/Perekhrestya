@@ -283,18 +283,25 @@
             </select>
         </div>
 
-        <div class="config-toggle" onclick="toggleConfig()">⚙️ Налаштування API</div>
+        <div class="config-toggle" onclick="toggleConfig()">🔑 Налаштувати API (безкоштовно)</div>
         <div id="configSection">
-            <div style="margin-top:8px">
-                <label>HuggingFace API Token</label>
+            <div style="margin-top:10px;background:rgba(68,204,136,0.04);border:1px solid rgba(68,204,136,0.08);border-radius:8px;padding:14px;font-size:12px;line-height:1.6;color:rgba(255,255,255,0.5)">
+                <b>🔓 Як отримати безкоштовний токен за 1 хвилину:</b><br>
+                1. Зайди на <a href="https://huggingface.co/join" target="_blank" style="color:#88bbee">huggingface.co/join</a> — зареєструйся (безкоштовно)<br>
+                2. Перейди в <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#88bbee">Settings → Tokens</a><br>
+                3. Натисни <b>New token</b> → обери <b>read</b> → <b>Generate</b><br>
+                4. Скопіюй токен (починається з <b>hf_</b>) — встав нижче
+            </div>
+            <div style="margin-top:10px">
+                <label>HuggingFace токен (безкоштовний)</label>
                 <div class="row">
-                    <input type="password" id="apiKey" placeholder="hf_xxxxxxxxxxxxxxxxxx">
-                    <button class="btn-secondary" onclick="saveKey()">💾</button>
+                    <input type="text" id="apiKey" placeholder="hf_xxxxxxxxxxxxxxxxxx" style="font-family:monospace">
+                    <button class="btn-secondary" onclick="saveKey()">💾 Зберегти</button>
                 </div>
                 <div style="margin-top:4px">
                     <span class="key-status nok" id="keyStatus">🔑 Не налаштовано</span>
                 </div>
-                <div class="hint">Отримай токен на huggingface.co/settings/tokens. Безкоштовно.</div>
+                <div class="hint">💡 Деякі моделі вимагають прийняти ліцензію на сторінці моделі (теж безплатно). Якщо помилка 403 — клікни "Accept License" на HuggingFace.</div>
             </div>
         </div>
     </div>
