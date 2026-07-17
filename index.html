@@ -137,10 +137,10 @@
     <div id="blocker">
         <h1>ПЕРЕХРЕСТЯ</h1>
         <p>Хата, яка пам'ятає</p>
-        <p class="sub">Натисни, щоб увійти</p>
+        <p class="sub">Натисни — увійти • 🖱 затисни мишу — огляд • WASD — рух • E — взаємодія</p>
     </div>
 
-    <div id="ui">🪪 E — взаємодіяти</div>
+    <div id="ui">🖱 Затисни мишу — огляд • E — взаємодіяти</div>
 
     <div id="memory">
         <div class="text"></div>
@@ -538,22 +538,65 @@
             }
         });
 
-        // Блокування курсора
+        // ============================================================
+        // Керування — PointerLock (на GitHub Pages) / Drag (локально)
+        // ============================================================
+
+        let isDragging = false;
+        let dragMode = false;
+
+        function startGame() {
+            document.getElementById('blocker').style.display = 'none';
+            document.getElementById('ui').classList.add('visible');
+            isLocked = true;
+        }
+
         document.getElementById('blocker').addEventListener('click', () => {
-            renderer.domElement.requestPointerLock();
+            const p = renderer.domElement.requestPointerLock();
+            setTimeout(() => {
+                if (document.pointerLockElement !== renderer.domElement) {
+                    dragMode = true;
+                    startGame();
+                }
+            }, 300);
         });
 
         document.addEventListener('pointerlockchange', () => {
-            const blocker = document.getElementById('blocker');
             if (document.pointerLockElement === renderer.domElement) {
-                blocker.style.display = 'none';
-                document.getElementById('ui').classList.add('visible');
-                isLocked = true;
-            } else if (!inMemory) {
-                blocker.style.display = 'flex';
-                isLocked = false;
+                dragMode = false;
+                startGame();
             }
         });
+
+        document.addEventListener('pointerlockerror', () => {
+            dragMode = true;
+            startGame();
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (document.pointerLockElement === renderer.domElement) {
+                yaw -= e.movementX * 0.002;
+                pitch -= e.movementY * 0.002;
+                pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
+                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+            }
+            if (isDragging && dragMode && isLocked) {
+                yaw -= e.movementX * 0.003;
+                pitch -= e.movementY * 0.003;
+                pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
+                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+            }
+        });
+
+        document.addEventListener('mousedown', e => {
+            if (dragMode && isLocked && !inMemory && e.button === 0) {
+                isDragging = true;
+            }
+        });
+        document.addEventListener('mouseup', e => {
+            if (e.button === 0) isDragging = false;
+        });
+        document.addEventListener('mouseleave', () => { isDragging = false; });
 
         // Колізія зі стінами
         function isInsideWalls(pos) {
