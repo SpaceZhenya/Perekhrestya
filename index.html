@@ -539,39 +539,20 @@
         });
 
         // ============================================================
-        // Керування — PointerLock (на GitHub Pages) / Drag (локально)
+        // Керування — Drag (затисни мишу для огляду)
         // ============================================================
 
         let isDragging = false;
-        let dragMode = false;
+        let dragMode = true;
 
         function startGame() {
             document.getElementById('blocker').style.display = 'none';
             document.getElementById('ui').classList.add('visible');
             isLocked = true;
+            renderer.domElement.requestPointerLock();
         }
 
-        document.getElementById('blocker').addEventListener('click', () => {
-            const p = renderer.domElement.requestPointerLock();
-            setTimeout(() => {
-                if (document.pointerLockElement !== renderer.domElement) {
-                    dragMode = true;
-                    startGame();
-                }
-            }, 300);
-        });
-
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === renderer.domElement) {
-                dragMode = false;
-                startGame();
-            }
-        });
-
-        document.addEventListener('pointerlockerror', () => {
-            dragMode = true;
-            startGame();
-        });
+        document.getElementById('blocker').addEventListener('click', startGame);
 
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === renderer.domElement) {
@@ -579,8 +560,9 @@
                 pitch -= e.movementY * 0.002;
                 pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
                 camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+                return;
             }
-            if (isDragging && dragMode && isLocked) {
+            if (isDragging && isLocked) {
                 yaw -= e.movementX * 0.003;
                 pitch -= e.movementY * 0.003;
                 pitch = Math.max(-PI_2 * 0.9, Math.min(PI_2 * 0.9, pitch));
@@ -589,7 +571,7 @@
         });
 
         document.addEventListener('mousedown', e => {
-            if (dragMode && isLocked && !inMemory && e.button === 0) {
+            if (isLocked && !inMemory && e.button === 0) {
                 isDragging = true;
             }
         });
