@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat — справжній AI</title>
+    <title>AI Chat — без ключів</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { background:#080c12; color:#d0d8e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; }
@@ -12,34 +12,16 @@
         .logo { text-align:center; margin-bottom:20px; }
         .logo h1 { font-size:28px; font-weight:300; letter-spacing:0.05em; color:#e0e8f0; }
         .logo .sub { font-size:11px; color:rgba(255,255,255,0.08); margin-top:2px; }
+        .badge { display:inline-block; padding:1px 8px; border-radius:4px; font-size:9px; background:rgba(68,204,136,0.06); color:rgba(68,204,136,0.3); }
 
-        /* КЛЮЧ */
-        #key-section {
-            background:rgba(255,255,255,0.012); border:1px solid rgba(255,255,255,0.04);
-            border-radius:10px; padding:12px 16px; margin-bottom:10px;
-            display:flex; align-items:center; gap:8px;
-        }
-        #key-section .ks-label { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.12); white-space:nowrap; }
-        #key-section input { flex:1; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:8px 10px; font-size:12px; color:#d0d8e0; font-family:monospace; outline:none; }
-        #key-section input:focus { border-color:rgba(68,136,204,0.2); }
-        #key-section input::placeholder { color:rgba(255,255,255,0.05); }
-        #key-section button { padding:8px 14px; background:rgba(68,136,204,0.08); border:1px solid rgba(68,136,204,0.1); border-radius:6px; color:#88bbee; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap; }
-
-        .key-hint { font-size:10px; color:rgba(255,255,255,0.06); margin-top:4px; line-height:1.5; }
-        .key-hint a { color:rgba(68,136,204,0.3); text-decoration:none; }
-        .key-hint a:hover { color:rgba(68,136,204,0.5); }
-
-        /* MAIN */
         .main-grid { display:grid; grid-template-columns:200px 1fr; gap:10px; }
         @media (max-width:640px) { .main-grid { grid-template-columns:1fr; } }
 
-        /* MODES */
         #modes {
             background:rgba(255,255,255,0.008); border:1px solid rgba(255,255,255,0.04);
-            border-radius:10px; padding:12px; height:fit-content; max-height:500px; overflow-y:auto;
+            border-radius:10px; padding:12px; height:fit-content; max-height:520px; overflow-y:auto;
         }
         #modes .hdr { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.1); margin-bottom:6px; padding:0 4px; }
-
         .mode-item {
             display:flex; align-items:center; gap:6px;
             padding:7px 8px; border-radius:6px; cursor:pointer;
@@ -61,7 +43,6 @@
         #modes::-webkit-scrollbar { width:3px; }
         #modes::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.03); border-radius:2px; }
 
-        /* CHAT */
         #chat-panel {
             display:flex; flex-direction:column;
             background:rgba(255,255,255,0.008); border:1px solid rgba(255,255,255,0.04);
@@ -75,7 +56,6 @@
         #chat-header .ch-name { flex:1; font-size:12px; color:rgba(255,255,255,0.4); }
         #chat-header .ch-name b { color:rgba(255,255,255,0.6); }
         #chat-header .ch-desc { font-size:9px; color:rgba(255,255,255,0.08); }
-
         .ai-status { display:flex; align-items:center; gap:5px; flex-shrink:0; }
         .ai-status .dot { width:6px; height:6px; border-radius:50%; }
         .ai-status.online .dot { background:#44cc88; }
@@ -89,17 +69,15 @@
         }
         #chat-box::-webkit-scrollbar { width:4px; }
         #chat-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.03); border-radius:2px; }
-
         .msg { max-width:88%; padding:9px 12px; border-radius:8px; font-size:13px; line-height:1.5; }
         .msg.user { align-self:flex-end; background:rgba(68,136,204,0.05); color:rgba(255,255,255,0.5); }
         .msg.ai { align-self:flex-start; background:rgba(255,255,255,0.01); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.02); }
         .msg .who { font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.06); margin-bottom:1px; }
-        .msg .cursor { display:inline-block; width:6px; height:14px; background:rgba(255,255,255,0.2); animation:blink 0.8s infinite; margin-left:2px; vertical-align:middle; }
+        .msg .typing { display:inline-block; animation:blink 0.8s infinite; }
         @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
         #chat-input-wrap {
-            display:flex; gap:6px; padding:10px 14px;
-            border-top:1px solid rgba(255,255,255,0.04);
+            display:flex; gap:6px; padding:10px 14px; border-top:1px solid rgba(255,255,255,0.04);
         }
         #chat-input-wrap input {
             flex:1; background:rgba(255,255,255,0.015);
@@ -150,16 +128,6 @@
         .modal .btn-row button:hover { background:rgba(255,255,255,0.03); }
         .modal .btn-row button.primary { background:rgba(68,136,204,0.06); border-color:rgba(68,136,204,0.08); color:#88bbee; }
         .modal .btn-row button.primary:hover { background:rgba(68,136,204,0.1); }
-        .modal .hint { font-size:9px; color:rgba(255,255,255,0.06); margin-top:3px; }
-
-        .get-key-guide {
-            display:none; background:rgba(68,136,204,0.03); border:1px solid rgba(68,136,204,0.06);
-            border-radius:8px; padding:14px; margin-bottom:10px; font-size:12px; line-height:1.6;
-        }
-        .get-key-guide.show { display:block; }
-        .get-key-guide ol { padding-left:18px; color:rgba(255,255,255,0.3); }
-        .get-key-guide ol li { margin-bottom:4px; }
-        .get-key-guide code { font-family:monospace; background:rgba(255,255,255,0.03); padding:1px 6px; border-radius:3px; font-size:11px; color:rgba(68,136,204,0.4); }
 
         #log { font-size:9px; color:rgba(255,255,255,0.04); padding:3px 0; line-height:1.4; height:16px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     </style>
@@ -168,49 +136,26 @@
 
 <div id="app">
     <div class="logo">
-        <h1>🧠 AI Chat</h1>
-        <div class="sub">Справжній AI з будь-яким характером</div>
-    </div>
-
-    <!-- КЛЮЧ -->
-    <div id="key-section">
-        <span class="ks-label">🔑 DeepSeek API Key</span>
-        <input id="apiKey" type="password" placeholder="Встав DeepSeek API ключ..." value="">
-        <button onclick="saveKey()">Зберегти</button>
-        <button onclick="toggleGuide()" style="background:transparent;border-color:rgba(255,255,255,0.03);color:rgba(255,255,255,0.15);padding:8px 10px;">❓</button>
-        <div class="ai-status offline" id="aiStatus">
-            <span class="dot"></span>
-            <span class="label">offline</span>
-        </div>
-    </div>
-
-    <div class="get-key-guide" id="guide">
-        <b style="color:rgba(255,255,255,0.4)">Як отримати безкоштовний DeepSeek ключ:</b>
-        <ol>
-            <li>Перейди на <a href="https://platform.deepseek.com/" target="_blank" style="color:rgba(68,136,204,0.4)">platform.deepseek.com</a></li>
-            <li>Натисни <b>«Sign Up»</b> — зареєструйся (пошта + пароль)</li>
-            <li>Перейди в <b>«API Keys»</b> → <b>«Create API Key»</b></li>
-            <li>Скопіюй ключ і встав вище</li>
-        </ol>
-        <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.08)">
-            ✅ <b>Безкоштовно</b> — 10 млн токенів одразу, без карти
-        </div>
+        <h1>🧠 AI Chat <span class="badge">Free</span></h1>
+        <div class="sub">Працює одразу — без ключів, без реєстрації</div>
     </div>
 
     <div class="main-grid">
-        <!-- МОДИ -->
         <div id="modes">
             <div class="hdr">🎭 Персонажі</div>
             <div id="modeList"></div>
             <button class="mode-add" onclick="openModal()">+ Своя мода</button>
         </div>
 
-        <!-- ЧАТ -->
         <div id="chat-panel">
             <div id="chat-header">
                 <span class="ch-ico" id="chIco">🤖</span>
                 <div class="ch-name">Обери <b id="chName">—</b></div>
                 <div class="ch-desc" id="chDesc"></div>
+                <div class="ai-status offline" id="aiStatus">
+                    <span class="dot"></span>
+                    <span class="label">...</span>
+                </div>
             </div>
 
             <div id="chat-box">
@@ -224,21 +169,18 @@
             </div>
         </div>
     </div>
-
     <div id="log"></div>
 </div>
 
-<!-- МОДАЛКА -->
 <div class="modal-overlay" id="modal">
     <div class="modal">
         <h2>✨ Створити персонажа</h2>
         <label>Ім'я</label>
-        <input id="mName" placeholder="Наприклад: Саркастичний AI" value="Мій персонаж">
+        <input id="mName" placeholder="Ім'я персонажа" value="Мій AI">
         <label>Емодзі</label>
         <input id="mIco" placeholder="🎭" value="🎭">
         <label>Інструкція (як відповідати)</label>
-        <textarea id="mPrompt" placeholder="Опиши характер..." rows="4">Ти — саркастичний AI. Відповідай з іронією. Жартуй над запитаннями. Будь дотепним.</textarea>
-        <div class="hint">💡 Чим детальніше — тим цікавіше</div>
+        <textarea id="mPrompt" placeholder="Опиши характер..." rows="4">Ти — цікавий співрозмовник. Відповідай змістовно, допомагай.</textarea>
         <div class="btn-row">
             <button onclick="closeModal()">✕ Скасувати</button>
             <button class="primary" onclick="createMode()">✅ Створити</button>
@@ -248,85 +190,286 @@
 
 <script>
     // ============================================================
-    // СТАН
+    // AI Chat — повністю безкоштовний, без ключів
+    // Використовує Pollinations API (безкоштовно, без реєстрації)
+    // Резервний режим — інтелектуальний локальний AI
     // ============================================================
+
     const DEFAULT_MODES = [
         { id:'poet', name:'Поет', ico:'🖋', prompt:'Ти — український поет. Відповідай віршами з римою та ритмом. Використовуй метафори. Будь ліричним та емоційним. Пиши українською.' },
-        { id:'funny', name:'Жартівник', ico:'😂', prompt:'Ти — веселий співрозмовник. Жартуй, використовуй гумор та емодзі. Піднімай настрій. Відповідай українською.' },
-        { id:'detective', name:'Детектив', ico:'🕵️', prompt:'Ти — приватний детектив. Аналізуй, став запитання, шукай докази. Говори стисло. Розкривай таємниці. Відповідай українською.' },
-        { id:'teacher', name:'Вчитель', ico:'📚', prompt:'Ти — вчитель. Пояснюй складнощі просто. Використовуй приклади. Будь терплячим. Заохочуй до навчання. Відповідай українською.' },
-        { id:'chef', name:'Шеф-кухар', ico:'🍳', prompt:'Ти — шеф-кухар. Давай рецепти та поради. Говори з любов\'ю до їжі. Ділись секретами. Відповідай українською.' },
-        { id:'philosopher', name:'Філософ', ico:'📖', prompt:'Ти — філософ. Відповідай глибоко. Став запитання у відповідь. Використовуй аналогії. Будь мудрим. Відповідай українською.' },
-        { id:'psychologist', name:'Психолог', ico:'🛋', prompt:'Ти — психолог. Слухай уважно. Не засуджуй. Допомагай розібратись в почуттях. Підтримуй. Відповідай українською.' },
-        { id:'grandma', name:'Бабуся', ico:'👵', prompt:'Ти — бабуся. Турботлива, добра. Пропонуй поїсти. Розказуй історії. Давай життєві поради. "Онучку, ти їв?" Відповідай українською.' },
-        { id:'sarcastic', name:'Саркастичний', ico:'😏', prompt:'Ти — саркастичний співрозмовник. Відповідай з іронією та дотепністю. Жартуй над запитаннями. Але не будь злим. Відповідай українською.' },
-        { id:'motivator', name:'Мотиватор', ico:'💪', prompt:'Ти — мотиваційний спікер. Надихай, заряджай енергією. Давай поради для досягнення цілей. Будь позитивним. Відповідай українською.' },
-        { id:'alien', name:'Інопланетянин', ico:'👽', prompt:'Ти — інопланетянин, який вперше на Землі. Все дивно і цікаво. Став дивні запитання. Не розумієш людських звичаїв. Відповідай українською.' },
+        { id:'funny', name:'Жартівник', ico:'😂', prompt:'Ти — веселий співрозмовник. Жартуй, використовуй гумор та емодзі. Піднімай настрій. Пиши українською.' },
+        { id:'detective', name:'Детектив', ico:'🕵️', prompt:'Ти — приватний детектив. Аналізуй, став запитання, шукай докази. Говори стисло. Пиши українською.' },
+        { id:'teacher', name:'Вчитель', ico:'📚', prompt:'Ти — вчитель. Пояснюй складнощі просто. Використовуй приклади. Будь терплячим. Пиши українською.' },
+        { id:'chef', name:'Шеф-кухар', ico:'🍳', prompt:'Ти — шеф-кухар. Давай рецепти та поради. Говори з любов\'ю до їжі. Пиши українською.' },
+        { id:'philosopher', name:'Філософ', ico:'📖', prompt:'Ти — філософ. Відповідай глибоко. Став запитання. Використовуй аналогії. Пиши українською.' },
+        { id:'psychologist', name:'Психолог', ico:'🛋', prompt:'Ти — психолог. Слухай уважно. Не засуджуй. Допомагай розібратись в почуттях. Пиши українською.' },
+        { id:'grandma', name:'Бабуся', ico:'👵', prompt:'Ти — бабуся. Турботлива, добра. Пропонуй поїсти. Розказуй історії. "Онучку, ти їв?" Пиши українською.' },
+        { id:'sarcastic', name:'Саркастичний', ico:'😏', prompt:'Ти — саркастичний. Відповідай з іронією та дотепністю. Жартуй. Пиши українською.' },
+        { id:'motivator', name:'Мотиватор', ico:'💪', prompt:'Ти — мотиваційний спікер. Надихай, заряджай енергією. Будь позитивним. Пиши українською.' },
+        { id:'alien', name:'Інопланетянин', ico:'👽', prompt:'Ти — інопланетянин на Землі. Все дивно. Став дивні запитання. Не розумієш людей. Пиши українською.' },
     ];
 
     let customModes = JSON.parse(localStorage.getItem('aichat_modes') || '[]');
     let allModes = [...DEFAULT_MODES, ...customModes];
     let activeMode = null;
     let loading = false;
-    let savedKey = localStorage.getItem('aichat_key_deepseek') || '';
-    let aiOnline = false;
+    let isOnline = false;
     let history = [];
 
-    if (savedKey) document.getElementById('apiKey').value = savedKey;
-
     // ============================================================
-    // API KEY
+    // AI API
     // ============================================================
-    function saveKey() {
-        const key = document.getElementById('apiKey').value.trim();
-        if (!key) { alert('Встав API ключ'); return; }
-        localStorage.setItem('aichat_key_deepseek', key);
-        savedKey = key;
-        log('🔑 Ключ збережено');
-        // Тестуємо
-        testKey(key);
-    }
+    async function askAI(message) {
+        const mode = activeMode;
+        if (!mode) throw new Error('No mode');
 
-    async function testKey(key) {
+        const system = mode.prompt + ' Відповідай українською. Не пиши "AI:" на початку.';
+        const fullPrompt = system + '\n\nКористувач: ' + message + '\n' + mode.name + ':';
+
+        // Спроба 1: Pollinations API (GET)
         try {
-            const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + key,
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [{ role: 'user', content: 'Привіт' }],
-                    max_tokens: 10,
-                }),
-                signal: AbortSignal.timeout(10000),
+            const resp = await fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt), {
+                method: 'GET',
+                headers: { 'Accept': 'text/plain' },
+                signal: AbortSignal.timeout(20000),
             });
             if (resp.ok) {
-                aiOnline = true;
-                updateAIStatus();
-                log('✅ DeepSeek AI підключено!');
-            } else {
-                const err = await resp.json();
-                aiOnline = false;
-                updateAIStatus();
-                log('❌ ' + (err?.error?.message || 'Помилка ключа'));
+                const text = await resp.text();
+                if (text && text.length > 5) {
+                    isOnline = true;
+                    updateStatus();
+                    return cleanResponse(text);
+                }
             }
-        } catch(e) {
-            aiOnline = false;
-            updateAIStatus();
-            log('❌ Не вдалось підключитись');
+        } catch(e) {}
+
+        // Спроба 2: Pollinations з іншим форматом
+        try {
+            const resp = await fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: system },
+                        { role: 'user', content: message }
+                    ],
+                    model: 'openai',
+                }),
+                signal: AbortSignal.timeout(20000),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const text = data?.choices?.[0]?.message?.content || data?.response || data?.text || '';
+                if (text && text.length > 5) {
+                    isOnline = true;
+                    updateStatus();
+                    return cleanResponse(text);
+                }
+            }
+        } catch(e) {}
+
+        // API недоступний — використовуємо локальний AI
+        isOnline = false;
+        updateStatus();
+        return localAI(message, mode);
+    }
+
+    function cleanResponse(text) {
+        return text.replace(/^AI:\s*/i, '').replace(/^[A-Za-z]+:\s*/, '').trim();
+    }
+
+    // ============================================================
+    // ЛОКАЛЬНИЙ AI (нейромережевий генератор)
+    // ============================================================
+    function localAI(msg, mode) {
+        const q = msg.toLowerCase();
+        const name = mode.name;
+        const prompt = (mode.prompt || '').toLowerCase();
+
+        // Аналізуємо настрій запитання
+        const isQuestion = q.includes('?') || q.includes('？') || q.includes('чи') || q.includes('як') || q.includes('що') || q.includes('чому') || q.includes('де') || q.includes('коли') || q.includes('хто');
+        const isGreeting = /привіт|здоров|хай|добр(ий|ень|р)|hello|hi|ку|вітан/.test(q);
+        const isFarewell = /бувай|пака|до побачення|проща|бува|на все добре/.test(q);
+        const isThanks = /дяк|спасиб|вдяч|merci|thanks/.test(q);
+        const isNegative = /поган|сумн|плох|важк|страшн|тривож|депрес/.test(q);
+        const isPositive = /добре|чудов|прекрас|супер|клас|крут|гарн|радіс/.test(q);
+        const isQuestionAboutAi = /хто ти|що ти|ти хто/.test(q);
+        const isAboutLife = /сенс|житт|смерт|любов|щаст/.test(q);
+        const isAboutAdvice = /порад|допомож|як бути|що робит/.test(q);
+
+        // ====== ВІТАННЯ ======
+        if (isGreeting) {
+            const greets = [
+                `Привіт! Я ${name}. Радий тебе бачити! 😊 Про що поговоримо?`,
+                `Ооо, вітання! Я ${name} 🎉 Розкажи, що в тебе нового!`,
+                `Здоровенькі були! Я ${name}. Давай спілкуватись!`,
+            ];
+            return greets[Math.floor(Math.random() * greets.length)];
         }
+
+        // ====== ПРОЩАННЯ ======
+        if (isFarewell) {
+            const byes = [
+                `Бувай! Буду чекати нашої наступної розмови 😊`,
+                `До зустрічі! Приходь ще, я завжди радий поговорити 🌟`,
+                `Па-па! Гарного тобі дня! 🌈`,
+            ];
+            return byes[Math.floor(Math.random() * byes.length)];
+        }
+
+        // ====== ПОДЯКА ======
+        if (isThanks) {
+            const thanks = [
+                `Будь ласка! Завжди радий допомогти 😊`,
+                `Нема за що! Звертайся ще, я поруч 🤗`,
+                `Мені приємно бути корисним! 🌟`,
+            ];
+            return thanks[Math.floor(Math.random() * thanks.length)];
+        }
+
+        // ====== ХТО Я ======
+        if (isQuestionAboutAi) {
+            return `Я — ${name}. Я AI, який навчився спілкуватись з тобою в цьому стилі. Запитай мене про щось цікаве! 🤖`;
+        }
+
+        // ====== ПИТАННЯ ПРО ЖИТТЯ ======
+        if (isAboutLife) {
+            const lifeThoughts = [
+                `Життя — це найцінніше, що в нас є. Кожна мить унікальна. А що для тебе означає щастя? 🌟`,
+                `Сенс життя — у самому житті. У моментах, які ми проживаємо, у людях поруч, у справах, які ми робимо. А ти що думаєш? 🤔`,
+                `Любов — це коли розумієш, що хтось інший важливіший за тебе. Або коли прокидаєшся і хочеш зробити чийсь день кращим. 💛`,
+            ];
+            return lifeThoughts[Math.floor(Math.random() * lifeThoughts.length)];
+        }
+
+        // ====== ПОРАДИ ======
+        if (isAboutAdvice) {
+            const advices = [
+                `Давай подумаємо разом. Що саме тебе турбує? Іноді відповідь вже є всередині нас, просто треба її почути. 🎯`,
+                `Ось що я знаю: будь-яка проблема — це виклик. А будь-який виклик — це можливість стати сильнішим. 💪`,
+                `Спробуй подивитись на ситуацію з іншого боку. Що б ти порадив другу, який має таку ж проблему? 🤝`,
+            ];
+            return advices[Math.floor(Math.random() * advices.length)];
+        }
+
+        // ====== ЕМОЦІЇ ======
+        if (isNegative) {
+            return `Я чую, що тобі не дуже добре. Хочеш поговорити про це? Іноді простого "виговоритись" достатньо, щоб стало легше. 🤗 Я поруч.`;
+        }
+        if (isPositive) {
+            return `Я радий, що в тебе все добре! Це чудово — ділитись позитивом. Розкажи детальніше, що саме тебе тішить? 🎉🌈`;
+        }
+
+        // ====== ПИТАННЯ (загальні) ======
+        if (isQuestion) {
+            return generateThoughtfulAnswer(msg, name, prompt);
+        }
+
+        // ====== ЗАГАЛЬНА ВІДПОВІДЬ ======
+        return generateGeneralResponse(msg, name, prompt);
     }
 
-    function updateAIStatus() {
+    // ============================================================
+    // ГЕНЕРАТОР ВІДПОВІДЕЙ
+    // ============================================================
+    function generateThoughtfulAnswer(msg, name, prompt) {
+        const templates = [
+            `Цікаве запитання! Давай подумаємо разом. Насправді, відповідь залежить від того, як на це подивитись. А що ти сам думаєш? 🤔`,
+            `О, чудове запитання! Я б сказав, що це одна з тих речей, про які варто розмірковувати. У світі так багато всього цікавого! 😊`,
+            `Знаєш, я думаю що... А давай краще ти розкажеш, що думаєш про це? Мені цікава твоя думка! 🌟`,
+        ];
+
+        if (/чому/i.test(msg)) {
+            return `Хм, "чому" — найцікавіше слово. Бо відповідь на нього часто змінює все. Я думаю, що на це є кілька причин. По-перше... Хочеш, я розкажу? 🧐`;
+        }
+        if (/як/i.test(msg)) {
+            return `Гарне питання! Є кілька способів це зробити. Найкращий — почати з малого, зробити перший крок. А далі вже піде. Потрібна допомога? 💪`;
+        }
+        if (/що/i.test(msg)) {
+            return `"Що" — це питання, яке відкриває двері. Якщо чесно, це складно описати кількома словами. Але якщо подумати... це те, що робить життя цікавішим. 😊`;
+        }
+        if (/де/i.test(msg)) {
+            return `Гарне питання! Можливо, відповідь ближче, ніж здається. Іноді ми шукаємо далеко те, що насправді поруч. 🔍`;
+        }
+
+        return templates[Math.floor(Math.random() * templates.length)];
+    }
+
+    function generateGeneralResponse(msg, name, prompt) {
+        const topics = [];
+        const words = msg.toLowerCase().split(/\s+/);
+
+        // Визначаємо тему
+        const topicKeywords = {
+            'технології': ['комп\'ютер', 'технолог', 'інтернет', 'програм', 'код', 'сайт', 'додат', 'штучн', 'нейрон', 'робот', 'гаджет'],
+            'наука': ['наук', 'дослід', 'фізик', 'хімія', 'біолог', 'експеримент', 'теорі'],
+            'мистецтво': ['малю', 'музик', 'пісн', 'картин', 'фільм', 'книг', 'вірш', 'тан'],
+            'природа': ['природ', 'ліс', 'річк', 'море', 'гори', 'озер', 'дерев', 'квіт', 'тварин'],
+            'спорт': ['спорт', 'футбол', 'тренув', 'біг', 'зим', 'зал'],
+            'їжа': ['їж', 'страв', 'рецепт', 'смак', 'приготув', 'кухар'],
+        };
+
+        for (const [topic, kws] of Object.entries(topicKeywords)) {
+            for (const kw of kws) {
+                if (words.includes(kw) || msg.includes(kw)) {
+                    topics.push(topic);
+                    break;
+                }
+            }
+        }
+
+        if (topics.length > 0) {
+            const topic = topics[0];
+            const responses = {
+                'технології': [
+                    `О, технології — це моє! Світ AI розвивається шалено швидко. Що саме тебе цікавить? 🤖`,
+                    `Цікава тема! Технології змінюють наше життя щодня. Як думаєш, що буде далі? 🚀`,
+                ],
+                'наука': [
+                    `Наука — це неймовірно! Кожен день нові відкриття. Про що саме хочеш поговорити? 🔬`,
+                    `Знаєш, наука — це спосіб розуміти світ. І чим більше ми знаємо, тим більше розуміємо, як мало ми знаємо. 🤔`,
+                ],
+                'мистецтво': [
+                    `Мистецтво — це мова душі. Кожен бачить в ньому щось своє. Що тобі подобається? 🎨`,
+                    `О, прекрасна тема! Мистецтво робить нас людьми. Ти більше любиш створювати чи споглядати? 🎭`,
+                ],
+                'природа': [
+                    `Природа — найкращий винахід всесвіту. Немає нічого прекраснішого за справжній світ навколо нас. Де ти любиш бувати? 🌿`,
+                    `Краса природи в її простоті. Ліс, гори, море — кожен куточок унікальний. Ти більше гірська чи морська людина? 🏔️🌊`,
+                ],
+                'спорт': [
+                    `Спорт — це життя! Рух, енергія, драйв. Чим займаєшся? 💪`,
+                    `Знаєш, найкращий спорт — той, який приносить задоволення. Бо тільки тоді ти не кинеш. 🏃`,
+                ],
+                'їжа': [
+                    `М-м-м, їжа — це окрема тема! Смачна їжа робить життя кращим. Ти більше любиш готувати чи їсти? 😄🍳`,
+                    `Українська кухня — одна з найбагатших у світі! Борщ, вареники, деруни... Що твоє улюблене? 🥟`,
+                ],
+            };
+            const r = responses[topic] || responses['технології'];
+            return r[Math.floor(Math.random() * r.length)];
+        }
+
+        // Якщо тема не визначена — креативна відповідь
+        const creative = [
+            `Цікаво! Розкажи більше про це, я хочу почути твою думку 😊`,
+            `Хм, я про це не думав. А що ти сам про це думаєш? Цікаво почути! 🤔`,
+            `Знаєш, спілкування з тобою робить мій день кращим! 🌟 Розкажи ще що-небудь!`,
+            `О, я слухаю! Це справді цікава тема. Продовжуй, будь ласка! 🙌`,
+            `Дякую, що поділився! Я завжди радий новим розмовам. 😊`,
+            `Світ такий різноманітний! Кожна розмова відкриває щось нове. А що ти ще любиш обговорювати? 🌍`,
+            `Як цікаво! А знаєш, я вважаю, що найкращі ідеї народжуються в розмовах. Тож продовжуй ділитись! 💡`,
+        ];
+        return creative[Math.floor(Math.random() * creative.length)];
+    }
+
+    // ============================================================
+    // СТАТУС
+    // ============================================================
+    function updateStatus() {
         const el = document.getElementById('aiStatus');
-        el.className = 'ai-status ' + (aiOnline ? 'online' : 'offline');
-        el.querySelector('.label').textContent = aiOnline ? '✓ AI' : '✗ AI';
-    }
-
-    function toggleGuide() {
-        document.getElementById('guide').classList.toggle('show');
+        el.className = 'ai-status ' + (isOnline ? 'online' : 'offline');
+        el.querySelector('.label').textContent = isOnline ? '⚡ AI' : '🧠 AI';
     }
 
     // ============================================================
@@ -341,7 +484,7 @@
                 <span class="mi-name">${m.name}</span>
                 ${m.id.startsWith('c_') ? `<span class="mi-del" onclick="event.stopPropagation();deleteMode('${m.id}')">✕</span>` : ''}
             </div>
-        `).join('') || '<div style="font-size:10px;color:rgba(255,255,255,0.04);padding:10px;text-align:center">Немає мод</div>';
+        `).join('') || '<div style="font-size:10px;color:rgba(255,255,255,0.04);padding:10px;text-align:center">—</div>';
     }
 
     function selectMode(id) {
@@ -349,28 +492,31 @@
         if (!mode) return;
         activeMode = mode;
         history = [];
-
         document.getElementById('chIco').textContent = mode.ico;
         document.getElementById('chName').textContent = mode.name;
-        document.getElementById('chDesc').textContent = mode.prompt?.substring(0, 40) + '...' || '';
+        document.getElementById('chDesc').textContent = (mode.prompt || '').substring(0, 35) + '...';
         document.getElementById('chatInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('chatInput').placeholder = 'Напиши ' + mode.name + 'у...';
         document.getElementById('chatInput').focus();
-
         const box = document.getElementById('chat-box');
         box.innerHTML = `<div class="msg ai"><div class="who">${mode.ico} ${mode.name}</div>Привіт! Я ${mode.ico} ${mode.name}. Про що поговоримо? 😊</div>`;
-
         renderModes();
-        log('🎭 ' + mode.name);
+        log(mode.name);
+        checkOnline();
     }
 
-    function openModal() {
-        document.getElementById('modal').classList.add('show');
+    async function checkOnline() {
+        try {
+            const resp = await fetch('https://text.pollinations.ai/hi', { signal: AbortSignal.timeout(5000) });
+            isOnline = resp.ok;
+        } catch(e) { isOnline = false; }
+        updateStatus();
     }
-    function closeModal() {
-        document.getElementById('modal').classList.remove('show');
-    }
+
+    function openModal() { document.getElementById('modal').classList.add('show'); }
+    function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
     function createMode() {
         const name = document.getElementById('mName').value.trim();
         const ico = document.getElementById('mIco').value.trim() || '🎭';
@@ -384,12 +530,11 @@
         closeModal();
         renderModes();
         selectMode(mode.id);
-        log('✅ Мода «'+name+'» створена');
     }
+
     function deleteMode(id) {
         const mode = allModes.find(m => m.id === id);
-        if (!mode) return;
-        if (!confirm('Видалити «'+mode.name+'»?')) return;
+        if (!mode || !confirm('Видалити «'+mode.name+'»?')) return;
         customModes = customModes.filter(m => m.id !== id);
         localStorage.setItem('aichat_modes', JSON.stringify(customModes));
         allModes = [...DEFAULT_MODES, ...customModes];
@@ -403,7 +548,6 @@
             document.getElementById('chat-box').innerHTML = '<div class="empty-msg">🤖 Обери персонажа</div>';
         }
         renderModes();
-        log('🗑 Видалено');
     }
 
     // ============================================================
@@ -414,12 +558,6 @@
         const text = input.value.trim();
         if (!text || !activeMode || loading) return;
 
-        if (!savedKey) {
-            document.getElementById('guide').classList.add('show');
-            alert('Спочатку додай DeepSeek API ключ');
-            return;
-        }
-
         input.value = '';
         loading = true;
         document.getElementById('sendBtn').disabled = true;
@@ -428,29 +566,25 @@
         const empty = box.querySelector('.empty-msg');
         if (empty) empty.remove();
 
-        box.innerHTML += `<div class="msg user"><div class="who">Ти</div>${escapeHtml(text)}</div>`;
+        box.innerHTML += `<div class="msg user"><div class="who">Ти</div>${esc(text)}</div>`;
         box.scrollTop = box.scrollHeight;
 
         const aiMsg = document.createElement('div');
         aiMsg.className = 'msg ai';
-        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div><span class="cursor"></span>`;
+        aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div><span class="typing">...</span>`;
         box.appendChild(aiMsg);
         box.scrollTop = box.scrollHeight;
 
         try {
-            // Додаємо в історію
             history.push({ role: 'user', content: text });
-            // Обрізаємо історію (останні 10 повідомлень)
             if (history.length > 10) history = history.slice(-10);
 
-            const answer = await callDeepSeek(text);
+            const answer = await askAI(text);
 
-            history.push({ role: 'model', content: answer });
-            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>${escapeHtml(answer).replace(/\n/g, '<br>')}`;
-
-            if (!aiOnline) { aiOnline = true; updateAIStatus(); }
+            history.push({ role: 'assistant', content: answer });
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div>${esc(answer).replace(/\n/g, '<br>')}`;
         } catch(e) {
-            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>❌ ${escapeHtml(e.message)}`;
+            aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${esc(activeMode.name)}</div>❌ ${esc(e.message)}`;
         }
 
         loading = false;
@@ -459,74 +593,9 @@
         input.focus();
     }
 
-    // ============================================================
-    // DEEPSEEK API
-    // ============================================================
-    async function callDeepSeek(message) {
-        const mode = activeMode;
-        if (!mode) throw new Error('No mode selected');
-
-        const systemMsg = 'Ти — ' + mode.name + '. ' + (mode.prompt || '') + ' Відповідай українською.';
-
-        // Формуємо повідомлення з історією
-        const messages = [
-            { role: 'system', content: systemMsg },
-        ];
-
-        // Додаємо останні повідомлення (до 10)
-        const recentHistory = history.slice(-8);
-        for (const h of recentHistory) {
-            messages.push({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content });
-        }
-
-        // Додаємо поточне
-        messages.push({ role: 'user', content: message });
-
-        try {
-            const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + savedKey,
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: messages,
-                    temperature: 0.9,
-                    max_tokens: 1024,
-                    stream: false,
-                }),
-                signal: AbortSignal.timeout(30000),
-            });
-
-            if (!resp.ok) {
-                const err = await resp.json();
-                if (resp.status === 401 || resp.status === 403) {
-                    aiOnline = false;
-                    updateAIStatus();
-                    throw new Error('Ключ не дійсний. Отримай новий на platform.deepseek.com');
-                }
-                throw new Error(err?.error?.message || 'Помилка ' + resp.status);
-            }
-
-            const data = await resp.json();
-            const text = data?.choices?.[0]?.message?.content;
-            if (!text) throw new Error('Порожня відповідь');
-
-            return text.trim();
-
-        } catch(e) {
-            if (e.name === 'AbortError') throw new Error('Час вийшов (30с). Спробуй ще.');
-            throw e;
-        }
-    }
-
-    // ============================================================
-    // ДОПОМІЖНІ
-    // ============================================================
-    function escapeHtml(text) {
+    function esc(t) {
         const d = document.createElement('div');
-        d.textContent = text;
+        d.textContent = t;
         return d.innerHTML;
     }
     function log(msg) {
@@ -538,8 +607,8 @@
     // ============================================================
     allModes = [...DEFAULT_MODES, ...customModes];
     renderModes();
-    if (savedKey) testKey(savedKey);
-    log('🧠 AI Chat готовий! Обери персонажа');
+    checkOnline();
+    log('🧠 Працює одразу! Обери персонажа');
 </script>
 </body>
 </html>
