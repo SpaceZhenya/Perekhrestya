@@ -3,111 +3,755 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тіні — реалістичний шутер</title>
+    <title>Тінь — 3D шутер</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
-        body { background:#020304; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:'Segoe UI',sans-serif; }
-        #wrap {
-            position:relative; width:800px; max-width:100vw; height:600px; max-height:100vh;
-            border:1px solid rgba(255,255,255,0.03); border-radius:6px; overflow:hidden;
-            box-shadow:0 0 80px rgba(0,0,0,0.5);
-        }
-        canvas { display:block; width:100%; height:100%; background:#040608; cursor:crosshair; }
+        *{margin:0;padding:0;box-sizing:border-box;user-select:none}
+        body{background:#000;overflow:hidden;font-family:'Segoe UI',sans-serif}
+        canvas{display:block}
 
-        #hud {
-            position:absolute; top:0; left:0; right:0;
-            padding:8px 12px; pointer-events:none;
+        #ui{
+            position:fixed;top:0;left:0;right:0;bottom:0;
+            pointer-events:none;z-index:10
         }
-        #hud .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-        #hud .row:last-child { margin-bottom:0; }
-        #hud .val { font-size:11px; letter-spacing:0.03em; }
-        #hud .val b { color:rgba(255,255,255,0.5); font-weight:400; }
-        #hud .val .num { color:rgba(255,255,255,0.25); }
 
-        #hpbarWrap { width:130px; height:5px; background:rgba(255,255,255,0.03); border-radius:3px; overflow:hidden; position:relative; }
-        #hpbar { height:100%; width:100%; border-radius:3px; transition:width 0.1s; }
-        #hpbar.health { background:linear-gradient(90deg,#3a7a5a,#5a8a6a); }
-        #hpbar.damage { background:linear-gradient(90deg,#8a2a2a,#aa3a3a); }
-
-        #ammo { font-size:11px; }
-        #ammo b { font-size:14px; }
-
-        #overlay {
-            display:none; position:absolute; top:0; left:0; right:0; bottom:0;
-            background:rgba(0,0,0,0.7); z-index:20;
-            flex-direction:column; align-items:center; justify-content:center; gap:12px;
+        #crosshair{
+            position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);
         }
-        #overlay.show { display:flex; }
-        #overlay h1 { font-size:24px; font-weight:300; color:rgba(255,255,255,0.15); letter-spacing:0.15em; }
-        #overlay .sub { font-size:11px; color:rgba(255,255,255,0.06); }
-        #overlay .big-num { font-size:36px; color:rgba(255,255,255,0.1); font-weight:200; }
-        #overlay button {
-            padding:8px 28px; margin-top:4px;
-            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);
-            border-radius:6px; color:rgba(255,255,255,0.2); font-size:12px;
-            cursor:pointer; font-family:inherit; transition:0.15s;
+        #crosshair::before,#crosshair::after{
+            content:'';display:block;position:absolute;
+            background:rgba(255,255,255,0.06);
         }
-        #overlay button:hover { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); }
+        #crosshair::before{width:2px;height:12px;top:-6px;left:-1px}
+        #crosshair::after{width:12px;height:2px;top:-1px;left:-6px}
+        #crosshair span{
+            display:block;width:2px;height:2px;
+            background:rgba(255,255,255,0.04);
+        }
 
-        #minimap {
-            position:absolute; bottom:10px; right:10px;
-            width:80px; height:80px; border-radius:4px;
-            border:1px solid rgba(255,255,255,0.03);
-            background:rgba(0,0,0,0.4); overflow:hidden; pointer-events:none;
+        #hud{
+            position:absolute;bottom:20px;left:20px;right:20px;
+            display:flex;justify-content:space-between;align-items:flex-end;
         }
+        #hpSec{
+            display:flex;flex-direction:column;gap:3px;
+        }
+        #hpSec .label{
+            font-size:9px;letter-spacing:0.1em;color:rgba(255,255,255,0.06);
+        }
+        #hpBarW{
+            width:150px;height:4px;background:rgba(255,255,255,0.02);
+            border-radius:2px;overflow:hidden;
+        }
+        #hpBar{height:100%;width:100%;background:#3a7a5a;border-radius:2px;transition:width 0.15s}
+        #hpBar.low{background:#8a2a2a}
+
+        #scoreSec{
+            text-align:right;
+        }
+        #scoreSec .num{font-size:22px;color:rgba(255,255,255,0.06);font-weight:200}
+        #scoreSec .num b{color:rgba(255,255,255,0.15)}
+        #scoreSec .wave{font-size:10px;color:rgba(255,255,255,0.04);letter-spacing:0.05em}
+
+        #dmgs{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            display:flex;flex-direction:column;align-items:center;gap:2px;
+        }
+        .dmg-num{
+            font-size:16px;font-weight:600;
+            color:rgba(255,200,100,0.3);text-shadow:0 0 10px rgba(255,200,100,0.1);
+            transition:all 0.5s ease-out;
+        }
+
+        #startOverlay{
+            position:fixed;top:0;left:0;right:0;bottom:0;
+            background:rgba(0,0,0,0.85);z-index:100;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+            backdrop-filter:blur(8px);
+        }
+        #startOverlay h1{
+            font-size:28px;font-weight:300;color:rgba(255,255,255,0.08);
+            letter-spacing:0.2em;
+        }
+        #startOverlay .sub{
+            font-size:11px;color:rgba(255,255,255,0.04);
+        }
+        #startOverlay button{
+            padding:10px 30px;margin-top:6px;
+            background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);
+            border-radius:6px;color:rgba(255,255,255,0.1);
+            font-size:12px;cursor:pointer;pointer-events:auto;font-family:inherit;
+            transition:0.15s;
+        }
+        #startOverlay button:hover{
+            background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.2);
+        }
+        #startOverlay .note{
+            font-size:9px;color:rgba(255,255,255,0.02);
+        }
+        #startOverlay.hidden{display:none}
     </style>
 </head>
 <body>
-<div id="wrap">
-    <canvas id="c"></canvas>
-    <div id="hud">
-        <div class="row">
-            <div class="val"><b id="hpNum">100</b> <span class="num">HP</span></div>
-            <div class="val"><span class="num">🌊</span> <b id="wave">0</b></div>
-        </div>
-        <div class="row">
-            <div id="hpbarWrap"><div id="hpbar" class="health"></div></div>
-            <div class="val" id="ammo"><b id="score">0</b> <span class="num">очок</span></div>
-        </div>
-    </div>
-    <div id="overlay" class="show">
-        <h1>🌑 ТІНІ</h1>
-        <div class="sub">Ліва кнопка — стріляти | WASD — рух</div>
-        <button onclick="startGame()">▶ ПОЧАТИ</button>
-    </div>
-    <canvas id="minimap" width="80" height="80"></canvas>
+
+<div id="startOverlay">
+    <h1>🌑 ТІНЬ</h1>
+    <div class="sub">3D шутер — клікни, щоб почати</div>
+    <button onclick="startGame()">▶ ГРАТИ</button>
+    <div class="note">WASD — рух · Миша — огляд · ЛКМ — стріляти · Shift — біг</div>
 </div>
-<script>
+
+<div id="ui">
+    <div id="crosshair"><span></span></div>
+    <div id="dmgs"></div>
+    <div id="hud">
+        <div id="hpSec">
+            <div id="hpBarW"><div id="hpBar"></div></div>
+        </div>
+        <div id="scoreSec">
+            <div class="num"><b id="scr">0</b></div>
+            <div class="wave" id="wave">ХВИЛЯ 0</div>
+        </div>
+    </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
     // ============================================================
-    // ТІНІ — реалістичний топ-даун шутер
+    // СЦЕНА
     // ============================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040608);
+    scene.fog = new THREE.FogExp2(0x040608, 0.0035);
 
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
-    const miniCanvas = document.getElementById('minimap');
-    const miniCtx = miniCanvas.getContext('2d');
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 0);
 
-    let W, H;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    document.body.prepend(renderer.domElement);
 
-    function resize() {
-        W = canvas.parentElement.clientWidth;
-        H = canvas.parentElement.clientHeight;
-        canvas.width = W;
-        canvas.height = H;
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ============================================================
+    // СВІТЛО
+    // ============================================================
+    const ambientLight = new THREE.AmbientLight(0x203050, 0.3);
+    scene.add(ambientLight);
+
+    const moonLight = new THREE.DirectionalLight(0x446688, 0.4);
+    moonLight.position.set(-30, 40, -20);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 1024;
+    moonLight.shadow.mapSize.height = 1024;
+    scene.add(moonLight);
+
+    const fillLight = new THREE.DirectionalLight(0x334466, 0.2);
+    fillLight.position.set(20, 10, 30);
+    scene.add(fillLight);
+
+    // ============================================================
+    // ЗЕМЛЯ
+    // ============================================================
+    const groundGeo = new THREE.PlaneGeometry(120, 120);
+    const groundMat = new THREE.MeshStandardMaterial({
+        color: 0x080c10,
+        roughness: 0.95,
+        metalness: 0.0,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ============================================================
+    // ДЕРЕВА ТА ПЕРЕШКОДИ
+    // ============================================================
+    function createTree(x, z) {
+        const g = new THREE.Group();
+
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x181c20, roughness: 0.9 });
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 5), trunkMat);
+        trunk.position.y = 0.75;
+        trunk.castShadow = true;
+        g.add(trunk);
+
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x0a0e12, roughness: 0.8 });
+        const leaf = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2, 6), leafMat);
+        leaf.position.y = 1.8;
+        leaf.castShadow = true;
+        g.add(leaf);
+        const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 6), leafMat);
+        leaf2.position.y = 2.8;
+        leaf2.castShadow = true;
+        g.add(leaf2);
+
+        g.position.set(x, 0, z);
+        const r = Math.random() * Math.PI * 2;
+        g.rotation.y = r;
+        const s = 0.8 + Math.random() * 0.6;
+        g.scale.set(s, s, s);
+        return g;
     }
-    window.addEventListener('resize', resize);
-    resize();
+
+    // Дерева по колу
+    for (let i = 0; i < 35; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 10 + Math.random() * 40;
+        const x = Math.cos(a) * d;
+        const z = Math.sin(a) * d;
+        scene.add(createTree(x, z));
+    }
+
+    // Камені-перешкоди
+    function createRock(x, z) {
+        const mat = new THREE.MeshStandardMaterial({
+            color: 0x14181c, roughness: 0.9, metalness: 0.1
+        });
+        const geo = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, 0.2, z);
+        mesh.rotation.set(Math.random(), Math.random(), Math.random());
+        mesh.scale.set(1, 0.6 + Math.random() * 0.3, 1);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
+    for (let i = 0; i < 20; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 5 + Math.random() * 45;
+        scene.add(createRock(Math.cos(a) * d, Math.sin(a) * d));
+    }
 
     // ============================================================
-    // ЗВУКИ (Web Audio API — синтезовані)
+    // ГРАВЕЦЬ (FPS камера)
+    // ============================================================
+    const player = {
+        hp: 100,
+        maxHp: 100,
+        x: 0,
+        z: 0,
+        angle: 0,
+        pitch: 0,
+        speed: 5,
+        sprintMult: 1.6,
+        height: 1.8,
+        shootCooldown: 0,
+        shootDelay: 0.12, // секунд
+        alive: true,
+        invincible: 0,
+    };
+
+    // ============================================================
+    // СТАН ГРИ
+    // ============================================================
+    const game = {
+        score: 0,
+        wave: 0,
+        kills: 0,
+        running: false,
+        enemies: [],
+        bullets: [],
+        particles: [],
+        damageNums: [],
+        enemySpawned: 0,
+        enemyCount: 0,
+        spawnTimer: 0,
+        timer: 0,
+    };
+
+    // ============================================================
+    // ВОРОГИ
+    // ============================================================
+    const ENEMY_DEFS = {
+        stalker: {
+            r: 0.5, hp: 2, speed: 2.0, score: 15, damage: 10,
+            color: 0xcc5533,
+        },
+        runner: {
+            r: 0.35, hp: 1, speed: 4.5, score: 10, damage: 8,
+            color: 0x5599cc,
+        },
+        brute: {
+            r: 0.8, hp: 8, speed: 1.2, score: 40, damage: 25,
+            color: 0x773355,
+        },
+        sniper: {
+            r: 0.4, hp: 2, speed: 1.3, score: 30, damage: 8,
+            color: 0x338855,
+            ranged: true,
+        },
+        exploder: {
+            r: 0.6, hp: 3, speed: 3.0, score: 25, damage: 40,
+            color: 0xcc8822,
+            explosion: true,
+        },
+    };
+
+    class Enemy3D {
+        constructor(x, z, type) {
+            this.type = type;
+            const def = ENEMY_DEFS[type];
+            this.hp = def.hp;
+            this.maxHp = def.hp;
+            this.speed = def.speed;
+            this.score = def.score;
+            this.damage = def.damage;
+            this.r = def.r;
+            this.alive = true;
+            this.hitFlash = 0;
+            this.targetX = x;
+            this.targetZ = z;
+            this.angle = 0;
+            this.wobble = Math.random() * Math.PI * 2;
+
+            // 3D об'єкт
+            this.group = new THREE.Group();
+            this.group.position.set(x, 0, z);
+
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: def.color,
+                roughness: 0.6,
+                metalness: 0.2,
+            });
+
+            if (type === 'runner') {
+                const body = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 6), bodyMat);
+                body.position.y = 0.25;
+                body.castShadow = true;
+                this.group.add(body);
+            } else if (type === 'brute') {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.8, 2, 2, 2), bodyMat);
+                body.position.y = 0.35;
+                body.castShadow = true;
+                this.group.add(body);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 6), bodyMat);
+                head.position.y = 0.75;
+                head.castShadow = true;
+                this.group.add(head);
+            } else if (type === 'exploder') {
+                const body = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), bodyMat);
+                body.position.y = 0.4;
+                body.castShadow = true;
+                this.group.add(body);
+                // Сяйво
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: 0xffaa33,
+                    transparent: true,
+                    opacity: 0.2,
+                });
+                const glow = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), glowMat);
+                glow.position.y = 0.4;
+                this.group.add(glow);
+                this.glowMesh = glow;
+            } else if (type === 'sniper') {
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.6, 6), bodyMat);
+                body.position.y = 0.3;
+                body.castShadow = true;
+                this.group.add(body);
+                const eye = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.2, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0x66ffaa })
+                );
+                eye.position.set(0, 0.4, 0.3);
+                this.group.add(eye);
+            } else {
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 6), bodyMat);
+                body.position.y = 0.3;
+                body.castShadow = true;
+                this.group.add(body);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 6, 6), bodyMat);
+                head.position.y = 0.6;
+                head.castShadow = true;
+                this.group.add(head);
+            }
+
+            // Тінь під ногами
+            const shadowMat = new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.15,
+            });
+            const shadow = new THREE.Mesh(new THREE.CircleGeometry(this.r, 8), shadowMat);
+            shadow.rotation.x = -Math.PI / 2;
+            shadow.position.y = 0.01;
+            this.group.add(shadow);
+            this.shadowMesh = shadow;
+
+            scene.add(this.group);
+
+            // Спеціальні параметри
+            if (def.ranged) {
+                this.shootTimer = Math.random() * 2;
+                this.shootDelay = 2.5;
+                this.retreat = false;
+            }
+            if (def.explosion) {
+                this.exploding = false;
+                this.explosionTimer = 0;
+            }
+        }
+
+        update(dt) {
+            if (!this.alive) return;
+            this.hitFlash = Math.max(0, this.hitFlash - dt * 10);
+
+            const dx = player.x - this.group.position.x;
+            const dz = player.z - this.group.position.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            this.angle = Math.atan2(dx, dz);
+
+            this.wobble += dt * 3;
+
+            // Поведінка
+            let moveX = 0, moveZ = 0;
+            let speed = this.speed;
+
+            if (this.type === 'exploder' && dist < 8 && !this.exploding) {
+                this.exploding = true;
+                this.explosionTimer = 1.5;
+            }
+
+            if (this.exploding) {
+                this.explosionTimer -= dt;
+                // Блимає
+                if (this.glowMesh) {
+                    this.glowMesh.material.opacity = 0.2 + Math.sin(this.explosionTimer * 20) * 0.3;
+                }
+                speed = this.speed * 1.8;
+                this.hitFlash = 0.3;
+                if (this.explosionTimer <= 0) {
+                    this.explode();
+                    return;
+                }
+                if (dist > 0.5) {
+                    moveX = dx / dist * speed;
+                    moveZ = dz / dist * speed;
+                }
+            } else if (this.type === 'runner') {
+                if (dist > 0.5) {
+                    moveX = dx / dist * speed;
+                    moveZ = dz / dist * speed;
+                }
+            } else if (this.type === 'brute') {
+                const chargeSpeed = dist < 6 ? speed * 2 : speed;
+                if (dist > 1) {
+                    moveX = dx / dist * chargeSpeed;
+                    moveZ = dz / dist * chargeSpeed;
+                }
+            } else if (this.type === 'sniper') {
+                this.shootTimer += dt;
+                if (this.shootTimer >= this.shootDelay && dist < 20 && dist > 3) {
+                    this.shootTimer = 0;
+                    spawnEnemyBullet(this.group.position.x, this.group.position.z, this.angle);
+                }
+                if (dist < 5) {
+                    moveX = -dx / dist * speed;
+                    moveZ = -dz / dist * speed;
+                } else if (dist > 15) {
+                    moveX = dx / dist * speed * 0.5;
+                    moveZ = dz / dist * speed * 0.5;
+                } else {
+                    moveX = dx / dist * speed * 0.2;
+                    moveZ = dz / dist * speed * 0.2;
+                }
+            } else {
+                if (dist > 0.5) {
+                    moveX = dx / dist * speed;
+                    moveZ = dz / dist * speed;
+                }
+            }
+
+            // Рух
+            this.group.position.x += moveX * dt;
+            this.group.position.z += moveZ * dt;
+
+            // Обертання до гравця
+            this.group.lookAt(player.x, 0, player.z);
+
+            // Підстрибування
+            this.group.position.y = Math.abs(Math.sin(this.wobble * 2)) * 0.05;
+
+            // Тінь під ногами
+            if (this.shadowMesh) {
+                this.shadowMesh.position.y = 0.01;
+            }
+
+            // Зіткнення з гравцем
+            const curDist = Math.sqrt((player.x - this.group.position.x) ** 2 + (player.z - this.group.position.z) ** 2);
+            if (curDist < this.r + 0.5 && player.invincible <= 0) {
+                player.hp -= this.damage;
+                player.invincible = 0.5;
+                if (player.hp <= 0) {
+                    player.hp = 0;
+                    player.alive = false;
+                    endGame();
+                }
+            }
+        }
+
+        takeDamage(dmg) {
+            this.hp -= dmg;
+            this.hitFlash = 0.3;
+            if (this.hp <= 0) {
+                this.die();
+                return true;
+            }
+            return false;
+        }
+
+        die() {
+            this.alive = false;
+            game.score += this.score;
+            game.kills++;
+
+            // Частинки смерті
+            for (let i = 0; i < 15; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 0.5 + Math.random() * 2;
+                spawnParticle(
+                    this.group.position.x, 0.3, this.group.position.z,
+                    Math.cos(a) * s, Math.random() * 0.5, Math.sin(a) * s,
+                    0x885533, 0.8, 0.5 + Math.random() * 0.5
+                );
+            }
+
+            scene.remove(this.group);
+            // Dispose geometry & materials
+            this.group.traverse(child => {
+                if (child.isMesh) {
+                    child.geometry.dispose();
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
+            });
+        }
+
+        explode() {
+            playExplosion();
+            // Шкода гравцю
+            const d = Math.sqrt((player.x - this.group.position.x) ** 2 + (player.z - this.group.position.z) ** 2);
+            if (d < 5) {
+                const f = 1 - d / 5;
+                player.hp -= this.damage * f;
+                if (player.hp <= 0) { player.hp = 0; player.alive = false; endGame(); }
+            }
+            // Частинки вибуху
+            for (let i = 0; i < 30; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 1 + Math.random() * 4;
+                spawnParticle(
+                    this.group.position.x, 0.3, this.group.position.z,
+                    Math.cos(a) * s, 0.5 + Math.random() * 2, Math.sin(a) * s,
+                    0xff8833, 1.0, 0.3 + Math.random() * 0.4
+                );
+            }
+            for (let i = 0; i < 15; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 0.5 + Math.random() * 1;
+                spawnParticle(
+                    this.group.position.x, 0.2, this.group.position.z,
+                    Math.cos(a) * s, Math.random() * 0.5, Math.sin(a) * s,
+                    0xaaaaaa, 0.3, 0.1 + Math.random() * 0.2
+                );
+            }
+            game.shake = 0.3;
+            scene.remove(this.group);
+            this.alive = false;
+        }
+    }
+
+    // ============================================================
+    // КУЛІ
+    // ============================================================
+    class Bullet3D {
+        constructor(x, y, z, angle) {
+            const geo = new THREE.SphereGeometry(0.08, 6, 6);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xaaccff });
+            this.mesh = new THREE.Mesh(geo, mat);
+            this.mesh.position.set(x, y, z);
+            scene.add(this.mesh);
+
+            this.angle = angle;
+            this.speed = 25;
+            this.life = 1.5;
+            this.alive = true;
+        }
+
+        update(dt) {
+            if (!this.alive) return;
+            this.mesh.position.x += Math.sin(this.angle) * this.speed * dt;
+            this.mesh.position.z += Math.cos(this.angle) * this.speed * dt;
+            this.life -= dt;
+            this.mesh.position.y = 1.6;
+
+            if (this.life <= 0) this.remove();
+
+            // Хіт ворогів
+            for (const e of game.enemies) {
+                if (!e.alive) continue;
+                const d = Math.sqrt(
+                    (this.mesh.position.x - e.group.position.x) ** 2 +
+                    (this.mesh.position.z - e.group.position.z) ** 2
+                );
+                if (d < e.r + 0.2) {
+                    const killed = e.takeDamage(1);
+                    playHit();
+                    // Частинки
+                    for (let i = 0; i < 5; i++) {
+                        const a = Math.random() * Math.PI * 2;
+                        spawnParticle(
+                            this.mesh.position.x, 1.3, this.mesh.position.z,
+                            Math.cos(a) * 0.5, Math.random() * 0.3, Math.sin(a) * 0.5,
+                            0xaaccff, 0.3, 0.1 + Math.random() * 0.1
+                        );
+                    }
+                    if (killed) {
+                        playDeath();
+                        showDamageNum(e.group.position.x, e.group.position.z, e.score);
+                    }
+                    this.remove();
+                    break;
+                }
+            }
+        }
+
+        remove() {
+            this.alive = false;
+            scene.remove(this.mesh);
+            this.mesh.geometry.dispose();
+            this.mesh.material.dispose();
+        }
+    }
+
+    // ============================================================
+    // КУЛІ ВОРОГІВ
+    // ============================================================
+    function spawnEnemyBullet(x, z, angle) {
+        const geo = new THREE.SphereGeometry(0.12, 6, 6);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x66ffaa });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, 1.0, z);
+        scene.add(mesh);
+
+        game.enemyBullets.push({
+            mesh, x, z, angle,
+            speed: 8,
+            life: 3,
+            alive: true,
+            update(dt) {
+                this.x += Math.sin(this.angle) * this.speed * dt;
+                this.z += Math.cos(this.angle) * this.speed * dt;
+                this.mesh.position.set(this.x, 1.0, this.z);
+                this.life -= dt;
+                if (this.life <= 0) {
+                    this.remove();
+                    return;
+                }
+                const d = Math.sqrt((player.x - this.x) ** 2 + (player.z - this.z) ** 2);
+                if (d < 0.5 && player.invincible <= 0) {
+                    player.hp -= 8;
+                    player.invincible = 0.3;
+                    showDamageNum(player.x, player.z, 8);
+                    this.remove();
+                }
+            },
+            remove() {
+                this.alive = false;
+                scene.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+            }
+        });
+    }
+
+    // ============================================================
+    // ЧАСТИНКИ
+    // ============================================================
+    const particleMeshes = [];
+
+    function spawnParticle(x, y, z, vx, vy, vz, color, opacity, size) {
+        const geo = new THREE.SphereGeometry(size, 4, 4);
+        const mat = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: opacity,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z);
+        scene.add(mesh);
+        particleMeshes.push({
+            mesh, mat,
+            vx, vy, vz,
+            life: 0.5 + Math.random() * 0.5,
+            alive: true,
+        });
+    }
+
+    function updateParticles(dt) {
+        for (let i = particleMeshes.length - 1; i >= 0; i--) {
+            const p = particleMeshes[i];
+            if (!p.alive) continue;
+            p.mesh.position.x += p.vx * dt;
+            p.mesh.position.y += p.vy * dt;
+            p.mesh.position.z += p.vz * dt;
+            p.vy -= 2 * dt; // гравітація
+            p.life -= dt;
+            p.mat.opacity = Math.max(0, p.life * 0.5);
+            if (p.life <= 0) {
+                p.alive = false;
+                scene.remove(p.mesh);
+                p.mesh.geometry.dispose();
+                p.mesh.material.dispose();
+                particleMeshes.splice(i, 1);
+            }
+        }
+    }
+
+    // ============================================================
+    // DAMAGE NUMBERS (HTML)
+    // ============================================================
+    function showDamageNum(x, z, amount) {
+        const container = document.getElementById('dmgs');
+        const el = document.createElement('div');
+        el.className = 'dmg-num';
+        el.textContent = '+' + amount;
+        el.style.opacity = '0.3';
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px)';
+            setTimeout(() => el.remove(), 500);
+        }, 100);
+    }
+
+    // ============================================================
+    // ЗВУКИ (синтезовані)
     // ============================================================
     let audioCtx = null;
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
 
-    function initAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    function playShoot() {
+    function playShootSound() {
         try {
             initAudio();
             const osc = audioCtx.createOscillator();
@@ -115,16 +759,16 @@
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
-            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.06);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
             osc.start(audioCtx.currentTime);
-            osc.stop(audioCtx.currentTime + 0.08);
+            osc.stop(audioCtx.currentTime + 0.06);
         } catch(e) {}
     }
 
-    function playHit() {
+    function playHitSound() {
         try {
             initAudio();
             const osc = audioCtx.createOscillator();
@@ -132,16 +776,16 @@
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.04);
+            gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
             osc.start(audioCtx.currentTime);
-            osc.stop(audioCtx.currentTime + 0.05);
+            osc.stop(audioCtx.currentTime + 0.04);
         } catch(e) {}
     }
 
-    function playDeath() {
+    function playDeathSound() {
         try {
             initAudio();
             const osc = audioCtx.createOscillator();
@@ -149,1054 +793,318 @@
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
-            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
             osc.start(audioCtx.currentTime);
-            osc.stop(audioCtx.currentTime + 0.3);
-            // Noise burst
-            const bufferSize = audioCtx.sampleRate * 0.15;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            const ng = audioCtx.createGain();
-            ng.gain.setValueAtTime(0.02, audioCtx.currentTime);
-            ng.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-            noise.connect(ng);
-            ng.connect(audioCtx.destination);
-            noise.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.25);
         } catch(e) {}
     }
 
-    function playExplosion() {
+    function playExplosionSound() {
         try {
             initAudio();
-            const bufferSize = audioCtx.sampleRate * 0.4;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
-            }
+            const bufSize = audioCtx.sampleRate * 0.3;
+            const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.1));
             const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
+            noise.buffer = buf;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
             noise.connect(gain);
             gain.connect(audioCtx.destination);
             noise.start(audioCtx.currentTime);
         } catch(e) {}
     }
 
-    // ============================================================
-    // СТАН
-    // ============================================================
-    const game = { running: false, score: 0, wave: 0, kills: 0, timer: 0, shake: 0 };
-    const player = {
-        x: 0, y: 0, r: 9, hp: 100, maxHp: 100,
-        speed: 2.5, angle: 0, alive: true,
-        shootCooldown: 0, shootDelay: 6,
-        invincible: 0,
-    };
-    const keys = {};
-    let mx = 0, my = 0, mouseDown = false;
-
-    const enemies = [];
-    const bullets = [];
-    const particles = [];
-    const damageNums = [];
-    const pickups = [];
-    let enemySpawned = 0, enemyCount = 0, spawnTimer = 0;
-
-    // ============================================================
-    // ВОРОГИ
-    // ============================================================
-    const ENEMY_TYPES = {
-        // Швидкий легкий
-        runner: {
-            r: 7, hp: 1, speed: 3.0, score: 10, damage: 8,
-            color: '#5a8aba', bodyColor: 'rgba(60,120,180,0.6)',
-        },
-        // Звичайний
-        stalker: {
-            r: 10, hp: 2, speed: 1.6, score: 15, damage: 12,
-            color: '#ba5a3a', bodyColor: 'rgba(180,80,40,0.7)',
-        },
-        // Танк
-        brute: {
-            r: 15, hp: 6, speed: 0.9, score: 35, damage: 20,
-            color: '#7a3a5a', bodyColor: 'rgba(120,40,60,0.8)',
-        },
-        // Стріляючий (RANGED)
-        sniper: {
-            r: 9, hp: 2, speed: 1.2, score: 25, damage: 8,
-            color: '#3a7a5a', bodyColor: 'rgba(40,120,80,0.7)',
-            ranged: true, shootTimer: 0, shootDelay: 90,
-        },
-        // Вибуховий
-        exploder: {
-            r: 12, hp: 3, speed: 1.8, score: 20, damage: 30,
-            color: '#9a6a2a', bodyColor: 'rgba(180,100,30,0.8)',
-            explosion: true, explosionRadius: 80, explosionTimer: 0,
-        },
-    };
-
-    class Enemy {
-        constructor(x, y, type) {
-            const def = ENEMY_TYPES[type];
-            this.x = x; this.y = y;
-            this.type = type;
-            this.r = def.r;
-            this.hp = def.hp; this.maxHp = def.hp;
-            this.speed = def.speed;
-            this.score = def.score;
-            this.damage = def.damage;
-            this.color = def.color;
-            this.bodyColor = def.bodyColor;
-            this.angle = 0;
-            this.hitFlash = 0;
-            this.state = 'move'; // move, attack, charge
-            this.stateTimer = 0;
-            this.attackCooldown = 0;
-            this.eyeAngle = 0;
-            this.wobble = Math.random() * Math.PI * 2;
-
-            // Спеціальні
-            if (def.ranged) {
-                this.shootTimer = def.shootDelay * 0.5 * Math.random();
-                this.shootDelay = def.shootDelay;
-            }
-            if (def.explosion) {
-                this.explosionRadius = def.explosionRadius;
-                this.exploding = false;
-                this.explosionTimer = 0;
-                this.beepTimer = 0;
-            }
-        }
-
-        update() {
-            const dx = player.x - this.x;
-            const dy = player.y - this.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            this.angle = Math.atan2(dy, dx);
-
-            if (this.hitFlash > 0) this.hitFlash--;
-            this.wobble += 0.03;
-            this.eyeAngle = this.angle + Math.sin(this.wobble) * 0.1;
-
-            // Поведінка
-            if (this.type === 'exploder' && dist < 100 && !this.exploding) {
-                this.exploding = true;
-                this.explosionTimer = 40;
-            }
-
-            if (this.exploding) {
-                this.explosionTimer--;
-                this.beepTimer++;
-                if (this.beepTimer > 10) {
-                    this.beepTimer = 0;
-                    this.hitFlash = 3; // блимає перед вибухом
-                }
-                if (this.explosionTimer <= 0) {
-                    this.explode();
-                    return true; // мертвий
-                }
-                // Біжить до гравця швидше
-                if (dist > 1) {
-                    this.x += Math.cos(this.angle) * this.speed * 1.5;
-                    this.y += Math.sin(this.angle) * this.speed * 1.5;
-                }
-            } else if (this.type === 'sniper') {
-                this.shootTimer++;
-                if (this.shootTimer >= this.shootDelay && dist < 350) {
-                    this.shootTimer = 0;
-                    // Стріляє кулею в гравця
-                    const bAngle = this.angle;
-                    game.bullets.push(new EnemyBullet(this.x, this.y, bAngle));
-                }
-                // Трохи відступає
-                if (dist < 120) {
-                    this.x -= Math.cos(this.angle) * this.speed * 0.5;
-                    this.y -= Math.sin(this.angle) * this.speed * 0.5;
-                } else {
-                    this.x += Math.cos(this.angle) * this.speed * 0.3;
-                    this.y += Math.sin(this.angle) * this.speed * 0.3;
-                }
-            } else if (this.type === 'brute' && dist < 150) {
-                // Таран — прискорення
-                this.state = 'charge';
-                this.speed = ENEMY_TYPES.brute.speed + Math.max(0, 2 - dist/100);
-                if (dist > 1) {
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed;
-                }
-            } else {
-                // Звичайний рух до гравця
-                if (dist > 1) {
-                    const spd = this.type === 'runner' ? this.speed :
-                                this.type === 'stalker' ? this.speed + Math.sin(this.wobble) * 0.2 : this.speed;
-                    this.x += Math.cos(this.angle) * spd;
-                    this.y += Math.sin(this.angle) * spd;
-                }
-            }
-
-            return false; // живий
-        }
-
-        explode() {
-            playExplosion();
-            // Шкода в радіусі
-            const dx = player.x - this.x;
-            const dy = player.y - this.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < this.explosionRadius) {
-                const falloff = 1 - dist / this.explosionRadius;
-                player.hp -= this.damage * falloff;
-                game.shake = 8;
-            }
-            // Частинки вибуху
-            for (let i = 0; i < 25; i++) {
-                const a = Math.random() * Math.PI * 2;
-                const s = 1 + Math.random() * 4;
-                particles.push(new Particle(this.x, this.y,
-                    Math.cos(a) * s, Math.sin(a) * s,
-                    `hsl(${30 + Math.random() * 30}, 100%, ${40 + Math.random() * 40}%)`,
-                    20 + Math.random() * 15, 2 + Math.random() * 3));
-            }
-            for (let i = 0; i < 10; i++) {
-                const a = Math.random() * Math.PI * 2;
-                const s = 1 + Math.random() * 2;
-                particles.push(new Particle(this.x, this.y,
-                    Math.cos(a) * s, Math.sin(a) * s,
-                    'rgba(200,200,200,0.5)',
-                    10 + Math.random() * 10, 1 + Math.random() * 2));
-            }
-            removeEnemy(this);
-        }
-
-        takeDamage(dmg) {
-            this.hp -= dmg;
-            this.hitFlash = 6;
-            return this.hp <= 0;
-        }
-
-        draw(cx, cy) {
-            ctx.save();
-            ctx.translate(cx, cy);
-
-            const flash = this.hitFlash > 0;
-            const isExploding = this.exploding;
-            const scale = isExploding ? 1 + (1 - this.explosionTimer / 40) * 0.3 : 1;
-            ctx.scale(scale, scale);
-
-            // Тінь
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-            ctx.beginPath();
-            ctx.ellipse(2, 3, this.r * 0.9, this.r * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (flash) {
-                // Спалах при попаданні
-                ctx.fillStyle = 'rgba(255,255,255,0.15)';
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r + 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Тіло
-            const grad = ctx.createRadialGradient(-this.r*0.2, -this.r*0.2, 0, 0, 0, this.r);
-            if (flash) {
-                grad.addColorStop(0, 'rgba(255,255,255,0.6)');
-                grad.addColorStop(0.5, this.bodyColor.replace('0.7','0.3'));
-                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-            } else if (isExploding) {
-                const pulse = 0.7 + Math.sin(this.explosionTimer * 0.5) * 0.3;
-                grad.addColorStop(0, `rgba(255,200,100,${pulse * 0.5})`);
-                grad.addColorStop(0.5, `rgba(200,80,30,${pulse * 0.6})`);
-                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-            } else {
-                grad.addColorStop(0, this.bodyColor.replace('0.7','0.4').replace('0.8','0.5').replace('0.6','0.3'));
-                grad.addColorStop(0.5, this.bodyColor);
-                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-            }
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Обводка
-            ctx.strokeStyle = flash ? 'rgba(255,255,255,0.3)' :
-                             (isExploding ? `rgba(255,200,100,${0.3 + Math.sin(this.explosionTimer * 0.5) * 0.2})` : 'rgba(255,255,255,0.05)');
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Деталі залежно від типу
-            if (this.type === 'runner') {
-                // Вузькі очі
-                ctx.fillStyle = flash ? '#fff' : 'rgba(200,230,255,0.6)';
-                const ex = Math.cos(this.eyeAngle) * this.r * 0.4;
-                const ey = Math.sin(this.eyeAngle) * this.r * 0.4;
-                ctx.fillRect(ex - 2, ey - 1, 4, 2);
-            } else if (this.type === 'stalker') {
-                // Два ока
-                ctx.fillStyle = flash ? '#fff' : 'rgba(255,200,150,0.4)';
-                for (let side = -1; side <= 1; side += 2) {
-                    const ex = Math.cos(this.eyeAngle) * this.r * 0.3 + Math.cos(this.eyeAngle + Math.PI/2) * side * 3;
-                    const ey = Math.sin(this.eyeAngle) * this.r * 0.3 + Math.sin(this.eyeAngle + Math.PI/2) * side * 3;
-                    ctx.beginPath();
-                    ctx.arc(ex, ey, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else if (this.type === 'brute') {
-                // Чотири ока, великі
-                ctx.fillStyle = flash ? '#fff' : 'rgba(200,100,120,0.5)';
-                for (let side = -1; side <= 1; side += 2) {
-                    for (let row = 0; row < 2; row++) {
-                        const off = row === 0 ? 0.2 : 0.5;
-                        const ex = Math.cos(this.eyeAngle) * this.r * off + Math.cos(this.eyeAngle + Math.PI/2) * side * 4;
-                        const ey = Math.sin(this.eyeAngle) * this.r * off + Math.sin(this.eyeAngle + Math.PI/2) * side * 4;
-                        ctx.beginPath();
-                        ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            } else if (this.type === 'sniper') {
-                // Одне велике око + щупальця
-                ctx.fillStyle = flash ? '#fff' : 'rgba(100,200,150,0.5)';
-                ctx.beginPath();
-                ctx.arc(Math.cos(this.eyeAngle) * this.r * 0.3, Math.sin(this.eyeAngle) * this.r * 0.3, 3, 0, Math.PI * 2);
-                ctx.fill();
-                // Щупальця
-                ctx.strokeStyle = flash ? 'rgba(255,255,255,0.3)' : this.bodyColor.replace('0.7','0.3');
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 4; i++) {
-                    const a = this.eyeAngle + Math.PI * (0.5 + i / 4) + Math.sin(this.wobble + i) * 0.1;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(a) * this.r * 0.5, Math.sin(a) * this.r * 0.5);
-                    ctx.quadraticCurveTo(
-                        Math.cos(a + 0.2) * this.r * 1.2, Math.sin(a + 0.2) * this.r * 1.2,
-                        Math.cos(a) * this.r * 1.5, Math.sin(a) * this.r * 1.5);
-                    ctx.stroke();
-                }
-            } else if (this.type === 'exploder') {
-                // Пульсуюча середина
-                const pulse = isExploding ? 0.5 + Math.sin(this.explosionTimer * 0.5) * 0.3 : 0.3;
-                ctx.fillStyle = `rgba(255,200,50,${pulse})`;
-                ctx.beginPath();
-                ctx.arc(0, 0, this.r * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-                // Тріщини
-                ctx.strokeStyle = `rgba(255,200,50,${pulse * 0.5})`;
-                ctx.lineWidth = 0.5;
-                for (let i = 0; i < 6; i++) {
-                    const a = i * Math.PI / 3 + Math.sin(this.wobble) * 0.2;
-                    ctx.beginPath();
-                    ctx.moveTo(0, 0);
-                    ctx.lineTo(Math.cos(a) * this.r * 0.7, Math.sin(a) * this.r * 0.7);
-                    ctx.stroke();
-                }
-            }
-
-            // HP бар (якщо не повне)
-            if (this.hp < this.maxHp && !this.exploding) {
-                const bw = this.r * 2;
-                const bh = 2;
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(-bw/2, -this.r - 6, bw, bh);
-                ctx.fillStyle = `rgba(200,80,80,0.5)`;
-                ctx.fillRect(-bw/2, -this.r - 6, bw * (this.hp / this.maxHp), bh);
-            }
-
-            ctx.restore();
-        }
-    }
-
-    // ============================================================
-    // КУЛІ ГРАВЦЯ
-    // ============================================================
-    class Bullet {
-        constructor(x, y, angle) {
-            this.x = x; this.y = y;
-            this.angle = angle;
-            this.speed = 9;
-            this.r = 3;
-            this.life = 50;
-            this.trail = [];
-        }
-
-        update() {
-            this.trail.push({x: this.x, y: this.y});
-            if (this.trail.length > 6) this.trail.shift();
-            this.x += Math.cos(this.angle) * this.speed;
-            this.y += Math.sin(this.angle) * this.speed;
-            this.life--;
-        }
-
-        isDead() { return this.life <= 0 || this.x < -30 || this.x > W + 30 || this.y < -30 || this.y > H + 30; }
-
-        draw(cx, cy) {
-            for (let i = 0; i < this.trail.length; i++) {
-                const a = (i / this.trail.length) * 0.4;
-                ctx.fillStyle = `rgba(150,200,255,${a * 0.3})`;
-                ctx.beginPath();
-                ctx.arc(this.trail[i].x + (cx - this.x), this.trail[i].y + (cy - this.y), 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(200,230,255,0.9)';
-            ctx.shadowColor = 'rgba(150,200,255,0.3)';
-            ctx.shadowBlur = 6;
-            ctx.beginPath();
-            ctx.arc(cx, cy, this.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-    }
-
-    // ============================================================
-    // КУЛІ ВОРОГІВ
-    // ============================================================
-    class EnemyBullet {
-        constructor(x, y, angle) {
-            this.x = x; this.y = y;
-            this.angle = angle;
-            this.speed = 4;
-            this.r = 4;
-            this.life = 80;
-            this.trail = [];
-        }
-
-        update() {
-            this.trail.push({x: this.x, y: this.y});
-            if (this.trail.length > 8) this.trail.shift();
-            this.x += Math.cos(this.angle) * this.speed;
-            this.y += Math.sin(this.angle) * this.speed;
-            this.life--;
-        }
-
-        isDead() { return this.life <= 0 || this.x < -30 || this.x > W + 30 || this.y < -30 || this.y > H + 30; }
-
-        draw(cx, cy) {
-            for (let i = 0; i < this.trail.length; i++) {
-                const a = (i / this.trail.length) * 0.5;
-                ctx.fillStyle = `rgba(100,255,150,${a * 0.3})`;
-                ctx.beginPath();
-                ctx.arc(this.trail[i].x + (cx - this.x), this.trail[i].y + (cy - this.y), 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(100,255,150,0.7)';
-            ctx.shadowColor = 'rgba(100,255,150,0.2)';
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.arc(cx, cy, this.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-    }
-
-    // ============================================================
-    // ЧАСТИНКИ
-    // ============================================================
-    class Particle {
-        constructor(x, y, vx, vy, color, life, r) {
-            this.x = x; this.y = y;
-            this.vx = vx; this.vy = vy;
-            this.color = color;
-            this.life = life || 20;
-            this.maxLife = this.life;
-            this.r = r || 2;
-        }
-
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vx *= 0.97;
-            this.vy *= 0.97;
-            this.vy += 0.02; // гравітація
-            this.life--;
-        }
-
-        isDead() { return this.life <= 0; }
-
-        draw() {
-            const a = this.life / this.maxLife;
-            ctx.globalAlpha = a;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r * (0.5 + a * 0.5), 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }
-    }
-
-    // ============================================================
-    // ПОШКОДЖЕННЯ (числа)
-    // ============================================================
-    class DamageNum {
-        constructor(x, y, amount) {
-            this.x = x; this.y = y;
-            this.amount = Math.round(amount);
-            this.life = 30;
-            this.maxLife = 30;
-            this.vy = -1.5;
-        }
-
-        update() { this.y += this.vy; this.vy += 0.02; this.life--; }
-        isDead() { return this.life <= 0; }
-
-        draw() {
-            const a = this.life / this.maxLife;
-            ctx.fillStyle = `rgba(255,200,100,${a * 0.6})`;
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(this.amount, this.x, this.y);
-        }
-    }
-
-    // ============================================================
-    // ПІДБОРИ
-    // ============================================================
-    class Pickup {
-        constructor(x, y, type) {
-            this.x = x; this.y = y;
-            this.type = type; // 'hp', 'ammo'
-            this.r = 7;
-            this.life = 300;
-            this.wobble = Math.random() * Math.PI * 2;
-        }
-
-        update() {
-            this.wobble += 0.05;
-            this.life--;
-        }
-
-        isDead() { return this.life <= 0; }
-
-        draw() {
-            const bob = Math.sin(this.wobble) * 2;
-            ctx.save();
-            ctx.translate(this.x, this.y + bob);
-
-            // Сяйво
-            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-            if (this.type === 'hp') {
-                glow.addColorStop(0, 'rgba(60,200,100,0.08)');
-                glow.addColorStop(1, 'transparent');
-            } else {
-                glow.addColorStop(0, 'rgba(200,200,100,0.08)');
-                glow.addColorStop(1, 'transparent');
-            }
-            ctx.fillStyle = glow;
-            ctx.beginPath();
-            ctx.arc(0, 0, 15, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = this.type === 'hp' ? 'rgba(60,200,100,0.3)' : 'rgba(200,200,100,0.3)';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = this.type === 'hp' ? 'rgba(60,200,100,0.15)' : 'rgba(200,200,100,0.15)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.type === 'hp' ? '+' : '⚡', 0, 0);
-
-            ctx.restore();
-        }
-    }
-
-    // ============================================================
-    // ГРАВЕЦЬ
-    // ============================================================
-    function drawPlayer(cx, cy) {
-        ctx.save();
-        ctx.translate(cx, cy);
-
-        // Сяйво
-        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 40);
-        glow.addColorStop(0, 'rgba(100,150,200,0.04)');
-        glow.addColorStop(1, 'transparent');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, 0, 40, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Тінь
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.beginPath();
-        ctx.ellipse(2, 3, player.r * 0.8, player.r * 0.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Тіло
-        const grad = ctx.createRadialGradient(-2, -2, 0, 0, 0, player.r);
-        grad.addColorStop(0, 'rgba(200,230,255,0.15)');
-        grad.addColorStop(0.6, 'rgba(160,200,240,0.08)');
-        grad.addColorStop(1, 'rgba(100,150,200,0.02)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Обводка
-        ctx.strokeStyle = `rgba(160,210,255,${0.15 + Math.sin(Date.now() * 0.003) * 0.05})`;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Лінія напрямку
-        ctx.strokeStyle = 'rgba(160,210,255,0.08)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(player.angle) * player.r * 1.8, Math.sin(player.angle) * player.r * 1.8);
-        ctx.stroke();
-
-        // "Очі"
-        for (let side = -1; side <= 1; side += 2) {
-            const ex = Math.cos(player.angle) * player.r * 0.3 + Math.cos(player.angle + Math.PI/2) * side * 3;
-            const ey = Math.sin(player.angle) * player.r * 0.3 + Math.sin(player.angle + Math.PI/2) * side * 3;
-            ctx.fillStyle = 'rgba(180,220,255,0.25)';
-            ctx.beginPath();
-            ctx.arc(ex, ey, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.restore();
-    }
-
-    // ============================================================
-    // ЛОГІКА
-    // ============================================================
-    shootCount = 0;
-
-    function update() {
-        if (!game.running || !player.alive) return;
-
-        // Рух
-        let dx = 0, dy = 0;
-        if (keys['w'] || keys['arrowup']) dy = -1;
-        if (keys['s'] || keys['arrowdown']) dy = 1;
-        if (keys['a'] || keys['arrowleft']) dx = -1;
-        if (keys['d'] || keys['arrowright']) dx = 1;
-
-        if (dx && dy) { dx *= 0.707; dy *= 0.707; }
-
-        // Присідання (shift — повільніше)
-        const sprint = keys['shift'] ? 0.5 : 1;
-        player.x = Math.max(player.r, Math.min(W - player.r, player.x + dx * player.speed * sprint));
-        player.y = Math.max(player.r, Math.min(H - player.r, player.y + dy * player.speed * sprint));
-
-        if (player.invincible > 0) player.invincible--;
-
-        // Кут до миші
-        const rect = canvas.getBoundingClientRect();
-        player.angle = Math.atan2(my - player.y, mx - player.x);
-
-        // Стрільба
-        if (player.shootCooldown > 0) player.shootCooldown--;
-
-        // Хвилі
-        if (enemySpawned < enemyCount) {
-            spawnTimer++;
-            const rate = Math.max(12, 35 - game.wave * 2);
-            if (spawnTimer >= rate) {
-                spawnTimer = 0;
-                spawnEnemy();
-            }
-        }
-
-        // Вороги
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            const e = enemies[i];
-            const dead = e.update();
-            if (dead) {
-                enemies.splice(i, 1);
-                continue;
-            }
-
-            // Зіткнення з гравцем
-            const d = Math.sqrt((player.x - e.x) ** 2 + (player.y - e.y) ** 2);
-            if (d < player.r + e.r && player.invincible <= 0) {
-                player.hp -= e.damage;
-                player.invincible = 15;
-                game.shake = Math.max(game.shake, 4);
-                // Відкидання
-                const angle = Math.atan2(e.y - player.y, e.x - player.x);
-                player.x += Math.cos(angle) * 8;
-                player.y += Math.sin(angle) * 8;
-                particles.push(new Particle(player.x, player.y,
-                    Math.cos(angle) * 2, Math.sin(angle) * 2,
-                    'rgba(200,50,50,0.3)', 10, 3));
-                if (player.hp <= 0) {
-                    player.hp = 0;
-                    player.alive = false;
-                    endGame();
-                    return;
-                }
-            }
-
-            // Кулі гравця по ворогах
-            for (let j = bullets.length - 1; j >= 0; j--) {
-                const b = bullets[j];
-                const bd = Math.sqrt((b.x - e.x) ** 2 + (b.y - e.y) ** 2);
-                if (bd < e.r + b.r) {
-                    const killed = e.takeDamage(1);
-                    bullets.splice(j, 1);
-                    playHit();
-                    // Частинки
-                    for (let k = 0; k < 4; k++) {
-                        const a = Math.random() * Math.PI * 2;
-                        particles.push(new Particle(b.x, b.y,
-                            Math.cos(a) * (1 + Math.random() * 2), Math.sin(a) * (1 + Math.random() * 2),
-                            'rgba(150,200,255,0.3)', 10, 1 + Math.random() * 2));
-                    }
-                    if (killed) {
-                        game.score += e.score;
-                        game.kills++;
-                        damageNums.push(new DamageNum(e.x, e.y - e.r - 5, e.score));
-                        playDeath();
-                        // Велика кількість частинок
-                        for (let k = 0; k < 12; k++) {
-                            const a = Math.random() * Math.PI * 2;
-                            const s = 1 + Math.random() * 3;
-                            particles.push(new Particle(e.x, e.y,
-                                Math.cos(a) * s, Math.sin(a) * s,
-                                e.bodyColor.replace('0.7','0.5').replace('0.8','0.5').replace('0.6','0.4'),
-                                15 + Math.random() * 10, 1 + Math.random() * 3));
-                        }
-                        // Підбір
-                        if (Math.random() < 0.2) {
-                            pickups.push(new Pickup(e.x, e.y, Math.random() < 0.5 ? 'hp' : 'ammo'));
-                        }
-                        enemies.splice(i, 1);
-                        document.getElementById('score').textContent = game.score;
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Кулі ворогів по гравцю
-        for (let i = game.bullets.length - 1; i >= 0; i--) {
-            const b = game.bullets[i];
-            b.update();
-            if (b.isDead()) { game.bullets.splice(i, 1); continue; }
-            const d = Math.sqrt((player.x - b.x) ** 2 + (player.y - b.y) ** 2);
-            if (d < player.r + b.r && player.invincible <= 0) {
-                player.hp -= 8;
-                player.invincible = 10;
-                game.shake = 5;
-                damageNums.push(new DamageNum(player.x, player.y - 15, 8));
-                for (let k = 0; k < 6; k++) {
-                    const a = Math.random() * Math.PI * 2;
-                    particles.push(new Particle(b.x, b.y,
-                        Math.cos(a) * 2, Math.sin(a) * 2,
-                        'rgba(100,255,150,0.3)', 10, 2));
-                }
-                game.bullets.splice(i, 1);
-                if (player.hp <= 0) {
-                    player.hp = 0;
-                    player.alive = false;
-                    endGame();
-                    return;
-                }
-            }
-        }
-
-        // Кулі гравця
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            bullets[i].update();
-            if (bullets[i].isDead()) bullets.splice(i, 1);
-        }
-
-        // Частинки
-        for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].update();
-            if (particles[i].isDead()) particles.splice(i, 1);
-        }
-
-        // Damage nums
-        for (let i = damageNums.length - 1; i >= 0; i--) {
-            damageNums[i].update();
-            if (damageNums[i].isDead()) damageNums.splice(i, 1);
-        }
-
-        // Підбори
-        for (let i = pickups.length - 1; i >= 0; i--) {
-            const p = pickups[i];
-            p.update();
-            const d = Math.sqrt((player.x - p.x) ** 2 + (player.y - p.y) ** 2);
-            if (d < player.r + p.r) {
-                if (p.type === 'hp') {
-                    player.hp = Math.min(player.maxHp, player.hp + 25);
-                } else {
-                    // Додаткові очки
-                    game.score += 5;
-                }
-                pickups.splice(i, 1);
-            }
-            if (p.isDead()) pickups.splice(i, 1);
-        }
-
-        // Перевірка хвилі
-        if (enemySpawned >= enemyCount && enemies.length === 0 && game.running) {
-            startWave();
-        }
-
-        // Тряска
-        if (game.shake > 0) game.shake--;
-
-        // HUD
-        document.getElementById('hpNum').textContent = Math.round(player.hp);
-        const hpPct = player.hp / player.maxHp * 100;
-        document.getElementById('hpbar').style.width = hpPct + '%';
-        document.getElementById('hpbar').className = 'health';
-        if (hpPct < 30) document.getElementById('hpbar').classList.add('damage');
-    }
+    function playShoot() { playShootSound(); }
+    function playHit() { playHitSound(); }
+    function playDeath() { playDeathSound(); }
+    function playExplosion() { playExplosionSound(); }
 
     // ============================================================
     // ХВИЛІ
     // ============================================================
     function startWave() {
         game.wave++;
-        enemySpawned = 0;
-        enemyCount = 4 + game.wave * 3;
-        spawnTimer = 0;
-        document.getElementById('wave').textContent = game.wave;
+        game.enemySpawned = 0;
+        game.enemyCount = 3 + game.wave * 2;
+        game.spawnTimer = 0;
+        document.getElementById('wave').textContent = 'ХВИЛЯ ' + game.wave;
     }
 
     function spawnEnemy() {
-        let x, y;
-        const side = Math.floor(Math.random() * 4);
-        switch(side) {
-            case 0: x = -25; y = Math.random() * H; break;
-            case 1: x = W + 25; y = Math.random() * H; break;
-            case 2: x = Math.random() * W; y = -25; break;
-            case 3: x = Math.random() * W; y = H + 25; break;
-        }
+        const a = Math.random() * Math.PI * 2;
+        const d = 15 + Math.random() * 10;
+        const x = player.x + Math.cos(a) * d;
+        const z = player.z + Math.sin(a) * d;
 
-        // Вибір типу
         let type = 'stalker';
         const r = Math.random();
         const w = game.wave;
         if (w >= 2 && r < 0.2) type = 'runner';
-        else if (w >= 3 && r < 0.15) type = 'brute';
+        else if (w >= 3 && r < 0.1) type = 'brute';
         else if (w >= 4 && r < 0.12) type = 'sniper';
-        else if (w >= 3 && r < 0.08) type = 'runner';
-        if (w >= 2 && type === 'stalker' && Math.random() < 0.1) type = 'exploder';
+        else if (w >= 3 && r < 0.15) type = 'runner';
+        if (w >= 5 && r < 0.08) type = 'exploder';
 
-        enemies.push(new Enemy(x, y, type));
-        enemySpawned++;
+        const e = new Enemy3D(x, z, type);
+        game.enemies.push(e);
+        game.enemySpawned++;
     }
 
     // ============================================================
-    // РЕНДЕР
+    // ПОЧАТОК ГРИ
     // ============================================================
-    function render() {
-        ctx.clearRect(0, 0, W, H);
+    let running = false;
+    let lastTime = 0;
+    let gameLoopId = null;
 
-        // Тряска
-        ctx.save();
-        if (game.shake > 0) {
-            const s = game.shake * 0.4;
-            ctx.translate(Math.random() * s - s/2, Math.random() * s - s/2);
+    window.startGame = function() {
+        document.getElementById('startOverlay').classList.add('hidden');
+
+        // Pointer lock
+        renderer.domElement.requestPointerLock();
+
+        player.hp = player.maxHp;
+        player.alive = true;
+        player.x = 0;
+        player.z = 0;
+        player.invincible = 1;
+        camera.position.set(0, player.height, 0);
+
+        game.score = 0;
+        game.wave = 0;
+        game.kills = 0;
+        game.enemies = [];
+        game.bullets = [];
+        game.enemyBullets = [];
+        game.shake = 0;
+
+        // Очистити частинки
+        for (const p of particleMeshes) {
+            scene.remove(p.mesh);
+            p.mesh.geometry.dispose();
+            p.mesh.material.dispose();
         }
+        particleMeshes.length = 0;
 
-        // Фон
-        const bgGrad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 500);
-        bgGrad.addColorStop(0, '#0a0e14');
-        bgGrad.addColorStop(1, '#040608');
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, W, H);
+        document.getElementById('scr').textContent = '0';
+        document.getElementById('hpBar').style.width = '100%';
 
-        // Туман
-        ctx.fillStyle = 'rgba(0,0,0,0.02)';
-        for (let i = 0; i < 3; i++) {
-            const fx = (Math.sin(Date.now() * 0.0001 + i * 2) * 0.5 + 0.5) * W;
-            const fy = (Math.cos(Date.now() * 0.00015 + i * 3) * 0.5 + 0.5) * H;
-            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 150 + i * 50);
-            grad.addColorStop(0, 'rgba(20,30,40,0.03)');
-            grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-        }
+        startWave();
+        running = true;
+        lastTime = performance.now();
 
-        // Підбори
-        for (const p of pickups) p.draw();
+        if (gameLoopId) cancelAnimationFrame(gameLoopId);
+        gameLoop();
+    };
 
-        // Частинки
-        for (const p of particles) p.draw();
-
-        // Вороги
-        for (const e of enemies) e.draw(e.x, e.y);
-
-        // Кулі ворогів
-        for (const b of game.bullets) b.draw(b.x, b.y);
-
-        // Кулі гравця
-        for (const b of bullets) b.draw(b.x, b.y);
-
-        // Гравець
-        if (player.alive) {
-            drawPlayer(player.x, player.y);
-        }
-
-        // Damage nums
-        for (const d of damageNums) d.draw();
-
-        // Темні краї (vignette)
-        const vigGrad = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
-        vigGrad.addColorStop(0, 'transparent');
-        vigGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
-        ctx.fillStyle = vigGrad;
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.restore();
-
-        // Мінімапа
-        drawMinimap();
+    // ============================================================
+    // ВИХІД
+    // ============================================================
+    function endGame() {
+        running = false;
+        document.getElementById('startOverlay').classList.remove('hidden');
+        document.getElementById('startOverlay').querySelector('h1').textContent = '💀 ЗАГИБЕЛЬ';
+        document.getElementById('startOverlay').querySelector('.sub').innerHTML =
+            `🎯 ${game.score} очок · 🌊 ${game.wave} хвиль`;
+        document.getElementById('startOverlay').querySelector('button').textContent = '↺ ЩЕ РАЗ';
+        document.exitPointerLock();
     }
 
     // ============================================================
-    // МІНІМАПА
+    // ОБРОБКА КЕРУВАННЯ
     // ============================================================
-    function drawMinimap() {
-        const mw = 80, mh = 80;
-        miniCtx.fillStyle = 'rgba(0,0,0,0.6)';
-        miniCtx.fillRect(0, 0, mw, mh);
+    const keys = {};
 
-        const sx = mw / W, sy = mh / H;
+    document.addEventListener('keydown', (e) => {
+        keys[e.key.toLowerCase()] = true;
+        if (e.key === ' ') e.preventDefault();
+    });
+    document.addEventListener('keyup', (e) => {
+        keys[e.key.toLowerCase()] = false;
+    });
 
-        // Вороги
-        for (const e of enemies) {
-            miniCtx.fillStyle = 'rgba(200,80,80,0.4)';
-            miniCtx.beginPath();
-            miniCtx.arc(e.x * sx, e.y * sy, 2, 0, Math.PI * 2);
-            miniCtx.fill();
+    // Pointer lock
+    document.addEventListener('click', () => {
+        if (running && !document.pointerLockElement) {
+            renderer.domElement.requestPointerLock();
         }
+    });
 
-        // Гравець
-        if (player.alive) {
-            miniCtx.fillStyle = 'rgba(150,200,255,0.5)';
-            miniCtx.beginPath();
-            miniCtx.arc(player.x * sx, player.y * sy, 2.5, 0, Math.PI * 2);
-            miniCtx.fill();
-        }
+    document.addEventListener('mousemove', (e) => {
+        if (!document.pointerLockElement || !running) return;
+        const sensitivity = 0.002;
+        camera.rotation.y -= e.movementX * sensitivity;
+        camera.rotation.x -= e.movementY * sensitivity;
+        camera.rotation.x = Math.max(-1.2, Math.min(1.2, camera.rotation.x));
+    });
 
-        // Кордони
-        miniCtx.strokeStyle = 'rgba(255,255,255,0.03)';
-        miniCtx.lineWidth = 0.5;
-        miniCtx.strokeRect(0, 0, mw, mh);
-    }
+    document.addEventListener('mousedown', (e) => {
+        if (e.button === 0 && running) shoot();
+    });
+    document.addEventListener('mouseup', (e) => {
+        if (e.button === 0) mousePressed = false;
+    });
+
+    let mousePressed = false;
 
     // ============================================================
     // СТРІЛЬБА
     // ============================================================
     function shoot() {
-        if (!game.running || !player.alive || player.shootCooldown > 0) return;
+        if (!running || !player.alive || player.shootCooldown > 0) return;
         player.shootCooldown = player.shootDelay;
         playShoot();
-        // Невеликий розкид
-        const spread = (Math.random() - 0.5) * 0.05;
-        const b = new Bullet(player.x, player.y, player.angle + spread);
-        bullets.push(b);
-        // Віддача
-        player.x -= Math.cos(player.angle) * 1.2;
-        player.y -= Math.sin(player.angle) * 1.2;
+
+        const angle = camera.rotation.y;
+        const spread = (Math.random() - 0.5) * 0.04;
+        const b = new Bullet3D(player.x, 1.5, player.z, angle + spread);
+        game.bullets.push(b);
     }
 
     // ============================================================
-    // УПРАВЛІННЯ
-    // ============================================================
-    document.addEventListener('keydown', (e) => {
-        keys[e.key.toLowerCase()] = true;
-        if (e.key === ' ') { e.preventDefault(); if (game.running && !player.alive) restartGame(); }
-    });
-    document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        mx = (e.clientX - rect.left) / rect.width * W;
-        my = (e.clientY - rect.top) / rect.height * H;
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        if (e.button === 0) { mouseDown = true; shoot(); }
-    });
-    canvas.addEventListener('mouseup', () => mouseDown = false);
-    canvas.addEventListener('mouseleave', () => mouseDown = false);
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // ============================================================
-    // ЦИКЛ
+    // ГОЛОВНИЙ ЦИКЛ
     // ============================================================
     function gameLoop() {
-        if (mouseDown && game.running) shoot();
-        update();
-        render();
-        requestAnimationFrame(gameLoop);
+        if (!running) return;
+
+        const now = performance.now();
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        // Рух гравця
+        const sprint = keys['shift'] ? player.sprintMult : 1;
+        let mx = 0, mz = 0;
+        if (keys['w'] || keys['arrowup']) mz = -1;
+        if (keys['s'] || keys['arrowdown']) mz = 1;
+        if (keys['a'] || keys['arrowleft']) mx = -1;
+        if (keys['d'] || keys['arrowright']) mx = 1;
+        if (mx && mz) { mx *= 0.707; mz *= 0.707; }
+
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        forward.y = 0;
+        right.y = 0;
+        forward.normalize();
+        right.normalize();
+
+        const speed = player.speed * sprint * dt;
+        player.x += (forward.x * mz + right.x * mx) * speed;
+        player.z += (forward.z * mz + right.z * mx) * speed;
+
+        // Межі світу
+        const bound = 55;
+        player.x = Math.max(-bound, Math.min(bound, player.x));
+        player.z = Math.max(-bound, Math.min(bound, player.z));
+
+        // Позиція камери
+        camera.position.x = player.x;
+        camera.position.z = player.z;
+
+        // Хитання при ходьбі
+        if (mx !== 0 || mz !== 0) {
+            const bobSpeed = sprint === 1 ? 6 : 3;
+            const bobAmp = sprint === 1 ? 0.02 : 0.01;
+            game.timer += dt * bobSpeed;
+            camera.position.y = player.height + Math.sin(game.timer) * bobAmp;
+        } else {
+            camera.position.y = player.height;
+        }
+
+        // Кулдаун
+        if (player.shootCooldown > 0) player.shootCooldown -= dt;
+        if (player.invincible > 0) player.invincible -= dt;
+        if (game.shake > 0) game.shake -= dt;
+        if (game.shake < 0) game.shake = 0;
+
+        // Спавн ворогів
+        if (game.enemySpawned < game.enemyCount) {
+            game.spawnTimer += dt;
+            if (game.spawnTimer >= 1.0) {
+                game.spawnTimer = 0;
+                spawnEnemy();
+            }
+        }
+
+        // Оновлення ворогів
+        for (let i = game.enemies.length - 1; i >= 0; i--) {
+            const e = game.enemies[i];
+            e.update(dt);
+            if (!e.alive) {
+                game.enemies.splice(i, 1);
+            }
+        }
+
+        // Оновлення куль
+        for (let i = game.bullets.length - 1; i >= 0; i--) {
+            const b = game.bullets[i];
+            b.update(dt);
+            if (!b.alive) game.bullets.splice(i, 1);
+        }
+
+        // Оновлення куль ворогів
+        for (let i = game.enemyBullets.length - 1; i >= 0; i--) {
+            const b = game.enemyBullets[i];
+            if (!b.alive) { game.enemyBullets.splice(i, 1); continue; }
+            b.update(dt);
+        }
+
+        // Оновлення частинок
+        updateParticles(dt);
+
+        // Перевірка хвилі
+        if (game.enemySpawned >= game.enemyCount && game.enemies.length === 0) {
+            startWave();
+        }
+
+        // HUD
+        document.getElementById('scr').textContent = game.score;
+        const hpPct = player.hp / player.maxHp * 100;
+        document.getElementById('hpBar').style.width = Math.max(0, hpPct) + '%';
+        document.getElementById('hpBar').className = hpPct < 30 ? 'low' : '';
+
+        // Смерть гравця
+        if (!player.alive) {
+            endGame();
+            return;
+        }
+
+        // Рендер
+        if (game.shake > 0) {
+            const s = game.shake * 2;
+            camera.position.x += (Math.random() - 0.5) * s * 0.01;
+            camera.position.z += (Math.random() - 0.5) * s * 0.01;
+        }
+
+        // Стрільба за триманням кнопки
+        if (mousePressed) shoot();
+
+        renderer.render(scene, camera);
+        gameLoopId = requestAnimationFrame(gameLoop);
     }
 
     // ============================================================
-    // СТАРТ / СТОП
+    // АВТОЗАПУСК ЦИКЛУ (очікує старту)
     // ============================================================
-    function startGame() {
-        document.getElementById('overlay').classList.remove('show');
-        game.running = true;
-        game.score = 0;
-        game.wave = 0;
-        game.kills = 0;
-        game.shake = 0;
-        player.hp = player.maxHp;
-        player.alive = true;
-        player.x = W/2;
-        player.y = H/2;
-        player.invincible = 0;
-        enemies.length = 0;
-        bullets.length = 0;
-        particles.length = 0;
-        damageNums.length = 0;
-        pickups.length = 0;
-        game.bullets = []; // кулі ворогів
-        document.getElementById('score').textContent = '0';
-        document.getElementById('hpNum').textContent = '100';
-        document.getElementById('hpbar').style.width = '100%';
-        startWave();
-        gameLoop();
+    function idleLoop() {
+        if (!running) {
+            renderer.render(scene, camera);
+            requestAnimationFrame(idleLoop);
+        }
     }
+    idleLoop();
 
-    window.startGame = startGame;
+    // ============================================================
+    // ПОЧАТКОВИЙ СТАН
+    // ============================================================
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
 
-    function restartGame() { startGame(); }
-
-    function endGame() {
-        game.running = false;
-        document.getElementById('overlay').classList.add('show');
-        document.getElementById('overlay').innerHTML = `
-            <h1>💀 ЗАГИБЕЛЬ</h1>
-            <div class="big-num">${game.score}</div>
-            <div class="sub">🎯 ${game.score} очок · 🌊 ${game.wave} хвиль</div>
-            <button onclick="restartGame()">↺ ЩЕ РАЗ</button>
-        `;
-    }
-
-    function removeEnemy(e) {
-        const idx = enemies.indexOf(e);
-        if (idx >= 0) enemies.splice(idx, 1);
-    }
 </script>
 </body>
 </html>
