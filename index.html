@@ -38,6 +38,24 @@
             font-size: 0.9em;
             opacity: 0.5;
         }
+        #startBtn {
+            margin-top: 1.5em;
+            padding: 14px 48px;
+            font-size: 1.3em;
+            font-family: 'Georgia', serif;
+            background: rgba(212, 197, 169, 0.15);
+            color: #d4c5a9;
+            border: 1px solid rgba(212, 197, 169, 0.4);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.1em;
+        }
+        #startBtn:hover {
+            background: rgba(212, 197, 169, 0.3);
+            border-color: #d4c5a9;
+            transform: scale(1.05);
+        }
         #ui {
             position: absolute;
             bottom: 20px;
@@ -137,7 +155,8 @@
     <div id="blocker">
         <h1>ПЕРЕХРЕСТЯ</h1>
         <p>Хата, яка пам'ятає</p>
-        <p class="sub">Натисни — увійти • 🖱 затисни мишу — огляд • WASD — рух • E — взаємодія</p>
+        <button id="startBtn">🚪 Увійти</button>
+        <p class="sub">🖱 Затисни мишу — огляд • WASD — рух • E — взаємодія</p>
     </div>
 
     <div id="ui">🖱 Затисни мишу — огляд • E — взаємодіяти</div>
@@ -552,7 +571,7 @@
             renderer.domElement.requestPointerLock();
         }
 
-        document.getElementById('blocker').addEventListener('click', startGame);
+        document.getElementById('startBtn').addEventListener('click', startGame);
 
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === renderer.domElement) {
