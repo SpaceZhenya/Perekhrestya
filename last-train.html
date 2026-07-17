@@ -926,11 +926,18 @@
         overlayOpen = false;
     });
 
-    document.querySelector('#start .btn').addEventListener('click', () => {
+    // Старт
+    function startGame() {
         start.style.opacity = '0';
+        start.style.pointerEvents = 'none';
         setTimeout(() => { start.style.display = 'none'; }, 800);
         gameStarted = true;
         showText('🚂 2007', 'Ти прокидаєшся в купе. За вікном — ніч. Потяг мчить. Годинник — 23:55. У кишені папірець: «Згадай останній рейс №7.» Ти не пам\'ятаєш, як сюди потрапив. Але щось у цьому потязі... знайоме.');
+    }
+
+    document.querySelector('#start .btn').addEventListener('click', startGame);
+    document.getElementById('start').addEventListener('click', e => {
+        if (e.target === e.currentTarget) startGame();
     });
 
     // Кнопки навігації
