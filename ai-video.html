@@ -3,253 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video — генератор відео</title>
+    <title>AI Video Pro — безкоштовний генератор</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0a0e14; color: #d0d8e0;
+            background: #080c12; color: #d0d8e0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             min-height: 100vh;
         }
+        #app { max-width: 720px; margin: 0 auto; padding: 30px 20px 60px; }
 
-        #app {
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .logo h1 { font-size: 28px; font-weight: 300; letter-spacing: 0.1em; color: #e0e8f0; }
-        .logo .sub { font-size: 12px; color: rgba(255,255,255,0.15); margin-top: 4px; letter-spacing: 0.3em; text-transform: uppercase; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { font-size: 32px; font-weight: 300; letter-spacing: 0.05em; color: #e0e8f0; }
+        .logo .sub { font-size: 11px; color: rgba(255,255,255,0.1); margin-top: 4px; letter-spacing: 0.4em; text-transform: uppercase; }
 
         .card {
-            background: rgba(255,255,255,0.02);
+            background: rgba(255,255,255,0.015);
             border: 1px solid rgba(255,255,255,0.04);
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .card label {
-            display: block;
-            font-size: 10px; text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: rgba(255,255,255,0.2);
-            margin-bottom: 6px;
+            display: block; font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.1em; color: rgba(255,255,255,0.2); margin-bottom: 6px;
         }
         .card textarea {
-            width: 100%;
+            width: 100%; background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+            padding: 14px 16px; font-size: 14px; color: #d0d8e0;
+            font-family: inherit; outline: none; resize: vertical;
+            min-height: 70px; line-height: 1.6;
+        }
+        .card textarea:focus { border-color: rgba(68,136,204,0.25); }
+        .card textarea::placeholder { color: rgba(255,255,255,0.06); }
+
+        .tags {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;
+        }
+        .tags button {
+            padding: 4px 12px; font-size: 11px;
             background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            padding: 14px 16px;
-            font-size: 14px;
-            color: #d0d8e0;
-            font-family: inherit;
-            outline: none;
-            resize: vertical;
-            min-height: 80px;
-            line-height: 1.6;
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 14px;
+            color: rgba(255,255,255,0.25); cursor: pointer;
+            font-family: inherit; transition: all 0.15s;
         }
-        .card textarea:focus { border-color: rgba(68,136,204,0.3); }
-        .card textarea::placeholder { color: rgba(255,255,255,0.08); }
+        .tags button:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.4); }
 
-        .card .hint {
-            font-size: 11px;
-            color: rgba(255,255,255,0.1);
-            margin-top: 6px;
+        .btn-big {
+            width: 100%; padding: 14px;
+            background: rgba(68,136,204,0.1);
+            border: 1px solid rgba(68,136,204,0.12);
+            border-radius: 8px; color: #88bbee;
+            font-size: 15px; font-family: inherit;
+            cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
+        .btn-big:hover { background: rgba(68,136,204,0.15); border-color: rgba(68,136,204,0.2); }
+        .btn-big:disabled { opacity: 0.25; cursor: not-allowed; }
 
-        .examples {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 8px;
+        #loading {
+            display: none; text-align: center;
+            padding: 50px 20px;
         }
-        .examples button {
-            padding: 4px 12px;
-            font-size: 11px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 14px;
-            color: rgba(255,255,255,0.3);
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.15s;
+        #loading.show { display: block; }
+        #loading .spinner {
+            width: 28px; height: 28px;
+            border: 2px solid rgba(68,136,204,0.08);
+            border-top-color: #4488cc;
+            border-radius: 50%; animation: spin 0.9s linear infinite;
+            margin: 0 auto 14px;
         }
-        .examples button:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
-
-        .row { display: flex; gap: 8px; align-items: center; }
-        .row select, .row input[type="text"] {
-            flex: 1;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 6px;
-            padding: 10px 12px;
-            font-size: 12px;
-            color: #d0d8e0;
-            font-family: inherit;
-            outline: none;
-        }
-        .row select:focus, .row input[type="text"]:focus { border-color: rgba(68,136,204,0.3); }
-
-        .btn-primary {
-            width: 100%;
-            padding: 14px;
-            background: rgba(68,136,204,0.12);
-            border: 1px solid rgba(68,136,204,0.15);
-            border-radius: 8px;
-            color: #88bbee;
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .btn-primary:hover { background: rgba(68,136,204,0.18); border-color: rgba(68,136,204,0.25); }
-        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .btn-secondary {
-            padding: 8px 16px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 6px;
-            color: rgba(255,255,255,0.4);
-            font-size: 11px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); }
-
-        .config-toggle {
-            font-size: 11px;
-            color: rgba(255,255,255,0.15);
-            cursor: pointer;
-            text-align: center;
-            padding: 4px;
-            margin-top: 4px;
-        }
-        .config-toggle:hover { color: rgba(255,255,255,0.25); }
-        #configSection { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading .info { font-size: 13px; color: rgba(255,255,255,0.25); }
+        #loading .sub { font-size: 11px; color: rgba(255,255,255,0.1); margin-top: 4px; }
 
         #result {
-            display: none;
-            margin-top: 12px;
+            display: none; margin-top: 10px;
         }
         #result.show { display: block; }
 
-        .video-wrap {
+        .vwrap {
             background: #060a10;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 8px;
+            border-radius: 8px; overflow: hidden;
         }
-        .video-wrap video {
-            width: 100%;
-            display: block;
-        }
+        .vwrap video { width: 100%; display: block; }
 
-        .result-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
+        .act {
+            display: flex; gap: 6px; margin-top: 8px;
         }
-        .result-actions button {
-            flex: 1;
-            padding: 10px;
+        .act button {
+            flex: 1; padding: 10px;
             background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 6px;
-            color: rgba(255,255,255,0.4);
-            font-size: 12px;
-            font-family: inherit;
-            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;
+            color: rgba(255,255,255,0.3); font-size: 12px;
+            font-family: inherit; cursor: pointer;
             transition: all 0.15s;
         }
-        .result-actions button:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); }
+        .act button:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5); }
 
-        #loading {
-            display: none;
-            text-align: center;
-            padding: 40px 20px;
+        .info-line {
+            display: flex; gap: 8px; align-items: center; justify-content: center;
+            padding: 6px; font-size: 11px; color: rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255,255,255,0.02);
+            margin-top: 10px;
         }
-        #loading.show { display: block; }
+        .info-line span { display: flex; align-items: center; gap: 4px; }
 
-        .spinner {
-            width: 32px; height: 32px;
-            border: 2px solid rgba(68,136,204,0.1);
-            border-top-color: #4488cc;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 12px;
+        .scene-selector {
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .scene-selector button {
+            padding: 8px 4px; font-size: 10px; text-align: center;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;
+            color: rgba(255,255,255,0.2); cursor: pointer;
+            font-family: inherit; transition: all 0.15s;
+        }
+        .scene-selector button:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.35); }
+        .scene-selector button.active { background: rgba(68,136,204,0.1); border-color: rgba(68,136,204,0.15); color: #88bbee; }
 
-        #loading .info { font-size: 12px; color: rgba(255,255,255,0.2); }
-        #loading .eta { font-size: 11px; color: rgba(255,255,255,0.1); margin-top: 4px; }
-        #loading .model-warning { font-size: 10px; color: rgba(255,200,100,0.3); margin-top: 8px; }
+        .dur-row { display: flex; gap: 10px; align-items: center; }
+        .dur-row input[type="range"] {
+            flex: 1; -webkit-appearance: none;
+            background: rgba(255,255,255,0.04); height: 3px;
+            border-radius: 2px; border: none; padding: 0;
+        }
+        .dur-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px;
+            border-radius: 50%; background: #4488cc; cursor: pointer;
+        }
+        .dur-row span { font-size: 12px; color: rgba(255,255,255,0.2); min-width: 28px; text-align: right; }
 
-        #error {
-            display: none;
-            padding: 12px 16px;
-            border: 1px solid rgba(238,68,102,0.15);
-            background: rgba(238,68,102,0.05);
-            border-radius: 8px;
-            color: #ee6688;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-        #error.show { display: block; }
-
-        #history {
-            margin-top: 20px;
-        }
-        #history .h-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 10px;
-            border: 1px solid rgba(255,255,255,0.03);
-            border-radius: 6px;
-            margin-bottom: 4px;
-            cursor: pointer;
-        }
-        #history .h-item:hover { background: rgba(255,255,255,0.02); }
-        #history .h-item .h-prompt {
-            flex: 1;
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        #history .h-item .h-date {
-            font-size: 10px;
-            color: rgba(255,255,255,0.1);
-        }
-        #history .h-item .h-play {
-            font-size: 16px;
-            line-height: 1;
-            color: rgba(255,255,255,0.15);
+        #log {
+            font-size: 10px; color: rgba(255,255,255,0.08);
+            margin-top: 6px; padding: 6px 0; line-height: 1.5;
+            max-height: 40px; overflow-y: auto;
         }
 
-        .key-status {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 4px;
+        .style-row {
+            display: flex; flex-wrap: wrap; gap: 4px;
+        }
+        .style-row button {
+            padding: 3px 10px; font-size: 10px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04); border-radius: 12px;
+            color: rgba(255,255,255,0.15); cursor: pointer;
+            font-family: inherit; transition: all 0.15s;
+        }
+        .style-row button:hover { border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.3); }
+        .style-row button.active { background: rgba(68,136,204,0.08); border-color: rgba(68,136,204,0.12); color: #88bbee; }
+
+        .badge {
             display: inline-block;
+            padding: 1px 8px; font-size: 9px;
+            background: rgba(68,204,136,0.08);
+            color: rgba(68,204,136,0.4);
+            border-radius: 4px;
+            margin-left: 6px;
         }
-        .key-status.ok { background: rgba(68,204,136,0.1); color: #44cc88; }
-        .key-status.nok { background: rgba(238,68,102,0.1); color: #ee6688; }
 
-        .fade-in { animation: fadeIn 0.4s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 600px) {
+            .scene-selector { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -257,247 +173,761 @@
 <div id="app">
     <div class="logo">
         <h1>🎬 AI Video</h1>
-        <div class="sub">Text → Video Generator</div>
+        <div class="sub">Free • No API • Just Type & Generate</div>
     </div>
 
-    <!-- ПРОМПТ -->
     <div class="card">
-        <label>Опиши відео</label>
-        <textarea id="prompt" placeholder="Наприклад: Кіт у космосі пливе в невагомості, стиль 80-х, ретрофутуризм...">Кіт пливе в невагомості, навколо зорі та туманності, стиль 80-х</textarea>
-        <div class="examples">
-            <button onclick="useExample(this)">Кіт у космосі</button>
-            <button onclick="useExample(this)">Ліс восени, листя падає</button>
-            <button onclick="useExample(this)">Кіберпанк місто вночі</button>
-            <button onclick="useExample(this)">Динозавр у місті, 50-ті</button>
+        <label>✍️ Опиши сцену</label>
+        <textarea id="prompt" placeholder="Наприклад: Світанок у горах, туман між піками, золоте світло...">Нічне місто, неонові вогні, дощ, відображення в калюжах</textarea>
+        <div class="tags">
+            <button onclick="setPrompt('Світанок у горах, хмари, перші промені сонця')">🏔 Гори</button>
+            <button onclick="setPrompt('Нічне місто, неон, дощ, мокрий асфальт')">🌃 Місто</button>
+            <button onclick="setPrompt('Море, хвилі, захід сонця, чайки')">🌊 Море</button>
+            <button onclick="setPrompt('Космос, туманність, зорі, пил')">🌌 Космос</button>
+            <button onclick="setPrompt('Осінній ліс, листя, туман, тиша')">🍂 Ліс</button>
+            <button onclick="setPrompt('Вогонь у каміні, тепле світло')">🔥 Вогонь</button>
         </div>
     </div>
 
-    <!-- API + МОДЕЛЬ -->
     <div class="card">
-        <div class="row">
-            <select id="model">
-                <option value="damo-vilab/text-to-video-ms-1.7b">🎥 Text-to-Video 1.7B (Damo)</option>
-                <option value="AliVilab/Text-to-video-ms-1.7b">🎥 Text-to-Video 1.7B (Ali)</option>
-                <option value="stabilityai/stable-video-diffusion-img2vid">🎞 Stable Video Diffusion</option>
-                <option value="ByteDance/AnimateDiff-Lightning">⚡ AnimateDiff Lightning</option>
-            </select>
-        </div>
-
-        <div class="config-toggle" onclick="toggleConfig()">🔑 Налаштувати API (безкоштовно)</div>
-        <div id="configSection">
-            <div style="margin-top:10px;background:rgba(68,204,136,0.04);border:1px solid rgba(68,204,136,0.08);border-radius:8px;padding:14px;font-size:12px;line-height:1.6;color:rgba(255,255,255,0.5)">
-                <b>🔓 Як отримати безкоштовний токен за 1 хвилину:</b><br>
-                1. Зайди на <a href="https://huggingface.co/join" target="_blank" style="color:#88bbee">huggingface.co/join</a> — зареєструйся (безкоштовно)<br>
-                2. Перейди в <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#88bbee">Settings → Tokens</a><br>
-                3. Натисни <b>New token</b> → обери <b>read</b> → <b>Generate</b><br>
-                4. Скопіюй токен (починається з <b>hf_</b>) — встав нижче
-            </div>
-            <div style="margin-top:10px">
-                <label>HuggingFace токен (безкоштовний)</label>
-                <div class="row">
-                    <input type="text" id="apiKey" placeholder="hf_xxxxxxxxxxxxxxxxxx" style="font-family:monospace">
-                    <button class="btn-secondary" onclick="saveKey()">💾 Зберегти</button>
-                </div>
-                <div style="margin-top:4px">
-                    <span class="key-status nok" id="keyStatus">🔑 Не налаштовано</span>
-                </div>
-                <div class="hint">💡 Деякі моделі вимагають прийняти ліцензію на сторінці моделі (теж безплатно). Якщо помилка 403 — клікни "Accept License" на HuggingFace.</div>
-            </div>
+        <label>🎨 Стиль сцени</label>
+        <div class="scene-selector" id="sceneSelector">
+            <button class="active" data-scene="auto" onclick="setScene('auto')">🔮 Авто</button>
+            <button data-scene="city" onclick="setScene('city')">🌃 Місто</button>
+            <button data-scene="nature" onclick="setScene('nature')">🌲 Природа</button>
+            <button data-scene="cosmos" onclick="setScene('cosmos')">🌌 Космос</button>
+            <button data-scene="water" onclick="setScene('water')">🌊 Вода</button>
+            <button data-scene="fire" onclick="setScene('fire')">🔥 Вогонь</button>
+            <button data-scene="abstract" onclick="setScene('abstract')">✨ Абстракція</button>
+            <button data-scene="retro" onclick="setScene('retro')">📼 Ретро</button>
         </div>
     </div>
 
-    <!-- ГЕНЕРАЦІЯ -->
-    <button class="btn-primary" onclick="generate()" id="genBtn">🚀 Згенерувати відео</button>
+    <div class="card">
+        <label>📺 Ефекти</label>
+        <div class="style-row" id="styleRow">
+            <button data-eff="vhs" onclick="toggleEffect('vhs')">📼 VHS</button>
+            <button data-eff="glitch" onclick="toggleEffect('glitch')">💥 Глітч</button>
+            <button data-eff="grain" onclick="toggleEffect('grain')">📺 Зерно</button>
+            <button data-eff="chroma" onclick="toggleEffect('chroma')">🌈 Хрома</button>
+            <button data-eff="blur" onclick="toggleEffect('blur')">🌫 Розмиття</button>
+            <button data-eff="scanlines" onclick="toggleEffect('scanlines')">🔲 Рядки</button>
+        </div>
+    </div>
 
-    <!-- ЛОАДІНГ -->
+    <div class="card">
+        <div class="dur-row">
+            <label style="margin-bottom:0">⏱ Тривалість:</label>
+            <input type="range" id="durSlider" min="5" max="20" value="10">
+            <span id="durLabel">10с</span>
+        </div>
+    </div>
+
+    <button class="btn-big" onclick="generateVideo()" id="genBtn">🎬 Згенерувати відео</button>
+
     <div id="loading">
         <div class="spinner"></div>
-        <div class="info">🎬 AI генерує відео...</div>
-        <div class="eta">Зазвичай 30-60 секунд</div>
-        <div class="model-warning">⚠️ Модель може завантажуватись до 2 хв при першому запуску</div>
+        <div class="info">🎨 Малюю сцену...</div>
+        <div class="sub">Аналіз тексту → підбір стилю → генерація</div>
     </div>
 
-    <!-- ПОМИЛКА -->
-    <div id="error"></div>
-
-    <!-- РЕЗУЛЬТАТ -->
     <div id="result">
         <div class="card">
-            <label>🎬 Результат</label>
-            <div class="video-wrap">
-                <video id="videoPlayer" controls autoplay muted></video>
+            <label>🎥 Готово</label>
+            <div class="vwrap">
+                <video id="player" controls autoplay muted loop playsinline></video>
             </div>
-            <div class="result-actions">
+            <div class="act">
                 <button onclick="downloadVideo()">💾 Скачати MP4</button>
-                <button onclick="copyPrompt()">📋 Копіювати промпт</button>
+                <button onclick="regenerateVideo()">🔄 Ще раз</button>
             </div>
         </div>
     </div>
 
-    <!-- ІСТОРІЯ -->
-    <div id="history">
-        <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.15);margin-bottom:8px;display:block">📁 Історія</label>
-        <div id="historyList"></div>
+    <div id="log"></div>
+
+    <div class="info-line">
+        <span>⚡ 100% безкоштовно</span>
+        <span>•</span>
+        <span>🔒 Без токенів</span>
+        <span>•</span>
+        <span>🎬 До 20 секунд</span>
     </div>
 </div>
 
 <script>
     // ============================================================
-    // КЕРУВАННЯ API КЛЮЧЕМ
+    // СТАН
     // ============================================================
-    function saveKey() {
-        const key = document.getElementById('apiKey').value.trim();
-        if (!key) return;
-        localStorage.setItem('hf_api_key', key);
-        updateKeyStatus();
-    }
-
-    function loadKey() {
-        const key = localStorage.getItem('hf_api_key');
-        if (key) {
-            document.getElementById('apiKey').value = key;
-            updateKeyStatus();
-        }
-    }
-
-    function getKey() {
-        return localStorage.getItem('hf_api_key') || document.getElementById('apiKey').value.trim();
-    }
-
-    function updateKeyStatus() {
-        const key = getKey();
-        const el = document.getElementById('keyStatus');
-        if (key && key.startsWith('hf_')) {
-            el.className = 'key-status ok';
-            el.textContent = '🔑 Активовано';
-        } else {
-            el.className = 'key-status nok';
-            el.textContent = '🔑 Потрібен токен';
-        }
-    }
-
-    function toggleConfig() {
-        const el = document.getElementById('configSection');
-        el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    }
-
-    // ============================================================
-    // ПРИКЛАДИ
-    // ============================================================
-    function useExample(btn) {
-        document.getElementById('prompt').value = btn.textContent;
-    }
-
-    // ============================================================
-    // ГЕНЕРАЦІЯ
-    // ============================================================
+    let scene = 'auto';
+    let effects = new Set();
+    let duration = 10;
     let currentVideoUrl = null;
-    let history = JSON.parse(localStorage.getItem('ai_video_history') || '[]');
+    let recorder = null;
+    let chunks = [];
+    let previewTime = 0;
+    let animId = null;
 
-    async function generate() {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    c.width = 640;
+    c.height = 360;
+
+    document.getElementById('durSlider').addEventListener('input', e => {
+        duration = parseInt(e.target.value);
+        document.getElementById('durLabel').textContent = duration + 'с';
+    });
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        el.innerHTML = '▸ ' + msg + '<br>' + el.innerHTML;
+    }
+
+    // ============================================================
+    // ВИБІР СЦЕНИ
+    // ============================================================
+    function setScene(name) {
+        scene = name;
+        document.querySelectorAll('.scene-selector button').forEach(b =>
+            b.classList.toggle('active', b.dataset.scene === name));
+    }
+
+    function toggleEffect(name) {
+        if (effects.has(name)) effects.delete(name); else effects.add(name);
+        document.querySelectorAll('[data-eff]').forEach(b =>
+            b.classList.toggle('active', effects.has(b.dataset.eff)));
+    }
+
+    function setPrompt(text) {
+        document.getElementById('prompt').value = text;
+    }
+
+    // ============================================================
+    // ПАРСИНГ ПРОМПТУ
+    // ============================================================
+    function parsePrompt(text) {
+        const t = text.toLowerCase();
+        const mood = { dark: 0.2, warm: 0.2, cold: 0.2, bright: 0.2, speed: 0.5, chaos: 0.3 };
+
+        if (/ніч|темн|чорн|тьма|пітьм|сутін|вечір|нічн|морок|тін/.test(t)) mood.dark += 0.5;
+        if (/світан|ранок|золот|сонц|світл|яскр|ден|промін/.test(t)) mood.bright += 0.5;
+        if (/вогон|тепл|жовт|помаран|червон|свіч|камін|гаряч|полум|жар/.test(t)) mood.warm += 0.5;
+        if (/холод|син|блакит|лід|мороз|зим|криг|сніг|сніжи/.test(t)) mood.cold += 0.5;
+        if (/дощ|злив|крапл|мокр|калюж|злива|гроза|шторм/.test(t)) { mood.dark += 0.2; mood.speed += 0.2; }
+        if (/сніг|сніжин|замет|біл|мороз|зим/.test(t)) mood.cold += 0.4;
+        if (/туман|дим|імл|серп|розми|хмар|мгла/.test(t)) mood.dark += 0.1;
+        if (/міст|урбан|неон|вулиц|будин|архіт|вікн|дорог|ліхтар|машин|бетон|метро/.test(t)) {
+            mood.urban = 1.0; mood.dark += 0.2;
+        }
+        if (/ліс|дерев|зелен|трав|природ|парк|гай|росли|квіт|кущ|гілк/.test(t)) mood.nature = 1.0;
+        if (/косм|зор|галакти|планет|простір|всесвіт|туманність/.test(t)) mood.cosmos = 1.0;
+        if (/море|хвил|океан|пляж|берег|річк|озер|вод|течія|ріка|струмок/.test(t)) { mood.water = 1.0; mood.speed += 0.1; }
+        if (/вогон|пожеж|гор|дим|жар|полум|іскр/.test(t)) mood.fire = 1.0;
+        if (/вітер|вітря|буря|ураган|порив|шторм/.test(t)) { mood.chaos += 0.4; mood.speed += 0.3; }
+        if (/спокі|тих|повіль|плин|сон|мрі|лагід/.test(t)) mood.speed = 0.2;
+        if (/швид|стрім|метуш|рух|енергі|динамі/.test(t)) mood.speed += 0.4;
+        if (/кібер|ретро|80[ -]?х|ретроф|vhs|neon|неон/.test(t)) mood.retro = 1.0;
+        if (/стар|пил|час|забут|покину|кімнат|книж|сторін|вікн|стіл|крісл|лампа/.test(t)) { mood.dark += 0.3; mood.warm += 0.3; mood.speed = 0.2; }
+
+        return mood;
+    }
+
+    // ============================================================
+    // МАЛЮВАННЯ СЦЕНИ
+    // ============================================================
+    function detectScene(prompt) {
+        if (scene !== 'auto') return scene;
+        const p = parsePrompt(prompt);
+        if (p.fire >= 0.8) return 'fire';
+        if (p.water >= 0.8) return 'water';
+        if (p.cosmos >= 0.8) return 'cosmos';
+        if (p.nature >= 0.8) return 'nature';
+        if (p.urban >= 0.8) return 'city';
+        if (p.retro >= 0.8) return 'retro';
+        // mix
+        if (p.dark > 0.5 && p.urban > 0.3) return 'city';
+        if (p.nature > 0.4) return 'nature';
+        if (p.water > 0.4) return 'water';
+        if (p.cosmos > 0.4) return 'cosmos';
+        if (p.warm > 0.5 && p.dark > 0.3) return 'fire';
+        return 'abstract';
+    }
+
+    function renderScene(prompt, t, dur) {
+        const s = detectScene(prompt);
+        const m = parsePrompt(prompt);
+
+        switch(s) {
+            case 'city': renderCity(t, m, dur); break;
+            case 'nature': renderNature(t, m, dur); break;
+            case 'cosmos': renderCosmos(t, m, dur); break;
+            case 'water': renderWater(t, m, dur); break;
+            case 'fire': renderFire(t, m, dur); break;
+            case 'retro': renderRetro(t, m, dur); break;
+            default: renderAbstract(t, m, dur);
+        }
+
+        applyEffects(t, m);
+        drawOverlay(prompt, t, m);
+    }
+
+    // ========== НЕБО (спільне) ==========
+    function drawSky(t, m, colors) {
+        const grd = ctx.createLinearGradient(0, 0, 0, c.height * 0.6);
+        const dark = Math.max(0, Math.min(1, m.dark));
+        const bright = Math.max(0, Math.min(1, m.bright));
+        const warm = Math.max(0, Math.min(1, m.warm));
+        const cold = Math.max(0, Math.min(1, m.cold));
+
+        const r1 = Math.round(colors ? colors[0][0] : 8 + dark * 10 + warm * 30 + bright * 10);
+        const g1 = Math.round(colors ? colors[0][1] : 8 + dark * 5 + warm * 15 + cold * 15 + bright * 10);
+        const b1 = Math.round(colors ? colors[0][2] : 14 + dark * 8 + cold * 30 + warm * 5);
+
+        const r2 = Math.round(colors ? colors[1][0] : 4 + dark * 5 + warm * 10);
+        const g2 = Math.round(colors ? colors[1][1] : 4 + dark * 2 + cold * 8);
+        const b2 = Math.round(colors ? colors[1][2] : 8 + dark * 4 + cold * 15);
+
+        grd.addColorStop(0, `rgb(${r1},${g1},${b1})`);
+        grd.addColorStop(1, `rgb(${r2},${g2},${b2})`);
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, c.width, c.height * 0.6);
+    }
+
+    // ========== МІСТО ==========
+    function renderCity(t, m, dur) {
+        drawSky(t, m, [[12, 10, 22], [6, 6, 12]]);
+
+        const dark = 0.7 + m.dark * 0.3;
+        const n = 25 + Math.round(m.chaos * 15);
+        const baseY = c.height * 0.45 + Math.sin(t * 0.1) * 3;
+
+        // Будинки
+        for (let i = 0; i < n; i++) {
+            const x = i * (c.width / n) + Math.sin(i * 0.7) * 8;
+            const h = 30 + (i * 43 % 100) + 10 * m.chaos;
+            const w = c.width / n - 1.5;
+            ctx.fillStyle = `rgba(8,8,20,${0.5 + (1-dark) * 0.3})`;
+            ctx.fillRect(x, baseY - h, w, h);
+
+            // Вікна
+            if (i % 2 === 0) {
+                for (let wi = 0; wi < h / 16; wi++) {
+                    const on = Math.sin(i * 5 + wi * 2 + t * 0.15) > 0.1;
+                    if (on) {
+                        const wAlpha = 0.3 + Math.sin(t + i + wi) * 0.1 + (1-dark) * 0.2;
+                        ctx.fillStyle = `rgba(255,200,120,${wAlpha})`;
+                        ctx.fillRect(x + 2, baseY - h + wi * 16 + 3, w - 4, 7);
+                    }
+                }
+            }
+        }
+
+        // Дощ
+        if (m.dark > 0.3 || /дощ/i.test(document.getElementById('prompt').value)) {
+            for (let i = 0; i < 60; i++) {
+                const x = (i * 127 + t * 0.8 * c.width/10) % (c.width + 20) - 10;
+                const y = (i * 89 + t * (120 + m.speed * 100)) % (c.height * 1.3) - c.height * 0.15;
+                const len = 10 + (i % 12);
+                ctx.strokeStyle = `rgba(180,200,255,${0.03 + (i % 15) / 500})`;
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - 1.2, y + len);
+                ctx.stroke();
+            }
+        }
+
+        // Відблиски на землі
+        const ground = ctx.createLinearGradient(0, baseY, 0, c.height);
+        ground.addColorStop(0, 'rgba(4,4,12,0.8)');
+        ground.addColorStop(0.3, 'rgba(10,8,16,0.5)');
+        ground.addColorStop(1, 'rgba(2,2,6,0.3)');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, baseY, c.width, c.height - baseY);
+
+        // Відображення
+        for (let i = 0; i < n; i+=2) {
+            const x = i * (c.width / n) + Math.sin(i * 0.5) * 5;
+            const h = 10 + (i * 13 % 40);
+            const w = c.width / n - 2;
+            ctx.fillStyle = `rgba(255,180,100,${0.01 + m.bright * 0.02})`;
+            ctx.fillRect(x, baseY + 2, w, h);
+        }
+
+        // Ліхтарі
+        for (let i = 0; i < 3; i++) {
+            const lx = c.width * (0.2 + i * 0.3) + Math.sin(t * 0.05 + i) * 5;
+            const ly = baseY - 40 - Math.sin(t * 0.02) * 5;
+            const gr = ctx.createRadialGradient(lx, ly, 0, lx, ly, 30 + m.bright * 40);
+            gr.addColorStop(0, `rgba(255,200,120,${0.06 + m.bright * 0.08})`);
+            gr.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 30 + m.bright * 40, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Туман
+        if (m.dark > 0.3) {
+            for (let i = 0; i < 5; i++) {
+                const fx = (i * c.width * 0.2 + Math.sin(t * 0.08 + i * 2.1) * c.width * 0.1) % (c.width * 1.2) - c.width * 0.1;
+                const fy = baseY - 20 + (i * 40) + Math.sin(t * 0.06 + i * 0.5) * 10;
+                const fr = 60 + (i % 3) * 40 + Math.sin(t * 0.03 + i) * 20;
+                const gr2 = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+                gr2.addColorStop(0, `rgba(180,160,200,${0.008 + m.dark * 0.01})`);
+                gr2.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gr2;
+                ctx.beginPath();
+                ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    // ========== ПРИРОДА ==========
+    function renderNature(t, m, dur) {
+        drawSky(t, m, [[12, 18, 25], [6, 12, 18]]);
+
+        // Земля
+        const baseY = c.height * 0.55;
+        const grd = ctx.createLinearGradient(0, baseY, 0, c.height);
+        const green = Math.round(20 + (1-m.dark) * 30 + m.nature * 20);
+        grd.addColorStop(0, `rgb(8,${green},12)`);
+        grd.addColorStop(1, 'rgb(2,8,4)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, baseY, c.width, c.height - baseY);
+
+        // Дерева
+        const trees = 8 + Math.round(m.nature * 6);
+        for (let i = 0; i < trees; i++) {
+            const x = (i * (c.width / trees) + 15 + Math.sin(i * 1.7) * 30) % (c.width - 20) + 10;
+            const h = 50 + (i * 37 % 70) + (1-m.dark) * 30;
+            const sway = Math.sin(t * 0.3 + i * 2.1) * (2 + m.chaos * 3);
+
+            // Стовбур
+            ctx.fillStyle = `rgba(15,12,8,${0.3 + (1-m.dark) * 0.2})`;
+            ctx.fillRect(x - 2 + sway * 0.3, baseY - h * 0.5, 4, h * 0.5);
+
+            // Крона
+            for (let j = 0; j < 4; j++) {
+                const cx = x + sway + Math.sin(j * 1.3) * 14 + j * 4 - 8;
+                const cy = baseY - h * 0.3 + j * 10 - 20;
+                const r = 12 + (j % 3) * 5 - j * 1.5;
+                ctx.fillStyle = `rgba(10,${Math.round(30 + (i*17)%30 + m.bright*20)},15,${0.06 + (1-m.dark)*0.04})`;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Туман
+        for (let i = 0; i < 4; i++) {
+            const fx = (i * c.width * 0.25 + Math.sin(t * 0.05 + i * 1.7) * c.width * 0.1) % (c.width);
+            const fy = baseY - 20 + i * 30 + Math.sin(t * 0.07 + i) * 8;
+            const fr = 60 + i * 30;
+            const gr2 = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+            gr2.addColorStop(0, `rgba(160,180,200,${0.006 + m.dark * 0.004})`);
+            gr2.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gr2;
+            ctx.beginPath();
+            ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Частинки (світлячки/листя)
+        for (let i = 0; i < (1-m.dark) * 15 + m.chaos * 10; i++) {
+            const px = (i * 97 + Math.sin(t * 0.1 + i * 2.3) * 15) % c.width;
+            const py = (i * 131 + t * 20 * (0.2 + m.speed * 0.3) + Math.sin(t * 0.05 + i * 0.7) * 10) % (c.height * 0.8) + c.height * 0.1;
+            ctx.fillStyle = `rgba(200,220,200,${0.01 + m.bright * 0.015})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1 + (i % 2), 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ========== КОСМОС ==========
+    function renderCosmos(t, m, dur) {
+        ctx.fillStyle = '#020408';
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // Зорі
+        for (let i = 0; i < 80; i++) {
+            const x = (i * 127 + 33) % c.width;
+            const y = (i * 89 + 67) % c.height;
+            const s = 1 + (i % 3);
+            const tw = 0.2 + 0.8 * Math.sin(t * 0.3 + i * 2.7);
+            ctx.fillStyle = `rgba(180,200,255,${(0.2 + (i%5)/10) * tw})`;
+            ctx.fillRect(x, y, s, s);
+        }
+
+        // Туманність
+        for (let i = 0; i < 4; i++) {
+            const nx = c.width * (0.2 + i * 0.2) + Math.sin(t * 0.04 + i * 1.3) * 80;
+            const ny = c.height * (0.2 + i * 0.15) + Math.sin(t * 0.03 + i * 0.7) * 50;
+            const nr = 80 + i * 40 + Math.sin(t * 0.02 + i) * 20;
+            const hues = [[100, 60, 180], [180, 60, 140], [60, 80, 200], [200, 60, 180]];
+            const h = hues[i % 4];
+            const gr = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr);
+            gr.addColorStop(0, `rgba(${h[0]},${h[1]},${h[2]},${0.03 + (i%2)*0.01})`);
+            gr.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.arc(nx, ny, nr, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Планета
+        const px = c.width * 0.7 + Math.sin(t * 0.03) * 20;
+        const py = c.height * 0.4 + Math.cos(t * 0.04) * 15;
+        const pr = 30 + Math.sin(t * 0.02) * 3;
+        const pg = ctx.createRadialGradient(px - pr * 0.3, py - pr * 0.3, 0, px, py, pr);
+        pg.addColorStop(0, 'rgba(80,60,180,0.15)');
+        pg.addColorStop(0.5, 'rgba(40,30,120,0.08)');
+        pg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = pg;
+        ctx.beginPath();
+        ctx.arc(px, py, pr, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Пил
+        for (let i = 0; i < 30; i++) {
+            const dx = (i * 73 + t * 2 + Math.sin(i * 0.5 + t * 0.05) * 10) % c.width;
+            const dy = (i * 109 + t * 1.5 + Math.cos(i * 0.3 + t * 0.04) * 8) % c.height;
+            ctx.fillStyle = `rgba(200,180,255,${0.005 + (i%5)/200})`;
+            ctx.beginPath();
+            ctx.arc(dx, dy, 0.5 + (i % 3) * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Спалахи зірок
+        for (let i = 0; i < 3; i++) {
+            if (Math.sin(t * 0.7 + i * 2.3) > 0.92) {
+                const sx = (i * 237) % c.width;
+                const sy = (i * 173) % c.height;
+                const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 20);
+                sg.addColorStop(0, 'rgba(200,255,255,0.04)');
+                sg.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = sg;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    // ========== ВОДА ==========
+    function renderWater(t, m, dur) {
+        drawSky(t, m, [[10, 14, 28], [6, 8, 18]]);
+
+        const baseY = c.height * 0.5;
+
+        // Хвилі
+        for (let w = 0; w < 4; w++) {
+            ctx.beginPath();
+            ctx.moveTo(0, baseY);
+            for (let x = 0; x <= c.width; x += 4) {
+                const y = baseY + Math.sin(x * 0.008 + t * (0.3 + w * 0.15) + w * 1.5) * (8 + w * 6 + m.chaos * 8)
+                    + Math.sin(x * 0.02 + t * 0.5 + w) * 4;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(c.width, c.height);
+            ctx.lineTo(0, c.height);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(8,20,40,${0.04 - w * 0.008 + m.dark * 0.02})`;
+            ctx.fill();
+        }
+
+        // Блики на воді
+        for (let i = 0; i < 20; i++) {
+            const gx = (i * 53 + t * 5 + Math.sin(t * 0.1 + i) * 10) % c.width;
+            const gy = baseY + 10 + (i * 17 % 60) + Math.sin(t * 0.2 + i * 0.5) * 5;
+            const gs = 2 + (i % 3);
+            ctx.fillStyle = `rgba(200,200,255,${0.005 + m.bright * 0.02})`;
+            ctx.beginPath();
+            ctx.ellipse(gx, gy, gs, gs * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ========== ВОГОНЬ ==========
+    function renderFire(t, m, dur) {
+        ctx.fillStyle = '#060408';
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        const baseY = c.height * 0.7;
+
+        // Світло вогню
+        const gr = ctx.createRadialGradient(c.width/2, baseY - 20, 0, c.width/2, baseY - 20, 200 + m.warm * 100);
+        gr.addColorStop(0, 'rgba(180,60,10,0.06)');
+        gr.addColorStop(0.5, 'rgba(80,30,5,0.04)');
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // Полум'я
+        for (let i = 0; i < 30; i++) {
+            const x = c.width/2 + Math.sin(i * 2.3 + t * 1.2) * 40 + ((i * 31) % 70) - 35;
+            const y = baseY - i * 4 - Math.sin(t * 1.8 + i * 0.7) * 6 + Math.random() * 2;
+            const r = 5 + (i % 15) + m.warm * 8 + Math.sin(t * 1.5 + i) * 2;
+            const colors = ['#ff3300', '#ff5500', '#ff8800', '#ffcc00', '#ff6600'];
+            const alpha = Math.max(0, 0.2 - i * 0.006 + m.warm * 0.05);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = colors[i % 5];
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 1.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Іскри
+        for (let i = 0; i < 12; i++) {
+            const sx = c.width/2 + Math.sin(t * 0.7 + i * 1.3) * (20 + i * 10);
+            const sy = baseY - i * 8 - 20 + Math.sin(t * 0.5 + i * 2.1) * 5;
+            ctx.fillStyle = 'rgba(255,200,100,0.08)';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ========== РЕТРО ==========
+    function renderRetro(t, m, dur) {
+        drawSky(t, m, [[18, 8, 30], [8, 4, 18]]);
+
+        // Синтезаторна сітка
+        for (let i = 0; i < 20; i++) {
+            const y = c.height * 0.3 + i * 12 + Math.sin(t * 0.2 + i * 0.5) * 5;
+            const hue = (180 + i * 20 + t * 20) % 360;
+            ctx.strokeStyle = `hsla(${hue},70%,50%,${0.03})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(c.width, y + Math.sin(t * 0.3 + i * 0.3) * 10);
+            ctx.stroke();
+        }
+
+        // Сонце, що заходить
+        const sx = c.width * 0.3;
+        const sy = c.height * 0.35;
+        const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 80);
+        sg.addColorStop(0, `rgba(255,100,50,${0.06 + Math.sin(t * 0.1) * 0.02})`);
+        sg.addColorStop(0.5, `rgba(255,50,100,${0.03})`);
+        sg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 80, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Пальми (стилізовані)
+        for (let i = 0; i < 3; i++) {
+            const px = c.width * (0.35 + i * 0.2) + Math.sin(t * 0.05 + i) * 5;
+            const ph = 60 + i * 20;
+            ctx.strokeStyle = 'rgba(30,20,10,0.1)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(px, c.height * 0.5);
+            ctx.quadraticCurveTo(px - 5 + i * 5, c.height * 0.5 - ph * 0.5, px + Math.sin(t * 0.2 + i) * 3, c.height * 0.5 - ph);
+            ctx.stroke();
+
+            // Листя
+            for (let j = 0; j < 4; j++) {
+                const lx = px + Math.sin(t * 0.15 + j) * 15 + j * 3;
+                const ly = c.height * 0.5 - ph + Math.sin(t * 0.1 + j * 0.7) * 5;
+                ctx.fillStyle = 'rgba(20,50,15,0.06)';
+                ctx.beginPath();
+                ctx.ellipse(lx, ly, 8, 3, j * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    // ========== АБСТРАКЦІЯ ==========
+    function renderAbstract(t, m, dur) {
+        ctx.fillStyle = '#060810';
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        const n = 5 + Math.round(m.chaos * 8);
+        for (let i = 0; i < n; i++) {
+            const x = c.width * (0.1 + (i % 5) * 0.2) + Math.sin(t * 0.3 + i * 1.3) * 60;
+            const y = c.height * (0.1 + (i % 4) * 0.2) + Math.cos(t * 0.25 + i * 0.7) * 40;
+            const r = 30 + i * 15 + Math.sin(t * 0.15 + i) * 15;
+            const hue = (i * 50 + t * 15 + m.warm * 40) % 360;
+            const alpha = 0.02 + m.bright * 0.03 + (i % 3) * 0.01;
+
+            ctx.fillStyle = `hsla(${hue},60%,50%,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Лінії, що рухаються
+        for (let i = 0; i < 8; i++) {
+            const x = (i * c.width / 8 + t * (20 + m.speed * 30)) % (c.width + 20) - 10;
+            const alpha = 0.01 + m.bright * 0.01;
+            ctx.fillStyle = `rgba(${100 + i*20},${60 + i*10},${150 + i*10},${alpha})`;
+            ctx.fillRect(x, 0, 1 + i * 0.5, c.height);
+        }
+    }
+
+    // ============================================================
+    // ЕФЕКТИ
+    // ============================================================
+    function applyEffects(t, m) {
+        if (effects.has('vhs')) {
+            for (let i = 0; i < 3; i++) {
+                const y = (i * c.height / 3 + Math.sin(t * 0.8 + i * 2) * 2);
+                ctx.fillStyle = `rgba(0,0,0,${0.015 + Math.sin(t * 0.4 + i) * 0.005})`;
+                ctx.fillRect(0, y, c.width, 2);
+            }
+            if (Math.sin(t * 0.5) > 0.96) {
+                ctx.fillStyle = 'rgba(255,0,80,0.02)';
+                ctx.fillRect(0, 0, c.width * 0.4, 3);
+            }
+        }
+        if (effects.has('glitch')) {
+            if (Math.sin(t * 12) > 0.985) {
+                const offset = (Math.random() * 10 - 5);
+                const gh = c.height * 0.02 + Math.random() * c.height * 0.05;
+                const gy = Math.random() * c.height;
+                ctx.fillStyle = 'rgba(0,0,0,0.08)';
+                ctx.fillRect(offset, gy, c.width, gh);
+            }
+        }
+        if (effects.has('grain')) {
+            const d = ctx.createImageData(c.width, c.height);
+            const data = d.data;
+            const pixelData = ctx.getImageData(0, 0, c.width, c.height).data;
+            for (let i = 0; i < data.length; i += 4) {
+                const g = (Math.random() - 0.5) * 6;
+                data[i] = pixelData[i] + g;
+                data[i+1] = pixelData[i+1] + g;
+                data[i+2] = pixelData[i+2] + g;
+                data[i+3] = pixelData[i+3];
+            }
+            ctx.putImageData(d, 0, 0);
+        }
+        if (effects.has('chroma') && !effects.has('grain')) {
+            try {
+                const d = ctx.getImageData(0, 0, c.width, c.height);
+                ctx.drawImage(c, 2, 0);
+                ctx.drawImage(c, -2, 0);
+                ctx.globalCompositeOperation = 'screen';
+                ctx.drawImage(c, 0, 0);
+                ctx.globalCompositeOperation = 'source-over';
+            } catch(e) {}
+        }
+        if (effects.has('scanlines')) {
+            ctx.fillStyle = 'rgba(0,0,0,0.03)';
+            for (let i = 0; i < c.height; i += 3) {
+                ctx.fillRect(0, i, c.width, 1);
+            }
+        }
+    }
+
+    function drawOverlay(prompt, t, m) {
+        if (!prompt) return;
+        const words = prompt.split(' ');
+        let lines = [];
+        let cur = '';
+        for (const w of words) {
+            if ((cur + ' ' + w).length > 35) { lines.push(cur); cur = w; }
+            else cur = (cur ? cur + ' ' : '') + w;
+        }
+        if (cur) lines.push(cur);
+        const alpha = 0.025 + m.bright * 0.02;
+        ctx.textAlign = 'center';
+        ctx.font = '14px "Georgia", serif';
+        lines.forEach((l, i) => {
+            ctx.fillStyle = `rgba(200,200,210,${alpha})`;
+            ctx.fillText(l, c.width/2, 30 + i * 20);
+        });
+    }
+
+    // ============================================================
+    // ГЕНЕРАЦІЯ ВІДЕО
+    // ============================================================
+    async function generateVideo() {
         const prompt = document.getElementById('prompt').value.trim();
         if (!prompt) { alert('Напиши опис відео'); return; }
 
-        const key = getKey();
-        if (!key) { alert('🔑 Додай API Token у налаштуваннях'); return; }
-
-        const model = document.getElementById('model').value;
         const genBtn = document.getElementById('genBtn');
         const loading = document.getElementById('loading');
         const result = document.getElementById('result');
-        const error = document.getElementById('error');
 
         genBtn.disabled = true;
         loading.classList.add('show');
         result.classList.remove('show');
-        error.classList.remove('show');
+
+        // Даємо UI час оновитись
+        await new Promise(r => setTimeout(r, 50));
 
         try {
-            const videoBlob = await callHFInference(prompt, model, key);
-
-            const url = URL.createObjectURL(videoBlob);
+            const blob = await recordVideo(prompt);
+            const url = URL.createObjectURL(blob);
             if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
             currentVideoUrl = url;
 
-            const player = document.getElementById('videoPlayer');
+            const player = document.getElementById('player');
             player.src = url;
             player.load();
+            player.play();
 
+            loading.classList.remove('show');
             result.classList.add('show');
+            genBtn.disabled = false;
+            log('✅ Відео готове: ' + duration + 'с');
+        } catch(e) {
             loading.classList.remove('show');
             genBtn.disabled = false;
-
-            // Історія
-            addToHistory(prompt, model, url);
-            renderHistory();
-
-        } catch (e) {
-            loading.classList.remove('show');
-            genBtn.disabled = false;
-            error.textContent = '❌ ' + e.message;
-            error.classList.add('show');
+            log('❌ Помилка: ' + e.message);
         }
     }
 
-    async function callHFInference(prompt, model, token) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+    function regenerateVideo() {
+        const result = document.getElementById('result');
+        result.classList.remove('show');
+        generateVideo();
+    }
 
-        try {
-            const resp = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ inputs: prompt }),
-                signal: controller.signal,
-            });
+    function recordVideo(prompt) {
+        return new Promise((resolve, reject) => {
+            const stream = c.captureStream(30);
+            const mime = 'video/webm;codecs=vp9';
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported(mime)) mimeType = mime;
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
+            else mimeType = 'video/webm';
 
-            clearTimeout(timeout);
+            const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
+            const chunks = [];
+            const fps = 30;
+            const totalFrames = duration * fps;
+            let frame = 0;
+            let start = performance.now();
 
-            if (!resp.ok) {
-                const text = await resp.text();
-                let msg = text;
-                try {
-                    const json = JSON.parse(text);
-                    msg = json.error || text;
-                } catch(e) {}
+            rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            rec.onstop = () => {
+                stream.getTracks().forEach(t => t.stop());
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                resolve(blob);
+            };
+            rec.onerror = e => reject(e);
 
-                if (resp.status === 403) throw new Error('Доступ заборонено. Можливо, потрібно прийняти ліцензію на HuggingFace.');
-                if (resp.status === 503) throw new Error('Модель завантажується. Спробуй ще раз через хвилину.\n' + msg);
-                throw new Error(msg);
-            }
+            rec.start(100);
 
-            // Отримуємо бінарні дані
-            const contentType = resp.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-                const json = await resp.json();
-                if (json.error) throw new Error(json.error);
-                // Можливо, це base64
-                if (json.video) {
-                    return base64ToBlob(json.video);
+            function renderFrame() {
+                if (frame >= totalFrames) {
+                    rec.stop();
+                    return;
                 }
-                throw new Error('Несподівана відповідь: ' + JSON.stringify(json).substring(0, 200));
+                const t = frame / fps;
+                renderScene(prompt, t, duration);
+                frame++;
+                requestAnimationFrame(renderFrame);
             }
 
-            // Це відеофайл
-            return await resp.blob();
-
-        } catch (e) {
-            clearTimeout(timeout);
-            if (e.name === 'AbortError') throw new Error('Час очікування вичерпано (2 хв). Спробуй іншу модель.');
-            throw e;
-        }
-    }
-
-    function base64ToBlob(base64) {
-        const binary = atob(base64);
-        const array = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            array[i] = binary.charCodeAt(i);
-        }
-        return new Blob([array], { type: 'video/mp4' });
+            renderFrame();
+        });
     }
 
     // ============================================================
@@ -507,79 +937,31 @@
         if (!currentVideoUrl) return;
         const a = document.createElement('a');
         a.href = currentVideoUrl;
-        const prompt = document.getElementById('prompt').value.substring(0, 30).replace(/[^a-zA-Zа-яА-Я0-9_\s]/g, '').trim() || 'video';
-        a.download = `ai_${prompt.substring(0, 20)}.mp4`;
+        const name = document.getElementById('prompt').value.substring(0, 25).replace(/[^a-zA-Zа-яА-Я0-9_\s]/g, '').trim() || 'video';
+        a.download = name.substring(0, 20) + '.webm';
         a.click();
     }
 
-    function copyPrompt() {
-        const prompt = document.getElementById('prompt').value;
-        navigator.clipboard.writeText(prompt).catch(() => {});
-    }
-
     // ============================================================
-    // ІСТОРІЯ
+    // PREVIEW
     // ============================================================
-    function addToHistory(prompt, model, url) {
-        history.unshift({
-            prompt,
-            model,
-            url,
-            date: new Date().toISOString(),
-        });
-        if (history.length > 20) history = history.slice(0, 20);
-        localStorage.setItem('ai_video_history', JSON.stringify(history));
-    }
-
-    function renderHistory() {
-        const list = document.getElementById('historyList');
-        if (history.length === 0) {
-            list.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.08);text-align:center;padding:20px">Поки що порожньо</div>';
-            return;
+    let previewStart = 0;
+    function previewLoop() {
+        if (!recorder) {
+            const t = (performance.now() - previewStart) / 1000;
+            const prompt = document.getElementById('prompt').value.trim() || '...';
+            renderScene(prompt, t, 10);
         }
-        list.innerHTML = history.map((item, i) => `
-            <div class="h-item fade-in" onclick="playHistory(${i})">
-                <span class="h-play">🎬</span>
-                <span class="h-prompt">${escapeHtml(item.prompt.substring(0, 60))}</span>
-                <span class="h-date">${formatDate(item.date)}</span>
-            </div>
-        `).join('');
+        requestAnimationFrame(previewLoop);
     }
 
-    function playHistory(index) {
-        const item = history[index];
-        if (!item || !item.url) return;
-        document.getElementById('videoPlayer').src = item.url;
-        document.getElementById('result').classList.add('show');
-        document.getElementById('videoPlayer').load();
-        document.getElementById('videoPlayer').play();
-        document.getElementById('prompt').value = item.prompt;
-    }
+    // Preview на всю панель
+    const previewCanvas = c.cloneNode();
+    previewCanvas.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:90vw;max-height:90vh;z-index:999;border-radius:12px;display:none';
+    document.body.appendChild(previewCanvas);
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function formatDate(iso) {
-        try {
-            const d = new Date(iso);
-            return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        } catch(e) { return ''; }
-    }
-
-    // ============================================================
-    // СТАРТ
-    // ============================================================
-    loadKey();
-    renderHistory();
-    updateKeyStatus();
-
-    // Якщо є ключ, сховати конфіг
-    if (getKey()) {
-        document.getElementById('configSection').style.display = 'none';
-    }
+    previewStart = performance.now();
+    log('⚡ Готово! Напиши сцену і натисни Generate');
 </script>
 </body>
 </html>
