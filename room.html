@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Кімната — Room Mystery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #06060a;
+            font-family: 'Georgia', serif;
+            overflow: hidden;
+            height: 100vh;
+            color: #d0c0b0;
+        }
+        #game {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px; height: 600px;
+            background: #0d0d12;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        canvas { display: block; width: 800px; height: 500px; cursor: pointer; }
+
+        #ui-bot {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 100px;
+            background: linear-gradient(0deg, #0a0a0f 0%, #0e0e14 100%);
+            border-top: 1px solid rgba(200,180,160,0.06);
+            padding: 8px 16px;
+            display: grid;
+            grid-template-columns: 60px 1fr 120px;
+            gap: 8px;
+            align-items: center;
+        }
+        #inv {
+            display: flex; gap: 4px; flex-wrap: wrap;
+        }
+        #inv .s {
+            width: 44px; height: 44px;
+            border: 1px solid rgba(200,180,160,0.08);
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            background: rgba(255,255,255,0.02);
+        }
+        #inv .s.has { border-color: rgba(200,180,160,0.15); background: rgba(200,180,160,0.03); }
+
+        #name {
+            text-align: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(200,180,160,0.25);
+        }
+        #nav-b {
+            display: flex; gap: 6px; justify-content: flex-end;
+        }
+        #nav-b button {
+            background: rgba(200,180,160,0.04);
+            border: 1px solid rgba(200,180,160,0.08);
+            color: #c8b4a0;
+            padding: 6px 16px;
+            border-radius: 3px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Georgia', serif;
+            line-height: 1;
+        }
+        #nav-b button:hover { background: rgba(200,180,160,0.1); }
+
+        /* Діалог */
+        #dialog {
+            position: absolute; bottom: 105px; left: 10px; right: 10px;
+            background: rgba(6,6,10,0.95);
+            border: 1px solid rgba(200,180,160,0.06);
+            border-radius: 6px;
+            padding: 14px 18px;
+            display: none;
+            z-index: 20;
+            backdrop-filter: blur(6px);
+            max-height: 220px;
+        }
+        #dialog .dn { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.3; margin-bottom: 4px; }
+        #dialog .dt { font-size: 14px; line-height: 1.6; color: rgba(200,180,160,0.85); }
+        #dialog .dc { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+        #dialog .dc button {
+            background: rgba(200,180,160,0.04);
+            border: 1px solid rgba(200,180,160,0.08);
+            color: #c8b4a0;
+            padding: 6px 16px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #dialog .dc button:hover { background: rgba(200,180,160,0.1); }
+
+        #overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 100px;
+            display: none;
+            align-items: center; justify-content: center;
+            background: rgba(6,6,10,0.88);
+            z-index: 15;
+            padding: 40px;
+            text-align: center;
+        }
+        #overlay .ot { font-size: 18px; line-height: 1.8; color: rgba(200,180,160,0.8); max-width: 560px; }
+        #overlay .os { font-size: 12px; color: rgba(200,180,160,0.25); margin-top: 16px; }
+        #overlay .ob {
+            margin-top: 20px;
+            background: rgba(200,180,160,0.06);
+            border: 1px solid rgba(200,180,160,0.1);
+            color: #c8b4a0;
+            padding: 8px 24px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            cursor: pointer;
+        }
+        #overlay .ob:hover { background: rgba(200,180,160,0.1); }
+
+        #start {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: #06060a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            transition: opacity 1.2s;
+            cursor: pointer;
+        }
+        #start h1 {
+            font-size: 3em; font-weight: normal;
+            letter-spacing: 0.25em; color: #d0c0b0;
+            text-shadow: 0 0 40px rgba(200,180,160,0.08);
+        }
+        #start .sub { color: rgba(200,180,160,0.2); font-size: 0.8em; letter-spacing: 0.15em; margin-top: 8px; }
+        #start .btn {
+            margin-top: 36px;
+            padding: 12px 44px;
+            border: 1px solid rgba(200,180,160,0.1);
+            border-radius: 4px;
+            color: #d0c0b0;
+            font-size: 1.1em;
+            font-family: 'Georgia', serif;
+            background: rgba(200,180,160,0.02);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #start .btn:hover { background: rgba(200,180,160,0.06); border-color: rgba(200,180,160,0.2); }
+
+        #end {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(6,6,10,0.96);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30; padding: 40px; text-align: center;
+        }
+        #end h2 { font-weight: normal; letter-spacing: 0.2em; color: #d0c0b0; margin-bottom: 12px; font-size: 1.4em; }
+        #end p { color: rgba(200,180,160,0.5); font-size: 0.9em; max-width: 500px; line-height: 1.7; }
+        #end .rb {
+            margin-top: 24px; padding: 10px 30px;
+            border: 1px solid rgba(200,180,160,0.12);
+            background: none; color: #d0c0b0;
+            font-family: 'Georgia', serif; cursor: pointer;
+            border-radius: 4px;
+        }
+        #end .rb:hover { background: rgba(200,180,160,0.05); }
+
+        @media (max-width: 820px) {
+            #game { width: 100vw; height: 100vh; border-radius: 0; }
+            canvas { width: 100vw; height: calc(100vh - 100px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game">
+    <div id="start">
+        <h1>КІМНАТА</h1>
+        <div class="sub">— останній гість —</div>
+        <div class="btn">🚪 Увійти</div>
+    </div>
+    <div id="end">
+        <h2 id="endTitle"></h2>
+        <p id="endText"></p>
+        <button class="rb" onclick="location.reload()">🔄 Заново</button>
+    </div>
+    <div id="overlay">
+        <div>
+            <div class="ot" id="otText"></div>
+            <div class="os" id="otSub"></div>
+            <button class="ob" id="otBtn">Продовжити</button>
+        </div>
+    </div>
+
+    <canvas id="c" width="800" height="500"></canvas>
+
+    <div id="dialog">
+        <div class="dn" id="dName"></div>
+        <div class="dt" id="dText"></div>
+        <div class="dc" id="dChoices"></div>
+    </div>
+
+    <div id="ui-bot">
+        <div id="inv"></div>
+        <div id="name">Кімната</div>
+        <div id="nav-b">
+            <button id="bp">◀</button>
+            <button id="bn">▶</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    const W = 800, H = 500;
+
+    const invEl = document.getElementById('inv');
+    const dialog = document.getElementById('dialog');
+    const dName = document.getElementById('dName');
+    const dText = document.getElementById('dText');
+    const dChoices = document.getElementById('dChoices');
+    const nameEl = document.getElementById('name');
+    const overlay = document.getElementById('overlay');
+    const otText = document.getElementById('otText');
+    const otSub = document.getElementById('otSub');
+    const start = document.getElementById('start');
+
+    const inv = [];
+    const flags = {};
+    let dialogOpen = false;
+    let overlayOpen = false;
+    let angle = 0;
+    let gameStarted = false;
+
+    function has(id) { return inv.includes(id); }
+    function flag(f) { return flags[f] || false; }
+    function setFlag(f) { flags[f] = true; }
+
+    // ============================================================
+    // МАЛЮВАННЯ КІМНАТИ (3 кути огляду)
+    // ============================================================
+    function vignette() {
+        const g = ctx.createRadialGradient(400, 200, 100, 400, 200, 500);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.4)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawFloor(y) {
+        ctx.fillStyle = '#221a14';
+        ctx.fillRect(0, y, W, H-y);
+        for (let x=0; x<W; x+=40) {
+            ctx.fillStyle = (Math.floor(x/40)%2===0)?'#261e18':'#201812';
+            ctx.fillRect(x, y, 40, H-y);
+        }
+    }
+
+    // Ліворуч — стіл, стілець, вікно
+    function drawLeft() {
+        const o = -40;
+        ctx.fillStyle = '#2a221a';
+        ctx.fillRect(0, 0, W, 350);
+
+        // Шпалери з візерунком
+        for (let y=0; y<350; y+=20) {
+            for (let x=0; x<W; x+=20) {
+                ctx.fillStyle = ((x/20 + y/20) % 2 === 0) ? '#2c241c' : '#282018';
+                ctx.fillRect(x, y, 20, 20);
+            }
+        }
+        ctx.fillStyle = '#2a221a'; // затемнення
+        ctx.fillRect(0, 0, W, 350);
+
+        ctx.fillStyle = '#1c1610';
+        ctx.fillRect(0, 0, W, 28);
+
+        drawFloor(350);
+
+        // Вікно
+        ctx.fillStyle = '#0a1520';
+        ctx.fillRect(500, 60, 120, 140);
+        ctx.fillStyle = '#0d1a2a';
+        ctx.fillRect(503, 63, 114, 134);
+        ctx.fillStyle = 'rgba(200,210,240,0.03)';
+        ctx.beginPath();
+        ctx.arc(540, 100, 12, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(500, 60, 120, 140);
+        ctx.beginPath();
+        ctx.moveTo(560, 60); ctx.lineTo(560, 200);
+        ctx.moveTo(500, 130); ctx.lineTo(620, 130);
+        ctx.stroke();
+
+        // Штори
+        ctx.fillStyle = '#2a1a1a';
+        ctx.fillRect(495, 55, 10, 155);
+        ctx.fillRect(615, 55, 10, 155);
+        ctx.fillStyle = 'rgba(40,20,20,0.3)';
+        ctx.fillRect(505, 55, 110, 8);
+
+        // Стіл
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(100, 280, 120, 5);
+        ctx.fillStyle = '#3a2515';
+        ctx.fillRect(120, 285, 8, 45);
+        ctx.fillRect(192, 285, 8, 45);
+
+        // Ключ на столі
+        if (!flag('keyTaken')) {
+            ctx.fillStyle = '#a09030';
+            ctx.fillRect(150, 275, 20, 5);
+            ctx.beginPath();
+            ctx.arc(168, 277, 4, 0, Math.PI*2);
+            ctx.strokeStyle = '#a09030';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillRect(150, 273, 3, 9);
+        }
+
+        // Стілець
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(230, 290, 35, 60);
+        ctx.fillStyle = '#4a3828';
+        ctx.fillRect(228, 287, 39, 6);
+
+        // Картина на стіні
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(300, 80, 80, 60);
+        ctx.fillStyle = '#1a2a1a';
+        ctx.fillRect(305, 85, 70, 50);
+        ctx.fillStyle = 'rgba(100,180,150,0.05)';
+        // ліс
+        ctx.fillRect(310, 90, 30, 40);
+        ctx.fillRect(350, 95, 20, 35);
+    }
+
+    // Центр — ліжко, шафа
+    function drawCenter() {
+        const o = 0;
+        ctx.fillStyle = '#2a221a';
+        ctx.fillRect(0, 0, W, 350);
+        for (let y=0; y<350; y+=20) {
+            for (let x=0; x<W; x+=20) {
+                ctx.fillStyle = ((x/20 + y/20) % 2 === 0) ? '#2c241c' : '#282018';
+                ctx.fillRect(x, y, 20, 20);
+            }
+        }
+        ctx.fillStyle = '#2a221a';
+        ctx.fillRect(0, 0, W, 350);
+        ctx.fillStyle = '#1c1610';
+        ctx.fillRect(0, 0, W, 28);
+        drawFloor(350);
+
+        // Ліжко
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(250, 240, 200, 110);
+        ctx.fillStyle = '#4a3828';
+        ctx.fillRect(248, 237, 204, 8);
+        // Подушка
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(260, 232, 50, 14);
+        ctx.fillStyle = '#6a5a4a';
+        ctx.fillRect(385, 232, 55, 14);
+        // Ковдра
+        ctx.fillStyle = '#2a1a1a';
+        ctx.fillRect(250, 250, 200, 60);
+        ctx.fillStyle = '#3a2a2a';
+        ctx.fillRect(250, 250, 200, 4);
+
+        // Шафа
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(580, 100, 80, 250);
+        ctx.fillStyle = '#4a3a2a';
+        ctx.fillRect(580, 100, 80, 5);
+        ctx.strokeStyle = 'rgba(60,40,30,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(580, 100, 80, 250);
+
+        // Дзеркало
+        ctx.fillStyle = '#1a2030';
+        ctx.fillRect(80, 80, 60, 80);
+        ctx.fillStyle = 'rgba(200,210,240,0.03)';
+        ctx.fillRect(85, 85, 50, 70);
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(80, 80, 60, 80);
+
+        // Настільна лампа на тумбочці
+        ctx.fillStyle = '#2a1a0a';
+        ctx.fillRect(470, 280, 30, 70);
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(468, 277, 34, 5);
+        ctx.fillStyle = '#ffddaa';
+        ctx.globalAlpha = 0.03 + Math.sin(Date.now()/600) * 0.01;
+        ctx.beginPath();
+        ctx.arc(485, 270, 10, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    // Праворуч — крісло, книжка, камін
+    function drawRight() {
+        const o = 40;
+        ctx.fillStyle = '#2a221a';
+        ctx.fillRect(0, 0, W, 350);
+        for (let y=0; y<350; y+=20) {
+            for (let x=0; x<W; x+=20) {
+                ctx.fillStyle = ((x/20 + y/20) % 2 === 0) ? '#2c241c' : '#282018';
+                ctx.fillRect(x, y, 20, 20);
+            }
+        }
+        ctx.fillStyle = '#2a221a';
+        ctx.fillRect(0, 0, W, 350);
+        ctx.fillStyle = '#1c1610';
+        ctx.fillRect(0, 0, W, 28);
+        drawFloor(350);
+
+        // Крісло
+        ctx.fillStyle = '#2a1a1a';
+        ctx.fillRect(500, 230, 80, 120);
+        ctx.fillStyle = '#3a2a2a';
+        ctx.fillRect(500, 230, 80, 8);
+        ctx.fillStyle = '#4a3a3a';
+        ctx.fillRect(570, 230, 10, 120);
+
+        // Книжка на підлозі
+        if (!flag('bookTaken')) {
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(535, 330, 30, 20);
+            ctx.fillStyle = '#7a5a3a';
+            ctx.fillRect(537, 332, 26, 16);
+            ctx.fillStyle = 'rgba(255,255,200,0.05)';
+            ctx.fillRect(540, 335, 20, 2);
+            ctx.fillRect(540, 340, 20, 2);
+        }
+
+        // Камін
+        ctx.fillStyle = '#2a1a10';
+        ctx.fillRect(80, 200, 100, 150);
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(80, 200, 100, 8);
+        ctx.fillStyle = '#1a1008';
+        ctx.fillRect(90, 210, 80, 130);
+        ctx.strokeStyle = 'rgba(60,40,30,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(80, 200, 100, 150);
+
+        // Вогонь
+        const flicker = Math.sin(Date.now()/200) * 3;
+        ctx.fillStyle = '#ff6622';
+        ctx.globalAlpha = 0.06;
+        ctx.beginPath();
+        ctx.moveTo(130, 310);
+        ctx.quadraticCurveTo(110, 280 + flicker, 130, 250 + flicker);
+        ctx.quadraticCurveTo(150, 280 + flicker, 130, 310);
+        ctx.fill();
+        ctx.fillStyle = '#ffaa44';
+        ctx.globalAlpha = 0.03;
+        ctx.beginPath();
+        ctx.moveTo(130, 310);
+        ctx.quadraticCurveTo(115, 290 + flicker, 130, 265 + flicker);
+        ctx.quadraticCurveTo(145, 290 + flicker, 130, 310);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Фото на каміні
+        if (!flag('photoFound')) {
+            ctx.fillStyle = '#c8b898';
+            ctx.fillRect(120, 193, 18, 12);
+        }
+    }
+
+    // ============================================================
+    // ХОТСПОТИ
+    // ============================================================
+    function getHS(a) {
+        return {
+            left: [
+                { id:'key', x:140, y:265, w:30, h:20, label:'🔑 ключ',
+                  show:()=>!flag('keyTaken'),
+                  action:()=>{setFlag('keyTaken');addItem('🔑');
+                  showT('🔑 Ключ','Старий латунний ключ. На бирці: «Кімната №7. 1995.» Це твоя кімната?')}},
+                { id:'window', x:500, y:60, w:120, h:140, label:'🪟 вікно',
+                  show:()=>true,
+                  action:()=>showT('Вікно','Надворі ніч. Старе місто. Ліхтарі. Здається, я був тут раніше... Але коли?')},
+                { id:'painting', x:300, y:80, w:80, h:60, label:'🖼 картина',
+                  show:()=>true,
+                  action:()=>{if(!flag('paintingLooked')){setFlag('paintingLooked');
+                  showT('🖼 Картина','Ліс. Сосни. На звороті напис: «Дача. Літо 94. Найкраще літо.» Ти чомусь пам\'ятаєш запах сосен.')}
+                  else showT('🖼 Картина','Той самий ліс. Ті самі сосни.')}},
+                { id:'chair', x:228, y:287, w:39, h:63, label:'🪑 стілець',
+                  show:()=>true,
+                  action:()=>showT('Стілець','Старий дерев\'яний стілець. Хитається. На спинці подряпина — чиєсь ім\'я? «М.К. 95».')},
+            ],
+            center: [
+                { id:'bed', x:250, y:232, w:200, h:120, label:'🛏 ліжко',
+                  show:()=>true,
+                  action:()=>showT('Ліжко','Заправлене. Але подушка пам\'ятає чиюсь голову. Ти торкаєшся простирадла — воно тепле. Хтось щойно тут лежав.')},
+                { id:'wardrobe', x:580, y:105, w:80, h:245, label:'🚪 шафа',
+                  show:()=>!flag('wardrobeOpened'),
+                  action:()=>{setFlag('wardrobeOpened');
+                  if(has('🔑')){
+                      setFlag('foundClue');
+                      showT('🚪 Шафа','Всередині — чоловічий костюм. У кишені — стара фотографія. Жінка стоїть біля моря. На звороті: «Чекаю. М.» Ти впізнаєш її. Вона снилась тобі.');
+                      addItem('📸');
+                  }else{
+                      showT('🚪 Шафа','Замкнено. Потрібен ключ.');
+                  }}},
+                { id:'mirror', x:80, y:80, w:60, h:80, label:'🪞 дзеркало',
+                  show:()=>true,
+                  action:()=>showT('🪞 Дзеркало','Ти дивишся в дзеркало. Але відображення не твоє. Чоловік років 40. Втомлені очі. Він дивиться на тебе. Або... ти дивишся на нього?')},
+                { id:'lamp', x:468, y:270, w:34, h:10, label:'💡 лампа',
+                  show:()=>true,
+                  action:()=>showT('💡 Лампа','Стара настільна лампа. Ввімкнена. Світло тепле, жовте. Під лампою — слід від фото. Хтось тримав його тут довго.')},
+            ],
+            right: [
+                { id:'armchair', x:500, y:230, w:80, h:120, label:'🛋 крісло',
+                  show:()=>true,
+                  action:()=>{if(!flag('armchairLooked')){setFlag('armchairLooked');
+                  showT('🛋 Крісло','Старе шкіряне крісло. Протерте до дірок. Ти сідаєш — і на мить тобі здається, що поряд хтось є. Пахне одеколоном і чаєм.')}
+                  else showT('🛋 Крісло','Все те саме крісло. Все той самий запах.')}},
+                { id:'book', x:535, y:330, w:30, h:20, label:'📖 книжка',
+                  show:()=>!flag('bookTaken'),
+                  action:()=>{setFlag('bookTaken');addItem('📖');
+                  showT('📖 Книжка','«Майстер і Маргарита». 1987 рік. Між сторінок — закладка: газетна вирізка. «Потяг №7 зник безвісти. 33 пасажири.» 2007. Ти відчуваєш, як холоне всередині.')}},
+                { id:'fireplace', x:80, y:200, w:100, h:150, label:'🔥 камін',
+                  show:()=>true,
+                  action:()=>showT('🔥 Камін','Вогонь ледь жевріє. Жар. Ти простягаєш руки — тепло. Здається, він горів усю ніч. Хтось чекав тебе.')},
+                { id:'photo2', x:115, y:190, w:28, h:15, label:'🖼 фото',
+                  show:()=>!flag('photoFound'),
+                  action:()=>{setFlag('photoFound');addItem('🖼');
+                  showT('🖼 Фото','Жінка і чоловік. Щасливі. 1995 рік. На звороті: «Ми. Наше весілля.» Чоловік — той самий, що в дзеркалі. Жінка... вона чекає. Чекає досі.')}},
+            ],
+        };
+    }
+
+    // ============================================================
+    // ДІАЛОГИ ТА СЮЖЕТ
+    // ============================================================
+    function showEnding(title, text) {
+        document.getElementById('endTitle').textContent = title;
+        document.getElementById('endText').textContent = text;
+        document.getElementById('end').style.display = 'flex';
+    }
+
+    function showT(name, text) {
+        if (overlayOpen) return;
+        otText.textContent = text;
+        otSub.textContent = '— ' + name + ' —';
+        overlay.style.display = 'flex';
+        overlayOpen = true;
+    }
+
+    function openDialog(name, text, choices) {
+        if (overlayOpen) return;
+        dName.textContent = name;
+        dText.textContent = text;
+        dChoices.innerHTML = '';
+        choices.forEach(c => {
+            const b = document.createElement('button');
+            b.textContent = c.text;
+            b.onclick = ()=>{dialog.style.display='none';dialogOpen=false;if(c.next)c.next();};
+            dChoices.appendChild(b);
+        });
+        dialog.style.display = 'block';
+        dialogOpen = true;
+    }
+
+    function closeDialog() { dialog.style.display='none';dialogOpen=false; }
+    document.getElementById('otBtn').addEventListener('click',()=>{overlay.style.display='none';overlayOpen=false;});
+
+    function tryEnding() {
+        // Фінальна сцена — коли зібрано всі докази
+        if (flag('foundClue') && flag('bookTaken') && flag('photoFound')) {
+            setFlag('finalDone');
+            openDialog('👤 Жінка', 'Світло мерехтить. У дзеркалі — вона. Та сама жінка з фото. «Ти нарешті згадав. Ми чекали. Я чекала 17 років. Ти пішов у рейс №7 і не повернувся. А тепер ти тут. У нашій кімнаті.»', [
+                {text:'✅ Згадати все', next:()=>showEnding('🕊️ Спокій','Ти заплющуєш очі. 2007 рік. Потяг. Аварія. А потім — темрява. Але тепер ти вдома. У кімнаті, де чекають. Світло гасне. Ти чуєш: «Ласкаво просимо додому.»')},
+                {text:'❌ Не готовий', next:()=>showT('👤 Жінка','«Коли будеш готовий — я чекатиму. У цій кімнаті. У цьому світлі. Ти завжди можеш повернутись.»')},
+            ]);
+        } else if (flag('foundClue') && !flag('endingHinted')) {
+            setFlag('endingHinted');
+            showT('👤 Шепіт', 'Ти чуєш голос: «Ще не все. Знайди книжку. Знайди фото. Тоді приходь.»');
+        } else if (flag('bookTaken') && !flag('endingHinted2')) {
+            setFlag('endingHinted2');
+            showT('📖 Книжка', 'Газетна вирізка випадає з книжки. «Потяг №7. Аварія. 33 загиблих.» Ти — 33-й. Ти — єдиний, хто не знайшли.');
+        }
+    }
+
+    // Кнопки навігації
+    document.getElementById('bp').addEventListener('click',()=>{if(!dialogOpen&&!overlayOpen)angle=Math.max(0,angle-1);});
+    document.getElementById('bn').addEventListener('click',()=>{if(!dialogOpen&&!overlayOpen)angle=Math.min(2,angle+1);});
+
+    // Старт
+    function startGame() {
+        start.style.opacity = '0';
+        start.style.pointerEvents = 'none';
+        setTimeout(()=>{start.style.display='none';},800);
+        gameStarted = true;
+        showT('🚪 Кімната №7','Ти відчиняєш двері. Стара кімната. Пахне пилом і часом. Лампа горить. Ліжко тепле. Здається, тебе чекали. На столі — ключ. У дзеркалі — не ти. Що сталося в цій кімнаті?');
+    }
+
+    document.querySelector('#start .btn').addEventListener('click', startGame);
+    document.getElementById('start').addEventListener('click', e => { if (e.target === e.currentTarget) startGame(); });
+
+    // Інвентар
+    function addItem(item) { if(!inv.includes(item)){inv.push(item);renderInv();} }
+    function renderInv() {
+        invEl.innerHTML = '';
+        for(let i=0;i<5;i++){
+            const s=document.createElement('div');
+            s.className='s'+(inv[i]?' has':'');
+            s.textContent=inv[i]||'';
+            invEl.appendChild(s);
+        }
+    }
+    renderInv();
+
+    // ============================================================
+    // РЕНДЕР
+    // ============================================================
+    let mx=null;
+
+    function render() {
+        ctx.fillStyle='#0a0a0f';
+        ctx.fillRect(0,0,W,H);
+
+        if (!gameStarted) { requestAnimationFrame(render); return; }
+
+        // Малювання
+        const v = ['left','center','right'][angle];
+        if(v==='left') drawLeft();
+        else if(v==='center') drawCenter();
+        else drawRight();
+
+        vignette();
+
+        const names = {left:'біля вікна',center:'ліжко',right:'камін'};
+        nameEl.textContent = (names[v]||'кімната').toUpperCase();
+
+        // Хотспоти
+        const hs = getHS(angle);
+        const list = (hs[['left','center','right'][angle]] || []);
+        if (mx) {
+            let found=false;
+            for(const h of list){
+                if(!h.show||!h.show()) continue;
+                if(mx.x>=h.x&&mx.x<=h.x+h.w&&mx.y>=h.y&&mx.y<=h.y+h.h){
+                    ctx.strokeStyle='rgba(200,180,160,0.12)';
+                    ctx.lineWidth=1;ctx.setLineDash([3,3]);
+                    ctx.strokeRect(h.x,h.y,h.w,h.h);
+                    ctx.setLineDash([]);
+                    ctx.fillStyle='rgba(6,6,10,0.6)';
+                    ctx.font='9px Georgia';
+                    ctx.textAlign='center';
+                    const tw=ctx.measureText(h.label).width+12;
+                    ctx.fillRect(h.x+h.w/2-tw/2,h.y-18,tw,14);
+                    ctx.fillStyle='#c8b4a0';
+                    ctx.fillText(h.label,h.x+h.w/2,h.y-8);
+                    found=true;
+                    break;
+                }
+            }
+            c.style.cursor=found?'pointer':'default';
+        }
+
+        requestAnimationFrame(render);
+    }
+
+    // ============================================================
+    // МИША
+    // ============================================================
+    c.addEventListener('mousemove',e=>{
+        const r=c.getBoundingClientRect();
+        mx={x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(H/r.height)};
+    });
+    c.addEventListener('mouseleave',()=>{mx=null;c.style.cursor='default';});
+
+    c.addEventListener('click',e=>{
+        if(!gameStarted||dialogOpen||overlayOpen)return;
+        const r=c.getBoundingClientRect();
+        const x=(e.clientX-r.left)*(W/r.width);
+        const y=(e.clientY-r.top)*(H/r.height);
+
+        const hs=getHS(angle);
+        const list=hs[['left','center','right'][angle]]||[];
+        for(const h of list){
+            if(!h.show||!h.show()) continue;
+            if(x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h){
+                h.action();
+                tryEnding();
+                return;
+            }
+        }
+
+        // Край — огляд
+        if(x<30&&angle>0)angle--;
+        else if(x>W-30&&angle<2)angle++;
+    });
+
+    // Клавіші
+    document.addEventListener('keydown',e=>{
+        if(e.key==='ArrowLeft'&&!dialogOpen&&!overlayOpen&&angle>0)angle--;
+        if(e.key==='ArrowRight'&&!dialogOpen&&!overlayOpen&&angle<2)angle++;
+        if(e.key==='Escape'){if(dialogOpen)closeDialog();if(overlayOpen){overlay.style.display='none';overlayOpen=false;}}
+    });
+
+    render();
+</script>
+</body>
+</html>
