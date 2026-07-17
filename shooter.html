@@ -3,144 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тіні — шутер</title>
+    <title>Тіні — реалістичний шутер</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
-        body { background:#05080a; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:'Segoe UI',sans-serif; }
+        body { background:#020304; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:'Segoe UI',sans-serif; }
         #wrap {
             position:relative; width:800px; max-width:100vw; height:600px; max-height:100vh;
             border:1px solid rgba(255,255,255,0.03); border-radius:6px; overflow:hidden;
+            box-shadow:0 0 80px rgba(0,0,0,0.5);
         }
-        canvas { display:block; width:100%; height:100%; background:#070a0c; cursor:crosshair; }
+        canvas { display:block; width:100%; height:100%; background:#040608; cursor:crosshair; }
 
         #hud {
             position:absolute; top:0; left:0; right:0;
-            display:flex; justify-content:space-between; padding:8px 12px;
-            pointer-events:none; font-size:11px; letter-spacing:0.05em;
+            padding:8px 12px; pointer-events:none;
         }
-        #hud .left, #hud .right { display:flex; gap:14px; align-items:center; }
-        #hud .val { color:rgba(255,255,255,0.25); }
-        #hud .val b { color:rgba(255,255,255,0.5); }
-        #hud .danger { color:#d05a5a; }
+        #hud .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+        #hud .row:last-child { margin-bottom:0; }
+        #hud .val { font-size:11px; letter-spacing:0.03em; }
+        #hud .val b { color:rgba(255,255,255,0.5); font-weight:400; }
+        #hud .val .num { color:rgba(255,255,255,0.25); }
 
-        #hpbar {
-            width:120px; height:4px; background:rgba(255,255,255,0.03); border-radius:2px; overflow:hidden;
-        }
-        #hpbar .fill { height:100%; width:100%; background:#d05a5a; border-radius:2px; transition:width 0.15s; }
+        #hpbarWrap { width:130px; height:5px; background:rgba(255,255,255,0.03); border-radius:3px; overflow:hidden; position:relative; }
+        #hpbar { height:100%; width:100%; border-radius:3px; transition:width 0.1s; }
+        #hpbar.health { background:linear-gradient(90deg,#3a7a5a,#5a8a6a); }
+        #hpbar.damage { background:linear-gradient(90deg,#8a2a2a,#aa3a3a); }
+
+        #ammo { font-size:11px; }
+        #ammo b { font-size:14px; }
 
         #overlay {
             display:none; position:absolute; top:0; left:0; right:0; bottom:0;
-            background:rgba(2,4,6,0.75); z-index:20;
-            flex-direction:column; align-items:center; justify-content:center; gap:10px;
+            background:rgba(0,0,0,0.7); z-index:20;
+            flex-direction:column; align-items:center; justify-content:center; gap:12px;
         }
         #overlay.show { display:flex; }
-        #overlay h1 { font-size:22px; font-weight:300; color:rgba(255,255,255,0.2); letter-spacing:0.1em; }
+        #overlay h1 { font-size:24px; font-weight:300; color:rgba(255,255,255,0.15); letter-spacing:0.15em; }
         #overlay .sub { font-size:11px; color:rgba(255,255,255,0.06); }
+        #overlay .big-num { font-size:36px; color:rgba(255,255,255,0.1); font-weight:200; }
         #overlay button {
-            margin-top:8px; padding:8px 28px;
-            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04);
-            border-radius:6px; color:rgba(255,255,255,0.15); font-size:12px;
-            cursor:pointer; font-family:inherit;
+            padding:8px 28px; margin-top:4px;
+            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);
+            border-radius:6px; color:rgba(255,255,255,0.2); font-size:12px;
+            cursor:pointer; font-family:inherit; transition:0.15s;
         }
-        #overlay button:hover { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.3); }
+        #overlay button:hover { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); }
+
+        #minimap {
+            position:absolute; bottom:10px; right:10px;
+            width:80px; height:80px; border-radius:4px;
+            border:1px solid rgba(255,255,255,0.03);
+            background:rgba(0,0,0,0.4); overflow:hidden; pointer-events:none;
+        }
     </style>
 </head>
 <body>
 <div id="wrap">
     <canvas id="c"></canvas>
     <div id="hud">
-        <div class="left">
-            <span class="val">❤️ <b id="hp">100</b></span>
-            <div id="hpbar"><div class="fill" id="hpFill"></div></div>
+        <div class="row">
+            <div class="val"><b id="hpNum">100</b> <span class="num">HP</span></div>
+            <div class="val"><span class="num">🌊</span> <b id="wave">0</b></div>
         </div>
-        <div class="right">
-            <span class="val">🎯 <b id="score">0</b></span>
-            <span class="val">🌊 <b id="wave">0</b></span>
+        <div class="row">
+            <div id="hpbarWrap"><div id="hpbar" class="health"></div></div>
+            <div class="val" id="ammo"><b id="score">0</b> <span class="num">очок</span></div>
         </div>
     </div>
     <div id="overlay" class="show">
         <h1>🌑 ТІНІ</h1>
-        <div class="sub">Вбивай тіней, збирай очки, виживай</div>
-        <button onclick="startGame()">▶ Грати</button>
+        <div class="sub">Ліва кнопка — стріляти | WASD — рух</div>
+        <button onclick="startGame()">▶ ПОЧАТИ</button>
     </div>
+    <canvas id="minimap" width="80" height="80"></canvas>
 </div>
 <script>
     // ============================================================
-    // ТІНІ — топ-даун шутер
+    // ТІНІ — реалістичний топ-даун шутер
     // ============================================================
 
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
-    const W = 800, H = 600;
+    const miniCanvas = document.getElementById('minimap');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    let W, H;
 
     function resize() {
-        const rect = canvas.parentElement.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        W = canvas.parentElement.clientWidth;
+        H = canvas.parentElement.clientHeight;
+        canvas.width = W;
+        canvas.height = H;
     }
     window.addEventListener('resize', resize);
     resize();
 
     // ============================================================
+    // ЗВУКИ (Web Audio API — синтезовані)
+    // ============================================================
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playShoot() {
+        try {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.08);
+        } catch(e) {}
+    }
+
+    function playHit() {
+        try {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.05);
+        } catch(e) {}
+    }
+
+    function playDeath() {
+        try {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.3);
+            // Noise burst
+            const bufferSize = audioCtx.sampleRate * 0.15;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            ng.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            noise.connect(ng);
+            ng.connect(audioCtx.destination);
+            noise.start(audioCtx.currentTime);
+        } catch(e) {}
+    }
+
+    function playExplosion() {
+        try {
+            initAudio();
+            const bufferSize = audioCtx.sampleRate * 0.4;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start(audioCtx.currentTime);
+        } catch(e) {}
+    }
+
+    // ============================================================
     // СТАН
     // ============================================================
-    let game = {
-        running: false,
-        score: 0,
-        wave: 0,
-        enemies: [],
-        bullets: [],
-        particles: [],
-        enemyTimer: 0,
-        waveTimer: 0,
-        enemiesSpawned: 0,
-        enemiesInWave: 0,
-    };
-
+    const game = { running: false, score: 0, wave: 0, kills: 0, timer: 0, shake: 0 };
     const player = {
-        x: W/2, y: H/2,
-        r: 10,
-        hp: 100,
-        maxHp: 100,
-        speed: 3.5,
-        angle: 0,
-        shootCooldown: 0,
-        shootDelay: 8,
-        alive: true,
+        x: 0, y: 0, r: 9, hp: 100, maxHp: 100,
+        speed: 2.5, angle: 0, alive: true,
+        shootCooldown: 0, shootDelay: 6,
+        invincible: 0,
     };
-
     const keys = {};
-    let mx = W/2, my = H/2;
+    let mx = 0, my = 0, mouseDown = false;
+
+    const enemies = [];
+    const bullets = [];
+    const particles = [];
+    const damageNums = [];
+    const pickups = [];
+    let enemySpawned = 0, enemyCount = 0, spawnTimer = 0;
 
     // ============================================================
     // ВОРОГИ
     // ============================================================
+    const ENEMY_TYPES = {
+        // Швидкий легкий
+        runner: {
+            r: 7, hp: 1, speed: 3.0, score: 10, damage: 8,
+            color: '#5a8aba', bodyColor: 'rgba(60,120,180,0.6)',
+        },
+        // Звичайний
+        stalker: {
+            r: 10, hp: 2, speed: 1.6, score: 15, damage: 12,
+            color: '#ba5a3a', bodyColor: 'rgba(180,80,40,0.7)',
+        },
+        // Танк
+        brute: {
+            r: 15, hp: 6, speed: 0.9, score: 35, damage: 20,
+            color: '#7a3a5a', bodyColor: 'rgba(120,40,60,0.8)',
+        },
+        // Стріляючий (RANGED)
+        sniper: {
+            r: 9, hp: 2, speed: 1.2, score: 25, damage: 8,
+            color: '#3a7a5a', bodyColor: 'rgba(40,120,80,0.7)',
+            ranged: true, shootTimer: 0, shootDelay: 90,
+        },
+        // Вибуховий
+        exploder: {
+            r: 12, hp: 3, speed: 1.8, score: 20, damage: 30,
+            color: '#9a6a2a', bodyColor: 'rgba(180,100,30,0.8)',
+            explosion: true, explosionRadius: 80, explosionTimer: 0,
+        },
+    };
+
     class Enemy {
         constructor(x, y, type) {
-            this.x = x;
-            this.y = y;
-            this.type = type; // 'normal', 'fast', 'tank'
-            this.r = type === 'tank' ? 14 : type === 'fast' ? 7 : 10;
-            this.hp = type === 'tank' ? 6 : type === 'fast' ? 1 : 2;
-            this.maxHp = this.hp;
-            this.speed = type === 'fast' ? 2.5 : type === 'tank' ? 0.8 : 1.5;
-            this.score = type === 'tank' ? 30 : type === 'fast' ? 15 : 10;
-            this.damage = type === 'tank' ? 15 : type === 'fast' ? 5 : 10;
+            const def = ENEMY_TYPES[type];
+            this.x = x; this.y = y;
+            this.type = type;
+            this.r = def.r;
+            this.hp = def.hp; this.maxHp = def.hp;
+            this.speed = def.speed;
+            this.score = def.score;
+            this.damage = def.damage;
+            this.color = def.color;
+            this.bodyColor = def.bodyColor;
             this.angle = 0;
             this.hitFlash = 0;
-            this.id = Math.random();
+            this.state = 'move'; // move, attack, charge
+            this.stateTimer = 0;
+            this.attackCooldown = 0;
+            this.eyeAngle = 0;
+            this.wobble = Math.random() * Math.PI * 2;
+
+            // Спеціальні
+            if (def.ranged) {
+                this.shootTimer = def.shootDelay * 0.5 * Math.random();
+                this.shootDelay = def.shootDelay;
+            }
+            if (def.explosion) {
+                this.explosionRadius = def.explosionRadius;
+                this.exploding = false;
+                this.explosionTimer = 0;
+                this.beepTimer = 0;
+            }
         }
 
         update() {
             const dx = player.x - this.x;
             const dy = player.y - this.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > 1) {
-                this.angle = Math.atan2(dy, dx);
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-            }
+            this.angle = Math.atan2(dy, dx);
+
             if (this.hitFlash > 0) this.hitFlash--;
+            this.wobble += 0.03;
+            this.eyeAngle = this.angle + Math.sin(this.wobble) * 0.1;
+
+            // Поведінка
+            if (this.type === 'exploder' && dist < 100 && !this.exploding) {
+                this.exploding = true;
+                this.explosionTimer = 40;
+            }
+
+            if (this.exploding) {
+                this.explosionTimer--;
+                this.beepTimer++;
+                if (this.beepTimer > 10) {
+                    this.beepTimer = 0;
+                    this.hitFlash = 3; // блимає перед вибухом
+                }
+                if (this.explosionTimer <= 0) {
+                    this.explode();
+                    return true; // мертвий
+                }
+                // Біжить до гравця швидше
+                if (dist > 1) {
+                    this.x += Math.cos(this.angle) * this.speed * 1.5;
+                    this.y += Math.sin(this.angle) * this.speed * 1.5;
+                }
+            } else if (this.type === 'sniper') {
+                this.shootTimer++;
+                if (this.shootTimer >= this.shootDelay && dist < 350) {
+                    this.shootTimer = 0;
+                    // Стріляє кулею в гравця
+                    const bAngle = this.angle;
+                    game.bullets.push(new EnemyBullet(this.x, this.y, bAngle));
+                }
+                // Трохи відступає
+                if (dist < 120) {
+                    this.x -= Math.cos(this.angle) * this.speed * 0.5;
+                    this.y -= Math.sin(this.angle) * this.speed * 0.5;
+                } else {
+                    this.x += Math.cos(this.angle) * this.speed * 0.3;
+                    this.y += Math.sin(this.angle) * this.speed * 0.3;
+                }
+            } else if (this.type === 'brute' && dist < 150) {
+                // Таран — прискорення
+                this.state = 'charge';
+                this.speed = ENEMY_TYPES.brute.speed + Math.max(0, 2 - dist/100);
+                if (dist > 1) {
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                }
+            } else {
+                // Звичайний рух до гравця
+                if (dist > 1) {
+                    const spd = this.type === 'runner' ? this.speed :
+                                this.type === 'stalker' ? this.speed + Math.sin(this.wobble) * 0.2 : this.speed;
+                    this.x += Math.cos(this.angle) * spd;
+                    this.y += Math.sin(this.angle) * spd;
+                }
+            }
+
+            return false; // живий
+        }
+
+        explode() {
+            playExplosion();
+            // Шкода в радіусі
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < this.explosionRadius) {
+                const falloff = 1 - dist / this.explosionRadius;
+                player.hp -= this.damage * falloff;
+                game.shake = 8;
+            }
+            // Частинки вибуху
+            for (let i = 0; i < 25; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 1 + Math.random() * 4;
+                particles.push(new Particle(this.x, this.y,
+                    Math.cos(a) * s, Math.sin(a) * s,
+                    `hsl(${30 + Math.random() * 30}, 100%, ${40 + Math.random() * 40}%)`,
+                    20 + Math.random() * 15, 2 + Math.random() * 3));
+            }
+            for (let i = 0; i < 10; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 1 + Math.random() * 2;
+                particles.push(new Particle(this.x, this.y,
+                    Math.cos(a) * s, Math.sin(a) * s,
+                    'rgba(200,200,200,0.5)',
+                    10 + Math.random() * 10, 1 + Math.random() * 2));
+            }
+            removeEnemy(this);
         }
 
         takeDamage(dmg) {
@@ -149,41 +383,133 @@
             return this.hp <= 0;
         }
 
-        draw(cx, cy, s) {
-            const scale = s || 1;
+        draw(cx, cy) {
             ctx.save();
             ctx.translate(cx, cy);
+
+            const flash = this.hitFlash > 0;
+            const isExploding = this.exploding;
+            const scale = isExploding ? 1 + (1 - this.explosionTimer / 40) * 0.3 : 1;
             ctx.scale(scale, scale);
 
             // Тінь
-            if (this.hitFlash > 0) {
-                ctx.fillStyle = '#fff';
-            } else {
-                ctx.fillStyle = this.type === 'tank' ? 'rgba(120,40,160,0.7)' :
-                                this.type === 'fast' ? 'rgba(60,180,200,0.6)' :
-                                'rgba(180,60,60,0.7)';
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.beginPath();
+            ctx.ellipse(2, 3, this.r * 0.9, this.r * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (flash) {
+                // Спалах при попаданні
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r + 3, 0, Math.PI * 2);
+                ctx.fill();
             }
 
             // Тіло
+            const grad = ctx.createRadialGradient(-this.r*0.2, -this.r*0.2, 0, 0, 0, this.r);
+            if (flash) {
+                grad.addColorStop(0, 'rgba(255,255,255,0.6)');
+                grad.addColorStop(0.5, this.bodyColor.replace('0.7','0.3'));
+                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+            } else if (isExploding) {
+                const pulse = 0.7 + Math.sin(this.explosionTimer * 0.5) * 0.3;
+                grad.addColorStop(0, `rgba(255,200,100,${pulse * 0.5})`);
+                grad.addColorStop(0.5, `rgba(200,80,30,${pulse * 0.6})`);
+                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+            } else {
+                grad.addColorStop(0, this.bodyColor.replace('0.7','0.4').replace('0.8','0.5').replace('0.6','0.3'));
+                grad.addColorStop(0.5, this.bodyColor);
+                grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+            }
+            ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.arc(0, 0, this.r, 0, Math.PI * 2);
             ctx.fill();
 
-            // "Очі" (напрям)
-            const eAngle = this.angle;
-            const glow = Math.max(0.3, 1 - this.hp / this.maxHp * 0.4);
-            ctx.fillStyle = `rgba(255,200,100,${glow * 0.5})`;
+            // Обводка
+            ctx.strokeStyle = flash ? 'rgba(255,255,255,0.3)' :
+                             (isExploding ? `rgba(255,200,100,${0.3 + Math.sin(this.explosionTimer * 0.5) * 0.2})` : 'rgba(255,255,255,0.05)');
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(Math.cos(eAngle) * this.r * 0.4, Math.sin(eAngle) * this.r * 0.4, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+            ctx.stroke();
 
-            // Сяйво навколо
-            if (this.hitFlash > 0) {
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = 2;
+            // Деталі залежно від типу
+            if (this.type === 'runner') {
+                // Вузькі очі
+                ctx.fillStyle = flash ? '#fff' : 'rgba(200,230,255,0.6)';
+                const ex = Math.cos(this.eyeAngle) * this.r * 0.4;
+                const ey = Math.sin(this.eyeAngle) * this.r * 0.4;
+                ctx.fillRect(ex - 2, ey - 1, 4, 2);
+            } else if (this.type === 'stalker') {
+                // Два ока
+                ctx.fillStyle = flash ? '#fff' : 'rgba(255,200,150,0.4)';
+                for (let side = -1; side <= 1; side += 2) {
+                    const ex = Math.cos(this.eyeAngle) * this.r * 0.3 + Math.cos(this.eyeAngle + Math.PI/2) * side * 3;
+                    const ey = Math.sin(this.eyeAngle) * this.r * 0.3 + Math.sin(this.eyeAngle + Math.PI/2) * side * 3;
+                    ctx.beginPath();
+                    ctx.arc(ex, ey, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (this.type === 'brute') {
+                // Чотири ока, великі
+                ctx.fillStyle = flash ? '#fff' : 'rgba(200,100,120,0.5)';
+                for (let side = -1; side <= 1; side += 2) {
+                    for (let row = 0; row < 2; row++) {
+                        const off = row === 0 ? 0.2 : 0.5;
+                        const ex = Math.cos(this.eyeAngle) * this.r * off + Math.cos(this.eyeAngle + Math.PI/2) * side * 4;
+                        const ey = Math.sin(this.eyeAngle) * this.r * off + Math.sin(this.eyeAngle + Math.PI/2) * side * 4;
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            } else if (this.type === 'sniper') {
+                // Одне велике око + щупальця
+                ctx.fillStyle = flash ? '#fff' : 'rgba(100,200,150,0.5)';
                 ctx.beginPath();
-                ctx.arc(0, 0, this.r + 4, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.arc(Math.cos(this.eyeAngle) * this.r * 0.3, Math.sin(this.eyeAngle) * this.r * 0.3, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Щупальця
+                ctx.strokeStyle = flash ? 'rgba(255,255,255,0.3)' : this.bodyColor.replace('0.7','0.3');
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 4; i++) {
+                    const a = this.eyeAngle + Math.PI * (0.5 + i / 4) + Math.sin(this.wobble + i) * 0.1;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * this.r * 0.5, Math.sin(a) * this.r * 0.5);
+                    ctx.quadraticCurveTo(
+                        Math.cos(a + 0.2) * this.r * 1.2, Math.sin(a + 0.2) * this.r * 1.2,
+                        Math.cos(a) * this.r * 1.5, Math.sin(a) * this.r * 1.5);
+                    ctx.stroke();
+                }
+            } else if (this.type === 'exploder') {
+                // Пульсуюча середина
+                const pulse = isExploding ? 0.5 + Math.sin(this.explosionTimer * 0.5) * 0.3 : 0.3;
+                ctx.fillStyle = `rgba(255,200,50,${pulse})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                // Тріщини
+                ctx.strokeStyle = `rgba(255,200,50,${pulse * 0.5})`;
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < 6; i++) {
+                    const a = i * Math.PI / 3 + Math.sin(this.wobble) * 0.2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(a) * this.r * 0.7, Math.sin(a) * this.r * 0.7);
+                    ctx.stroke();
+                }
+            }
+
+            // HP бар (якщо не повне)
+            if (this.hp < this.maxHp && !this.exploding) {
+                const bw = this.r * 2;
+                const bh = 2;
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(-bw/2, -this.r - 6, bw, bh);
+                ctx.fillStyle = `rgba(200,80,80,0.5)`;
+                ctx.fillRect(-bw/2, -this.r - 6, bw * (this.hp / this.maxHp), bh);
             }
 
             ctx.restore();
@@ -191,44 +517,84 @@
     }
 
     // ============================================================
-    // КУЛІ
+    // КУЛІ ГРАВЦЯ
     // ============================================================
     class Bullet {
         constructor(x, y, angle) {
-            this.x = x;
-            this.y = y;
+            this.x = x; this.y = y;
             this.angle = angle;
-            this.speed = 8;
+            this.speed = 9;
             this.r = 3;
-            this.life = 60;
+            this.life = 50;
             this.trail = [];
         }
 
         update() {
             this.trail.push({x: this.x, y: this.y});
-            if (this.trail.length > 5) this.trail.shift();
+            if (this.trail.length > 6) this.trail.shift();
             this.x += Math.cos(this.angle) * this.speed;
             this.y += Math.sin(this.angle) * this.speed;
             this.life--;
         }
 
-        isDead() {
-            return this.life <= 0 || this.x < -20 || this.x > canvas.width + 20 || this.y < -20 || this.y > canvas.height + 20;
-        }
+        isDead() { return this.life <= 0 || this.x < -30 || this.x > W + 30 || this.y < -30 || this.y > H + 30; }
 
         draw(cx, cy) {
-            // Слід
             for (let i = 0; i < this.trail.length; i++) {
-                const a = (i / this.trail.length) * 0.3;
+                const a = (i / this.trail.length) * 0.4;
                 ctx.fillStyle = `rgba(150,200,255,${a * 0.3})`;
                 ctx.beginPath();
                 ctx.arc(this.trail[i].x + (cx - this.x), this.trail[i].y + (cy - this.y), 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
-            ctx.fillStyle = 'rgba(180,220,255,0.8)';
+            ctx.fillStyle = 'rgba(200,230,255,0.9)';
+            ctx.shadowColor = 'rgba(150,200,255,0.3)';
+            ctx.shadowBlur = 6;
             ctx.beginPath();
             ctx.arc(cx, cy, this.r, 0, Math.PI * 2);
             ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    // ============================================================
+    // КУЛІ ВОРОГІВ
+    // ============================================================
+    class EnemyBullet {
+        constructor(x, y, angle) {
+            this.x = x; this.y = y;
+            this.angle = angle;
+            this.speed = 4;
+            this.r = 4;
+            this.life = 80;
+            this.trail = [];
+        }
+
+        update() {
+            this.trail.push({x: this.x, y: this.y});
+            if (this.trail.length > 8) this.trail.shift();
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+            this.life--;
+        }
+
+        isDead() { return this.life <= 0 || this.x < -30 || this.x > W + 30 || this.y < -30 || this.y > H + 30; }
+
+        draw(cx, cy) {
+            for (let i = 0; i < this.trail.length; i++) {
+                const a = (i / this.trail.length) * 0.5;
+                ctx.fillStyle = `rgba(100,255,150,${a * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(this.trail[i].x + (cx - this.x), this.trail[i].y + (cy - this.y), 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(100,255,150,0.7)';
+            ctx.shadowColor = 'rgba(100,255,150,0.2)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(cx, cy, this.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
     }
 
@@ -236,24 +602,21 @@
     // ЧАСТИНКИ
     // ============================================================
     class Particle {
-        constructor(x, y, color, speed, life) {
-            this.x = x;
-            this.y = y;
-            const a = Math.random() * Math.PI * 2;
-            const s = speed * (0.5 + Math.random());
-            this.vx = Math.cos(a) * s;
-            this.vy = Math.sin(a) * s;
+        constructor(x, y, vx, vy, color, life, r) {
+            this.x = x; this.y = y;
+            this.vx = vx; this.vy = vy;
+            this.color = color;
             this.life = life || 20;
             this.maxLife = this.life;
-            this.r = 1 + Math.random() * 2;
-            this.color = color;
+            this.r = r || 2;
         }
 
         update() {
             this.x += this.vx;
             this.y += this.vy;
-            this.vx *= 0.95;
-            this.vy *= 0.95;
+            this.vx *= 0.97;
+            this.vy *= 0.97;
+            this.vy += 0.02; // гравітація
             this.life--;
         }
 
@@ -261,131 +624,263 @@
 
         draw() {
             const a = this.life / this.maxLife;
-            ctx.fillStyle = this.color || `rgba(255,200,100,${a * 0.5})`;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = this.color;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r * a, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.r * (0.5 + a * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // ============================================================
+    // ПОШКОДЖЕННЯ (числа)
+    // ============================================================
+    class DamageNum {
+        constructor(x, y, amount) {
+            this.x = x; this.y = y;
+            this.amount = Math.round(amount);
+            this.life = 30;
+            this.maxLife = 30;
+            this.vy = -1.5;
+        }
+
+        update() { this.y += this.vy; this.vy += 0.02; this.life--; }
+        isDead() { return this.life <= 0; }
+
+        draw() {
+            const a = this.life / this.maxLife;
+            ctx.fillStyle = `rgba(255,200,100,${a * 0.6})`;
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.amount, this.x, this.y);
+        }
+    }
+
+    // ============================================================
+    // ПІДБОРИ
+    // ============================================================
+    class Pickup {
+        constructor(x, y, type) {
+            this.x = x; this.y = y;
+            this.type = type; // 'hp', 'ammo'
+            this.r = 7;
+            this.life = 300;
+            this.wobble = Math.random() * Math.PI * 2;
+        }
+
+        update() {
+            this.wobble += 0.05;
+            this.life--;
+        }
+
+        isDead() { return this.life <= 0; }
+
+        draw() {
+            const bob = Math.sin(this.wobble) * 2;
+            ctx.save();
+            ctx.translate(this.x, this.y + bob);
+
+            // Сяйво
+            const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+            if (this.type === 'hp') {
+                glow.addColorStop(0, 'rgba(60,200,100,0.08)');
+                glow.addColorStop(1, 'transparent');
+            } else {
+                glow.addColorStop(0, 'rgba(200,200,100,0.08)');
+                glow.addColorStop(1, 'transparent');
+            }
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = this.type === 'hp' ? 'rgba(60,200,100,0.3)' : 'rgba(200,200,100,0.3)';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = this.type === 'hp' ? 'rgba(60,200,100,0.15)' : 'rgba(200,200,100,0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.type === 'hp' ? '+' : '⚡', 0, 0);
+
+            ctx.restore();
+        }
+    }
+
+    // ============================================================
+    // ГРАВЕЦЬ
+    // ============================================================
+    function drawPlayer(cx, cy) {
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Сяйво
+        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 40);
+        glow.addColorStop(0, 'rgba(100,150,200,0.04)');
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 40, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Тінь
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(2, 3, player.r * 0.8, player.r * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Тіло
+        const grad = ctx.createRadialGradient(-2, -2, 0, 0, 0, player.r);
+        grad.addColorStop(0, 'rgba(200,230,255,0.15)');
+        grad.addColorStop(0.6, 'rgba(160,200,240,0.08)');
+        grad.addColorStop(1, 'rgba(100,150,200,0.02)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, player.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Обводка
+        ctx.strokeStyle = `rgba(160,210,255,${0.15 + Math.sin(Date.now() * 0.003) * 0.05})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, player.r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Лінія напрямку
+        ctx.strokeStyle = 'rgba(160,210,255,0.08)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(player.angle) * player.r * 1.8, Math.sin(player.angle) * player.r * 1.8);
+        ctx.stroke();
+
+        // "Очі"
+        for (let side = -1; side <= 1; side += 2) {
+            const ex = Math.cos(player.angle) * player.r * 0.3 + Math.cos(player.angle + Math.PI/2) * side * 3;
+            const ey = Math.sin(player.angle) * player.r * 0.3 + Math.sin(player.angle + Math.PI/2) * side * 3;
+            ctx.fillStyle = 'rgba(180,220,255,0.25)';
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        ctx.restore();
     }
 
     // ============================================================
-    // ФІЗИКА СВІТЛА (м'яка підсвітка)
+    // ЛОГІКА
     // ============================================================
-    function drawLight() {
-        const grad = ctx.createRadialGradient(player.x, player.y, 5, player.x, player.y, 200);
-        grad.addColorStop(0, 'rgba(100,150,200,0.02)');
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    shootCount = 0;
 
-    // ============================================================
-    // ХВИЛІ
-    // ============================================================
-    function startWave() {
-        game.wave++;
-        game.enemiesSpawned = 0;
-        game.enemiesInWave = 5 + game.wave * 3;
-        game.enemyTimer = 0;
-        document.getElementById('wave').textContent = game.wave;
-    }
-
-    function spawnEnemy() {
-        const w = canvas.width, h = canvas.height;
-        let x, y;
-        const side = Math.floor(Math.random() * 4);
-        switch(side) {
-            case 0: x = -20; y = Math.random() * h; break; // ліворуч
-            case 1: x = w + 20; y = Math.random() * h; break; // праворуч
-            case 2: x = Math.random() * w; y = -20; break; // зверху
-            case 3: x = Math.random() * w; y = h + 20; break; // знизу
-        }
-
-        // Тип ворога залежно від хвилі
-        let type = 'normal';
-        const r = Math.random();
-        if (game.wave >= 3 && r < 0.25) type = 'fast';
-        else if (game.wave >= 5 && r < 0.15) type = 'tank';
-        else if (game.wave >= 2 && r < 0.3) type = 'fast';
-
-        game.enemies.push(new Enemy(x, y, type));
-        game.enemiesSpawned++;
-    }
-
-    // ============================================================
-    // ОБРОБКА
-    // ============================================================
     function update() {
         if (!game.running || !player.alive) return;
 
-        // Рух гравця
+        // Рух
         let dx = 0, dy = 0;
         if (keys['w'] || keys['arrowup']) dy = -1;
         if (keys['s'] || keys['arrowdown']) dy = 1;
         if (keys['a'] || keys['arrowleft']) dx = -1;
         if (keys['d'] || keys['arrowright']) dx = 1;
 
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.707;
-            dy *= 0.707;
-        }
+        if (dx && dy) { dx *= 0.707; dy *= 0.707; }
 
-        const w = canvas.width, h = canvas.height;
-        player.x = Math.max(player.r, Math.min(w - player.r, player.x + dx * player.speed));
-        player.y = Math.max(player.r, Math.min(h - player.r, player.y + dy * player.speed));
+        // Присідання (shift — повільніше)
+        const sprint = keys['shift'] ? 0.5 : 1;
+        player.x = Math.max(player.r, Math.min(W - player.r, player.x + dx * player.speed * sprint));
+        player.y = Math.max(player.r, Math.min(H - player.r, player.y + dy * player.speed * sprint));
 
-        // Напрям до миші
+        if (player.invincible > 0) player.invincible--;
+
+        // Кут до миші
         const rect = canvas.getBoundingClientRect();
-        const msx = mx || w/2;
-        const msy = my || h/2;
-        player.angle = Math.atan2(msy - player.y, msx - player.x);
+        player.angle = Math.atan2(my - player.y, mx - player.x);
 
         // Стрільба
         if (player.shootCooldown > 0) player.shootCooldown--;
 
         // Хвилі
-        if (game.enemiesSpawned < game.enemiesInWave) {
-            game.enemyTimer++;
-            const spawnRate = Math.max(10, 30 - game.wave * 2);
-            if (game.enemyTimer >= spawnRate) {
-                game.enemyTimer = 0;
+        if (enemySpawned < enemyCount) {
+            spawnTimer++;
+            const rate = Math.max(12, 35 - game.wave * 2);
+            if (spawnTimer >= rate) {
+                spawnTimer = 0;
                 spawnEnemy();
             }
-        } else if (game.enemies.length === 0) {
-            startWave();
         }
 
         // Вороги
-        for (let i = game.enemies.length - 1; i >= 0; i--) {
-            const e = game.enemies[i];
-            e.update();
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            const dead = e.update();
+            if (dead) {
+                enemies.splice(i, 1);
+                continue;
+            }
 
             // Зіткнення з гравцем
-            const dist = Math.sqrt((player.x - e.x) ** 2 + (player.y - e.y) ** 2);
-            if (dist < player.r + e.r) {
-                player.hp -= e.damage * 0.5;
-                spawnParticles(e.x, e.y, 'rgba(200,50,50,0.4)', 3, 10);
-                game.enemies.splice(i, 1);
+            const d = Math.sqrt((player.x - e.x) ** 2 + (player.y - e.y) ** 2);
+            if (d < player.r + e.r && player.invincible <= 0) {
+                player.hp -= e.damage;
+                player.invincible = 15;
+                game.shake = Math.max(game.shake, 4);
+                // Відкидання
+                const angle = Math.atan2(e.y - player.y, e.x - player.x);
+                player.x += Math.cos(angle) * 8;
+                player.y += Math.sin(angle) * 8;
+                particles.push(new Particle(player.x, player.y,
+                    Math.cos(angle) * 2, Math.sin(angle) * 2,
+                    'rgba(200,50,50,0.3)', 10, 3));
                 if (player.hp <= 0) {
                     player.hp = 0;
                     player.alive = false;
                     endGame();
+                    return;
                 }
-                continue;
             }
 
-            // Зіткнення з кулями
-            for (let j = game.bullets.length - 1; j >= 0; j--) {
-                const b = game.bullets[j];
+            // Кулі гравця по ворогах
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
                 const bd = Math.sqrt((b.x - e.x) ** 2 + (b.y - e.y) ** 2);
                 if (bd < e.r + b.r) {
                     const killed = e.takeDamage(1);
-                    game.bullets.splice(j, 1);
-                    spawnParticles(b.x, b.y, 'rgba(150,200,255,0.3)', 2, 8);
+                    bullets.splice(j, 1);
+                    playHit();
+                    // Частинки
+                    for (let k = 0; k < 4; k++) {
+                        const a = Math.random() * Math.PI * 2;
+                        particles.push(new Particle(b.x, b.y,
+                            Math.cos(a) * (1 + Math.random() * 2), Math.sin(a) * (1 + Math.random() * 2),
+                            'rgba(150,200,255,0.3)', 10, 1 + Math.random() * 2));
+                    }
                     if (killed) {
                         game.score += e.score;
-                        spawnParticles(e.x, e.y, 'rgba(200,100,50,0.5)', 4, 15);
-                        game.enemies.splice(i, 1);
+                        game.kills++;
+                        damageNums.push(new DamageNum(e.x, e.y - e.r - 5, e.score));
+                        playDeath();
+                        // Велика кількість частинок
+                        for (let k = 0; k < 12; k++) {
+                            const a = Math.random() * Math.PI * 2;
+                            const s = 1 + Math.random() * 3;
+                            particles.push(new Particle(e.x, e.y,
+                                Math.cos(a) * s, Math.sin(a) * s,
+                                e.bodyColor.replace('0.7','0.5').replace('0.8','0.5').replace('0.6','0.4'),
+                                15 + Math.random() * 10, 1 + Math.random() * 3));
+                        }
+                        // Підбір
+                        if (Math.random() < 0.2) {
+                            pickups.push(new Pickup(e.x, e.y, Math.random() < 0.5 ? 'hp' : 'ammo'));
+                        }
+                        enemies.splice(i, 1);
                         document.getElementById('score').textContent = game.score;
                     }
                     break;
@@ -393,25 +888,217 @@
             }
         }
 
-        // Кулі
+        // Кулі ворогів по гравцю
         for (let i = game.bullets.length - 1; i >= 0; i--) {
-            game.bullets[i].update();
-            if (game.bullets[i].isDead()) {
+            const b = game.bullets[i];
+            b.update();
+            if (b.isDead()) { game.bullets.splice(i, 1); continue; }
+            const d = Math.sqrt((player.x - b.x) ** 2 + (player.y - b.y) ** 2);
+            if (d < player.r + b.r && player.invincible <= 0) {
+                player.hp -= 8;
+                player.invincible = 10;
+                game.shake = 5;
+                damageNums.push(new DamageNum(player.x, player.y - 15, 8));
+                for (let k = 0; k < 6; k++) {
+                    const a = Math.random() * Math.PI * 2;
+                    particles.push(new Particle(b.x, b.y,
+                        Math.cos(a) * 2, Math.sin(a) * 2,
+                        'rgba(100,255,150,0.3)', 10, 2));
+                }
                 game.bullets.splice(i, 1);
+                if (player.hp <= 0) {
+                    player.hp = 0;
+                    player.alive = false;
+                    endGame();
+                    return;
+                }
             }
+        }
+
+        // Кулі гравця
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            bullets[i].update();
+            if (bullets[i].isDead()) bullets.splice(i, 1);
         }
 
         // Частинки
-        for (let i = game.particles.length - 1; i >= 0; i--) {
-            game.particles[i].update();
-            if (game.particles[i].isDead()) {
-                game.particles.splice(i, 1);
-            }
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].isDead()) particles.splice(i, 1);
         }
 
+        // Damage nums
+        for (let i = damageNums.length - 1; i >= 0; i--) {
+            damageNums[i].update();
+            if (damageNums[i].isDead()) damageNums.splice(i, 1);
+        }
+
+        // Підбори
+        for (let i = pickups.length - 1; i >= 0; i--) {
+            const p = pickups[i];
+            p.update();
+            const d = Math.sqrt((player.x - p.x) ** 2 + (player.y - p.y) ** 2);
+            if (d < player.r + p.r) {
+                if (p.type === 'hp') {
+                    player.hp = Math.min(player.maxHp, player.hp + 25);
+                } else {
+                    // Додаткові очки
+                    game.score += 5;
+                }
+                pickups.splice(i, 1);
+            }
+            if (p.isDead()) pickups.splice(i, 1);
+        }
+
+        // Перевірка хвилі
+        if (enemySpawned >= enemyCount && enemies.length === 0 && game.running) {
+            startWave();
+        }
+
+        // Тряска
+        if (game.shake > 0) game.shake--;
+
         // HUD
-        document.getElementById('hp').textContent = Math.round(player.hp);
-        document.getElementById('hpFill').style.width = (player.hp / player.maxHp * 100) + '%';
+        document.getElementById('hpNum').textContent = Math.round(player.hp);
+        const hpPct = player.hp / player.maxHp * 100;
+        document.getElementById('hpbar').style.width = hpPct + '%';
+        document.getElementById('hpbar').className = 'health';
+        if (hpPct < 30) document.getElementById('hpbar').classList.add('damage');
+    }
+
+    // ============================================================
+    // ХВИЛІ
+    // ============================================================
+    function startWave() {
+        game.wave++;
+        enemySpawned = 0;
+        enemyCount = 4 + game.wave * 3;
+        spawnTimer = 0;
+        document.getElementById('wave').textContent = game.wave;
+    }
+
+    function spawnEnemy() {
+        let x, y;
+        const side = Math.floor(Math.random() * 4);
+        switch(side) {
+            case 0: x = -25; y = Math.random() * H; break;
+            case 1: x = W + 25; y = Math.random() * H; break;
+            case 2: x = Math.random() * W; y = -25; break;
+            case 3: x = Math.random() * W; y = H + 25; break;
+        }
+
+        // Вибір типу
+        let type = 'stalker';
+        const r = Math.random();
+        const w = game.wave;
+        if (w >= 2 && r < 0.2) type = 'runner';
+        else if (w >= 3 && r < 0.15) type = 'brute';
+        else if (w >= 4 && r < 0.12) type = 'sniper';
+        else if (w >= 3 && r < 0.08) type = 'runner';
+        if (w >= 2 && type === 'stalker' && Math.random() < 0.1) type = 'exploder';
+
+        enemies.push(new Enemy(x, y, type));
+        enemySpawned++;
+    }
+
+    // ============================================================
+    // РЕНДЕР
+    // ============================================================
+    function render() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Тряска
+        ctx.save();
+        if (game.shake > 0) {
+            const s = game.shake * 0.4;
+            ctx.translate(Math.random() * s - s/2, Math.random() * s - s/2);
+        }
+
+        // Фон
+        const bgGrad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 500);
+        bgGrad.addColorStop(0, '#0a0e14');
+        bgGrad.addColorStop(1, '#040608');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Туман
+        ctx.fillStyle = 'rgba(0,0,0,0.02)';
+        for (let i = 0; i < 3; i++) {
+            const fx = (Math.sin(Date.now() * 0.0001 + i * 2) * 0.5 + 0.5) * W;
+            const fy = (Math.cos(Date.now() * 0.00015 + i * 3) * 0.5 + 0.5) * H;
+            const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 150 + i * 50);
+            grad.addColorStop(0, 'rgba(20,30,40,0.03)');
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // Підбори
+        for (const p of pickups) p.draw();
+
+        // Частинки
+        for (const p of particles) p.draw();
+
+        // Вороги
+        for (const e of enemies) e.draw(e.x, e.y);
+
+        // Кулі ворогів
+        for (const b of game.bullets) b.draw(b.x, b.y);
+
+        // Кулі гравця
+        for (const b of bullets) b.draw(b.x, b.y);
+
+        // Гравець
+        if (player.alive) {
+            drawPlayer(player.x, player.y);
+        }
+
+        // Damage nums
+        for (const d of damageNums) d.draw();
+
+        // Темні краї (vignette)
+        const vigGrad = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+        vigGrad.addColorStop(0, 'transparent');
+        vigGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
+        ctx.fillStyle = vigGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.restore();
+
+        // Мінімапа
+        drawMinimap();
+    }
+
+    // ============================================================
+    // МІНІМАПА
+    // ============================================================
+    function drawMinimap() {
+        const mw = 80, mh = 80;
+        miniCtx.fillStyle = 'rgba(0,0,0,0.6)';
+        miniCtx.fillRect(0, 0, mw, mh);
+
+        const sx = mw / W, sy = mh / H;
+
+        // Вороги
+        for (const e of enemies) {
+            miniCtx.fillStyle = 'rgba(200,80,80,0.4)';
+            miniCtx.beginPath();
+            miniCtx.arc(e.x * sx, e.y * sy, 2, 0, Math.PI * 2);
+            miniCtx.fill();
+        }
+
+        // Гравець
+        if (player.alive) {
+            miniCtx.fillStyle = 'rgba(150,200,255,0.5)';
+            miniCtx.beginPath();
+            miniCtx.arc(player.x * sx, player.y * sy, 2.5, 0, Math.PI * 2);
+            miniCtx.fill();
+        }
+
+        // Кордони
+        miniCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+        miniCtx.lineWidth = 0.5;
+        miniCtx.strokeRect(0, 0, mw, mh);
     }
 
     // ============================================================
@@ -420,115 +1107,14 @@
     function shoot() {
         if (!game.running || !player.alive || player.shootCooldown > 0) return;
         player.shootCooldown = player.shootDelay;
-        const bullet = new Bullet(player.x, player.y, player.angle);
-        game.bullets.push(bullet);
-
-        // Віддача — невеликий імпульс
-        player.x -= Math.cos(player.angle) * 0.5;
-        player.y -= Math.sin(player.angle) * 0.5;
-    }
-
-    // ============================================================
-    // ЧАСТИНКИ
-    // ============================================================
-    function spawnParticles(x, y, color, count, life) {
-        for (let i = 0; i < count; i++) {
-            game.particles.push(new Particle(x, y, color, 3, life));
-        }
-    }
-
-    // ============================================================
-    // РЕНДЕР
-    // ============================================================
-    function render() {
-        const w = canvas.width, h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
-
-        // Фон — глибокий темно-синій
-        const bgGrad = ctx.createRadialGradient(player.x, player.y, 50, player.x, player.y, 400);
-        bgGrad.addColorStop(0, '#0a1016');
-        bgGrad.addColorStop(1, '#05080a');
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Сітка (атмосфера)
-        ctx.strokeStyle = 'rgba(255,255,255,0.01)';
-        ctx.lineWidth = 0.5;
-        for (let x = 0; x < w; x += 40) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, h);
-            ctx.stroke();
-        }
-        for (let y = 0; y < h; y += 40) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
-        }
-
-        // Світло гравця
-        drawLight();
-
-        // Частинки
-        for (const p of game.particles) { p.draw(); }
-
-        // Вороги
-        for (const e of game.enemies) { e.draw(e.x, e.y); }
-
-        // Кулі
-        for (const b of game.bullets) { b.draw(b.x, b.y); }
-
-        // Гравець
-        if (player.alive) {
-            ctx.save();
-            ctx.translate(player.x, player.y);
-
-            // Сяйво
-            const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
-            glow.addColorStop(0, 'rgba(100,150,200,0.08)');
-            glow.addColorStop(1, 'transparent');
-            ctx.fillStyle = glow;
-            ctx.beginPath();
-            ctx.arc(0, 0, 30, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Тіло
-            ctx.fillStyle = 'rgba(180,220,255,0.2)';
-            ctx.beginPath();
-            ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(180,220,255,0.3)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // "Ствол" (напрям)
-            ctx.strokeStyle = 'rgba(180,220,255,0.15)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(player.angle) * player.r * 1.5, Math.sin(player.angle) * player.r * 1.5);
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        // Якщо гра закінчена
-        if (!player.alive) {
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.fillRect(0, 0, w, h);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'rgba(255,100,100,0.15)';
-            ctx.font = '28px sans-serif';
-            ctx.fillText('💀', w/2, h/2 - 20);
-            ctx.fillStyle = 'rgba(255,255,255,0.03)';
-            ctx.font = '12px sans-serif';
-            ctx.fillText('Натисни Пробіл', w/2, h/2 + 20);
-        }
+        playShoot();
+        // Невеликий розкид
+        const spread = (Math.random() - 0.5) * 0.05;
+        const b = new Bullet(player.x, player.y, player.angle + spread);
+        bullets.push(b);
+        // Віддача
+        player.x -= Math.cos(player.angle) * 1.2;
+        player.y -= Math.sin(player.angle) * 1.2;
     }
 
     // ============================================================
@@ -536,31 +1122,23 @@
     // ============================================================
     document.addEventListener('keydown', (e) => {
         keys[e.key.toLowerCase()] = true;
-        if (e.key === ' ' && game.running && !player.alive) {
-            restartGame();
-        }
+        if (e.key === ' ') { e.preventDefault(); if (game.running && !player.alive) restartGame(); }
     });
-    document.addEventListener('keyup', (e) => {
-        keys[e.key.toLowerCase()] = false;
-    });
+    document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        mx = (e.clientX - rect.left) / rect.width * canvas.width;
-        my = (e.clientY - rect.top) / rect.height * canvas.height;
+        mx = (e.clientX - rect.left) / rect.width * W;
+        my = (e.clientY - rect.top) / rect.height * H;
     });
 
     canvas.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        if (e.button === 0) shoot();
+        if (e.button === 0) { mouseDown = true; shoot(); }
     });
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // Авто-стрільба тримаючи кнопку
-    let mouseDown = false;
-    canvas.addEventListener('mousedown', () => mouseDown = true);
     canvas.addEventListener('mouseup', () => mouseDown = false);
     canvas.addEventListener('mouseleave', () => mouseDown = false);
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // ============================================================
     // ЦИКЛ
@@ -573,41 +1151,51 @@
     }
 
     // ============================================================
-    // ЗАПУСК
+    // СТАРТ / СТОП
     // ============================================================
     function startGame() {
         document.getElementById('overlay').classList.remove('show');
         game.running = true;
-        player.alive = true;
-        player.hp = player.maxHp;
-        player.x = canvas.width / 2;
-        player.y = canvas.height / 2;
         game.score = 0;
         game.wave = 0;
-        game.enemies = [];
-        game.bullets = [];
-        game.particles = [];
+        game.kills = 0;
+        game.shake = 0;
+        player.hp = player.maxHp;
+        player.alive = true;
+        player.x = W/2;
+        player.y = H/2;
+        player.invincible = 0;
+        enemies.length = 0;
+        bullets.length = 0;
+        particles.length = 0;
+        damageNums.length = 0;
+        pickups.length = 0;
+        game.bullets = []; // кулі ворогів
         document.getElementById('score').textContent = '0';
-        document.getElementById('hp').textContent = '100';
-        document.getElementById('hpFill').style.width = '100%';
+        document.getElementById('hpNum').textContent = '100';
+        document.getElementById('hpbar').style.width = '100%';
         startWave();
         gameLoop();
     }
 
     window.startGame = startGame;
 
-    function restartGame() {
-        startGame();
-    }
+    function restartGame() { startGame(); }
 
     function endGame() {
+        game.running = false;
         document.getElementById('overlay').classList.add('show');
         document.getElementById('overlay').innerHTML = `
             <h1>💀 ЗАГИБЕЛЬ</h1>
-            <div class="sub">🎯 ${game.score} очок | 🌊 ${game.wave} хвиль</div>
-            <button onclick="restartGame()">↺ Ще раз</button>
+            <div class="big-num">${game.score}</div>
+            <div class="sub">🎯 ${game.score} очок · 🌊 ${game.wave} хвиль</div>
+            <button onclick="restartGame()">↺ ЩЕ РАЗ</button>
         `;
-        game.running = false;
+    }
+
+    function removeEnemy(e) {
+        const idx = enemies.indexOf(e);
+        if (idx >= 0) enemies.splice(idx, 1);
     }
 </script>
 </body>
