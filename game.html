@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таємниця старої хатинки — квест</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+        body { background:#080a0e; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:'Segoe UI',sans-serif; }
+        #game {
+            width:800px; max-width:100vw; height:600px; max-height:100vh;
+            background:#0c1018; position:relative; overflow:hidden;
+            border:1px solid rgba(255,255,255,0.04); border-radius:8px;
+        }
+        canvas { display:block; width:100%; height:100%; }
+
+        #ui {
+            position:absolute; bottom:0; left:0; right:0;
+            background:linear-gradient(transparent,rgba(4,6,10,0.95) 40%);
+            padding:50px 16px 14px; pointer-events:none;
+        }
+        #inv {
+            display:flex; gap:4px; margin-bottom:6px; min-height:32px;
+            pointer-events:auto; overflow-x:auto; padding:2px 0;
+        }
+        #inv::-webkit-scrollbar { height:2px; }
+        #inv::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.05); border-radius:1px; }
+        .inv-item {
+            width:32px; height:32px; flex-shrink:0;
+            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04);
+            border-radius:4px; display:flex; align-items:center; justify-content:center;
+            font-size:16px; cursor:pointer; transition:all 0.1s;
+        }
+        .inv-item:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.08); }
+        .inv-item.active { background:rgba(68,136,204,0.1); border-color:rgba(68,136,204,0.2); }
+
+        #msg {
+            pointer-events:auto; min-height:36px;
+            background:rgba(4,6,10,0.7); border:1px solid rgba(255,255,255,0.04);
+            border-radius:6px; padding:8px 12px; font-size:13px; color:rgba(255,255,255,0.4);
+            line-height:1.4; display:flex; align-items:center; gap:6px;
+        }
+        #msg .m-btn {
+            padding:4px 12px; border-radius:4px; border:1px solid rgba(68,136,204,0.08);
+            background:rgba(68,136,204,0.04); color:#88bbee; font-size:11px;
+            cursor:pointer; pointer-events:auto; white-space:nowrap; font-family:inherit;
+        }
+        #msg .m-btn:hover { background:rgba(68,136,204,0.1); }
+
+        #hud {
+            position:absolute; top:0; left:0; right:0;
+            display:flex; justify-content:space-between; padding:8px 12px;
+            pointer-events:none;
+        }
+        #hud .hud-item {
+            font-size:10px; color:rgba(255,255,255,0.06); letter-spacing:0.05em;
+        }
+        .hud-btn {
+            pointer-events:auto; padding:3px 10px;
+            background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);
+            border-radius:4px; color:rgba(255,255,255,0.08); font-size:10px;
+            cursor:pointer; font-family:inherit;
+        }
+        .hud-btn:hover { color:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.06); }
+
+        #dialog-overlay {
+            display:none; position:absolute; top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,0.7); z-index:10;
+        }
+        #dialog-overlay.show { display:flex; align-items:flex-end; justify-content:center; }
+
+        #dialog-box {
+            background:#0c1018; border:1px solid rgba(255,255,255,0.06);
+            border-radius:8px; margin:0 16px 70px; padding:16px;
+            max-width:500px; width:100%;
+        }
+        #dialog-box .d-name {
+            font-size:9px; text-transform:uppercase; letter-spacing:0.1em;
+            color:rgba(255,255,255,0.15); margin-bottom:4px;
+        }
+        #dialog-box .d-text {
+            font-size:13px; color:rgba(255,255,255,0.4); line-height:1.5; margin-bottom:10px;
+        }
+        #dialog-box .d-options {
+            display:flex; flex-direction:column; gap:3px;
+        }
+        #dialog-box .d-opt {
+            padding:7px 10px; background:rgba(255,255,255,0.01);
+            border:1px solid rgba(255,255,255,0.03); border-radius:4px;
+            color:rgba(255,255,255,0.2); font-size:12px; cursor:pointer;
+            font-family:inherit; text-align:left;
+        }
+        #dialog-box .d-opt:hover { background:rgba(68,136,204,0.04); border-color:rgba(68,136,204,0.08); color:#88bbee; }
+    </style>
+</head>
+<body>
+<div id="game">
+    <div id="hud">
+        <div class="hud-item" id="hudRoom">🌲</div>
+        <button class="hud-btn" onclick="window.restartGame()">↺ Заново</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="ui">
+        <div id="inv"></div>
+        <div id="msg">🌲 Обережно клікай на предмети...</div>
+    </div>
+    <div id="dialog-overlay">
+        <div id="dialog-box">
+            <div class="d-name" id="dName">—</div>
+            <div class="d-text" id="dText">...</div>
+            <div class="d-options" id="dOptions"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // ТАЄМНИЦЯ СТАРОЇ ХАТИНКИ — point-and-click квест
+    // ============================================================
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        if (render) render();
+    }
+    window.addEventListener('resize', resize);
+
+    // ============================================================
+    // СТАН
+    // ============================================================
+    let state = {
+        room: 'forest',
+        inventory: [],
+        flags: {},
+        npcDialog: null,
+        selectedItem: null,
+        message: '',
+        messageBtn: null,
+        mouseX: 0, mouseY: 0,
+        clicks: [],
+    };
+
+    // ============================================================
+    // СЦЕНИ
+    // ============================================================
+    const rooms = {
+        forest: {
+            name: '🌲 Ліс біля хатинки',
+            bg: '#0a1018',
+            objects: [
+                { id:'gate', x:0.5, y:0.75, w:0.2, h:0.12, text:'🚪 Хвіртка', desc:'Стара хвіртка рипить...' },
+                { id:'well', x:0.12, y:0.5, w:0.08, h:0.12, text:'⚱️ Колодязь', desc:'Темний колодязь. Щось блищить на дні.', examine:'' },
+                { id:'bench', x:0.78, y:0.7, w:0.12, h:0.06, text:'🪑 Лавка', desc:'Стара дерев\'яна лавка.' },
+                { id:'flowers', x:0.35, y:0.55, w:0.06, h:0.04, text:'🌸 Квіти', desc:'Дивні чорні квіти. Чи не росли тут раніше?', requireFlag:'look_flowers', altText:'🌺 Квіти (зів\'яли)' },
+            ]
+        },
+        house: {
+            name: '🏚️ Всередині хатинки',
+            bg: '#0e0808',
+            objects: [
+                { id:'table', x:0.5, y:0.6, w:0.18, h:0.08, text:'📦 Стіл', desc:'Старий дубовий стіл.', examinable:true },
+                { id:'cabinet', x:0.85, y:0.4, w:0.08, h:0.15, text:'🗄️ Шафа', desc:'Шафа зачинена.' },
+                { id:'window', x:0.2, y:0.3, w:0.12, h:0.15, text:'🪟 Вікно', desc:'Через брудне скло видно ліс.' },
+                { id:'stove', x:0.3, y:0.55, w:0.1, h:0.1, text:'🔥 Грубка', desc:'Стара глиняна грубка.' },
+                { id:'painting', x:0.55, y:0.25, w:0.1, h:0.12, text:'🖼️ Картина', desc:'Портрет жінки в чорному.' },
+                { id:'bed', x:0.7, y:0.65, w:0.15, h:0.08, text:'🛏️ Ліжко', desc:'Застелене ліжко.', examinable:true },
+            ]
+        },
+        cellar: {
+            name: '🕯️ Підвал',
+            bg: '#050408',
+            objects: [
+                { id:'chest', x:0.5, y:0.6, w:0.12, h:0.08, text:'📦 Скриня', desc:'Стара скриня. Замкнена.', examinable:true },
+                { id:'shelf', x:0.15, y:0.35, w:0.08, h:0.12, text:'📚 Полиця', desc:'Книги в пилюці.' },
+                { id:'barrel', x:0.8, y:0.55, w:0.1, h:0.1, text:'🛢️ Бочка', desc:'Порожня бочка.' },
+                { id:'symbol', x:0.4, y:0.3, w:0.04, h:0.04, text:'🔮 Символ', desc:'Дивний символ на стіні світиться.' },
+            ]
+        }
+    };
+
+    // ============================================================
+    // ПРЕДМЕТИ (інвентар)
+    // ============================================================
+    const items = {
+        key: { name:'Старий ключ', ico:'🗝️', desc:'Іржавий ключ. Підходить до скрині?' },
+        letter: { name:'Лист', ico:'💌', desc:'Пожовклий лист. "Прийди на світанку..."' },
+        pendant: { name:'Кулон', ico:'💎', desc:'Срібний кулон з дивним символом.' },
+        candle: { name:'Свічка', ico:'🕯️', desc:'Стара свічка. Ще може горіти.' },
+        book: { name:'Книга', ico:'📖', desc:'Щоденник. Останній запис: "Я знайшла її..."', readable:true },
+        herb: { name:'Зілля', ico:'🧪', desc:'Дивне зілля. Воно світиться.' },
+    };
+
+    // ============================================================
+    // СЦЕНАРІЙ (події, діалоги)
+    // ============================================================
+    const events = {
+        // ===== ЛІС =====
+        gate: {
+            examine: 'Стара хвіртка. Вона веде до хатинки. На хвіртці вирізано якісь символи.',
+            click: () => {
+                state.room = 'house';
+                setMsg('🏚️ Ти зайшов у двір. Хатинка виглядає покинутою...');
+                render();
+            }
+        },
+        well: {
+            examine: 'Темний колодязь. На дні щось блищить. Потрібна мотузка...',
+            use: (item) => {
+                if (item === 'candle') {
+                    addItem('pendant');
+                    setMsg('💎 Ти висвітлив дно і знайшов кулон!');
+                    removeObject('well');
+                    return true;
+                }
+                return false;
+            }
+        },
+        bench: {
+            examine: 'На лавці хтось сидів нещодавно — трава ще прим\'ята.',
+        },
+        flowers: {
+            examine: () => {
+                if (!state.flags.look_flowers) {
+                    state.flags.look_flowers = true;
+                    setMsg('🌸 Чорні квіти. Вони ніби дивляться на тебе. Ти відчуваєш легкий сум.');
+                } else {
+                    setMsg('🌺 Квіти зів\'яли на очах. Торкатись не варто.');
+                }
+            }
+        },
+
+        // ===== ХАТИНА =====
+        table: {
+            examine: () => {
+                if (!state.flags.look_table) {
+                    state.flags.look_table = true;
+                    setMsg('📄 На столі лежить старий лист. "Прийди на світанку до старого дуба..."');
+                    addItem('letter');
+                } else {
+                    setMsg('Дубовий стіл. У стільниці вирізано ім\'я: "Марта".');
+                }
+            }
+        },
+        cabinet: {
+            examine: 'Дерев\'яна шафа. Замкнена. Потрібен ключ.',
+            use: (item) => {
+                if (item === 'key') {
+                    addItem('book');
+                    setMsg('📖 У шафі ти знайшов старий щоденник!');
+                    removeObject('cabinet');
+                    return true;
+                }
+                return false;
+            }
+        },
+        window: {
+            examine: 'Крізь брудне скло видно ліс. Здається, за вікном хтось є...',
+        },
+        stove: {
+            examine: () => {
+                if (!state.flags.look_stove) {
+                    state.flags.look_stove = true;
+                    setMsg('🕯️ У грубці лежить стара свічка. Вона ще може горіти.');
+                    addItem('candle');
+                } else {
+                    setMsg('Грубка холодна. Давно не палили.');
+                }
+            }
+        },
+        painting: {
+            examine: 'На портреті — жінка з дивними очима. Вони ніби стежать за тобою. На рамці напис: "Марта, 1899".',
+        },
+        bed: {
+            examine: () => {
+                if (!state.flags.look_bed) {
+                    state.flags.look_bed = true;
+                    setMsg('🔑 Під подушкою ти знайшов старий ключ!');
+                    addItem('key');
+                } else {
+                    setMsg('Ліжко застелене. На подушці слід від голови.');
+                }
+            }
+        },
+
+        // ===== ПІДВАЛ =====
+        chest: {
+            examine: 'Стара скриня. Замкнена. На кришці вирізано той самий символ, що на кулоні.',
+            use: (item) => {
+                if (item === 'key') {
+                    setMsg('🗝️ Ключ підійшов! У скрині лежить зілля.');
+                    addItem('herb');
+                    state.flags.chest_opened = true;
+                    removeObject('chest');
+                    return true;
+                }
+                if (item === 'pendant' && state.flags.chest_opened) {
+                    setMsg('🔮 Кулон засвітився! Ти відчуваєш присутність...');
+                    state.flags.final_ready = true;
+                    state.npcDialog = {
+                        name: '👻 Марта',
+                        text: 'Ти знайшов мене... Дякую. Я чекала сто років. Візьми зілля і прийди на світанку до старого дуба. Я розкажу тобі правду.',
+                        options: [
+                            { text: '🌅 Прийти на світанку', action: () => {
+                                state.npcDialog = null;
+                                setMsg('🌅 Ти виходиш з підвалу. Світанок близько. Кінець... чи початок?\n\n🌟 Дякую за гру!');
+                                state.flags.ending = true;
+                                render();
+                            }},
+                            { text: '❓ Запитати про символ', action: () => {
+                                state.npcDialog.text = 'Символ — це ключ. Він відкриває двері між світами. Мій кулон — це твій ключ тепер. Бережи його.';
+                                showDialog(state.npcDialog);
+                            }},
+                            { text: '✋ Піти', action: () => {
+                                state.npcDialog = null;
+                                setMsg('👻 Марта зникла в темряві. Ти чуєш шепіт: "Я чекатиму..."');
+                                render();
+                            }},
+                        ]
+                    };
+                    showDialog(state.npcDialog);
+                    return true;
+                }
+                return false;
+            }
+        },
+        shelf: {
+            examine: () => {
+                if (!state.flags.look_shelf) {
+                    state.flags.look_shelf = true;
+                    setMsg('📚 Книги. Одна з них — про старі ритуали. Ти береш її з собою.');
+                    addItem('book');
+                } else {
+                    setMsg('Книги в пилюці. Більше нічого цікавого.');
+                }
+            }
+        },
+        barrel: {
+            examine: 'Стара бочка. Всередині сухо. Здається, там щось намальовано... символ.',
+        },
+        symbol: {
+            examine: () => {
+                if (state.flags.chest_opened) {
+                    setMsg('🔮 Символ світиться яскравіше! Він ніби кличе тебе...');
+                } else {
+                    setMsg('Дивний символ. Він схожий на ті, що на кулоні. Торкатись? Краще не треба.');
+                }
+                if (!state.flags.symbol_seen) {
+                    state.flags.symbol_seen = true;
+                }
+            }
+        },
+    };
+
+    // ============================================================
+    // ЛОГІКА
+    // ============================================================
+    function getRoom() { return rooms[state.room]; }
+
+    function getObjects() {
+        const room = getRoom();
+        if (!room) return [];
+        // Фільтруємо прибрані об'єкти
+        return room.objects.filter(o => {
+            if (o.requireFlag && !state.flags[o.requireFlag]) return false;
+            return !state.flags['removed_'+o.id];
+        });
+    }
+
+    function removeObject(id) { state.flags['removed_'+id] = true; }
+
+    function addItem(id) {
+        if (!state.inventory.includes(id)) {
+            state.inventory.push(id);
+            renderInv();
+        }
+    }
+
+    function hasItem(id) { return state.inventory.includes(id); }
+
+    function setMsg(text, btn) {
+        state.message = text;
+        state.messageBtn = btn || null;
+        renderMsg();
+    }
+
+    // ============================================================
+    // ДІАЛОГ
+    // ============================================================
+    function showDialog(d) {
+        state.npcDialog = d;
+        document.getElementById('dialog-overlay').classList.add('show');
+        document.getElementById('dName').textContent = d.name || '—';
+        document.getElementById('dText').textContent = d.text || '...';
+        const opts = document.getElementById('dOptions');
+        opts.innerHTML = (d.options || []).map((o, i) =>
+            `<button class="d-opt" onclick="window.dialogChoose(${i})">${o.text}</button>`
+        ).join('');
+    }
+
+    window.dialogChoose = function(i) {
+        const d = state.npcDialog;
+        if (!d || !d.options[i]) return;
+        const opt = d.options[i];
+        document.getElementById('dialog-overlay').classList.remove('show');
+        if (opt.action) opt.action();
+    };
+
+    // ============================================================
+    // КЛІКАННЯ
+    // ============================================================
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+
+        // Перевіряємо об'єкти
+        const objs = getObjects();
+        for (const obj of objs) {
+            if (x >= obj.x - obj.w/2 && x <= obj.x + obj.w/2 &&
+                y >= obj.y - obj.h/2 && y <= obj.y + obj.h/2) {
+                handleClick(obj);
+                return;
+            }
+        }
+
+        // Клік в порожнечу
+        setMsg(`${getRoom().name} — тиша.`);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        state.mouseX = (e.clientX - rect.left) / rect.width;
+        state.mouseY = (e.clientY - rect.top) / rect.height;
+    });
+
+    function handleClick(obj) {
+        const ev = events[obj.id];
+        if (!ev) { setMsg(obj.desc || '...'); return; }
+
+        // Якщо є вибраний предмет
+        if (state.selectedItem) {
+            const item = state.selectedItem;
+            state.selectedItem = null;
+            renderInv();
+
+            if (ev.use) {
+                const used = ev.use(item);
+                if (used) {
+                    state.inventory = state.inventory.filter(i => i !== item);
+                    renderInv();
+                    render();
+                    return;
+                }
+            }
+            setMsg(`🤔 Не спрацювало. ${obj.desc}`);
+            return;
+        }
+
+        // Простий клік
+        if (ev.examine) {
+            if (typeof ev.examine === 'function') {
+                ev.examine();
+            } else {
+                setMsg(ev.examine);
+            }
+        } else if (ev.click) {
+            ev.click();
+        } else if (ev.examine) {
+            setMsg(ev.examine);
+        }
+
+        render();
+    }
+
+    // ============================================================
+    // ІНВЕНТАР
+    // ============================================================
+    function renderInv() {
+        const el = document.getElementById('inv');
+        el.innerHTML = state.inventory.map(id => {
+            const item = items[id];
+            const active = state.selectedItem === id ? 'active' : '';
+            return `<div class="inv-item ${active}" onclick="event.stopPropagation();window.selectItem('${id}')" title="${item.name}: ${item.desc}">${item.ico}</div>`;
+        }).join('') || '<div style="font-size:9px;color:rgba(255,255,255,0.03);padding:6px 4px;">інвентар порожній</div>';
+    }
+
+    window.selectItem = function(id) {
+        if (state.selectedItem === id) {
+            state.selectedItem = null;
+        } else {
+            state.selectedItem = id;
+        }
+        renderInv();
+        const item = items[id];
+        if (state.selectedItem) {
+            setMsg(`🔍 Вибрано: ${item.ico} ${item.name}. Клікни на щось у світі.`);
+        } else {
+            setMsg(item ? `${item.ico} ${item.name}: ${item.desc}` : '...');
+        }
+    };
+
+    // ============================================================
+    // ПОВІДОМЛЕННЯ
+    // ============================================================
+    function renderMsg() {
+        const el = document.getElementById('msg');
+        let html = state.message || '🌲 ...';
+        if (state.messageBtn) {
+            html += ` <button class="m-btn" onclick="(${state.messageBtn.action.toString()})()">${state.messageBtn.text}</button>`;
+        }
+        el.innerHTML = html;
+    }
+
+    // ============================================================
+    // РЕНДЕРИНГ
+    // ============================================================
+    function render() {
+        const w = canvas.width, h = canvas.height;
+        const room = getRoom();
+        if (!room) return;
+
+        // Небо/фон
+        ctx.fillStyle = room.bg || '#0a1018';
+        ctx.fillRect(0, 0, w, h);
+
+        // Малюємо сцену
+        drawScene(w, h, state.room);
+
+        // Об'єкти
+        const objs = getObjects();
+        for (const obj of objs) {
+            drawObject(w, h, obj);
+        }
+
+        // HUD — назва кімнати
+        document.getElementById('hudRoom').textContent = room.name;
+
+        // Якщо фінал
+        if (state.flags.ending) {
+            drawEnding(w, h);
+        }
+    }
+
+    function drawScene(w, h, roomId) {
+        // Малюємо елементи сцени вручну
+        ctx.save();
+
+        if (roomId === 'forest') {
+            // Небо
+            const grad = ctx.createLinearGradient(0,0,0,h*0.6);
+            grad.addColorStop(0,'#0a121c');
+            grad.addColorStop(1,'#12181e');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,w,h*0.6);
+
+            // Місяць
+            ctx.beginPath();
+            ctx.arc(w*0.8, h*0.1, 20, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(200,210,220,0.03)';
+            ctx.fill();
+
+            // Дерева (силуети)
+            ctx.fillStyle = 'rgba(10,16,24,0.5)';
+            for (let i = 0; i < 5; i++) {
+                const tx = w * (0.05 + i * 0.22);
+                const th = h * (0.15 + Math.random() * 0.1);
+                ctx.beginPath();
+                ctx.moveTo(tx - 20, h * 0.55);
+                ctx.lineTo(tx, h * 0.25 - th);
+                ctx.lineTo(tx + 20, h * 0.55);
+                ctx.fill();
+            }
+
+            // Земля
+            ctx.fillStyle = '#0d1218';
+            ctx.fillRect(0, h*0.65, w, h*0.35);
+
+            // Стежка
+            ctx.fillStyle = '#0f151c';
+            ctx.beginPath();
+            ctx.moveTo(w*0.3, h*0.75);
+            ctx.lineTo(w*0.7, h*0.75);
+            ctx.lineTo(w*0.6, h);
+            ctx.lineTo(w*0.4, h);
+            ctx.fill();
+
+            // Паркан
+            ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                ctx.moveTo(w*(0.4 + i*0.04), h*0.65);
+                ctx.lineTo(w*(0.4 + i*0.04), h*0.72);
+                ctx.stroke();
+            }
+
+        } else if (roomId === 'house') {
+            // Внутрішні стіни
+            ctx.fillStyle = '#0e0a0a';
+            ctx.fillRect(0,0,w,h);
+
+            // Стіни (дерев'яні дошки)
+            ctx.strokeStyle = 'rgba(255,255,255,0.01)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, h * (0.05 + i * 0.05));
+                ctx.lineTo(w, h * (0.05 + i * 0.05));
+                ctx.stroke();
+            }
+
+            // Підлога
+            ctx.fillStyle = '#0d0808';
+            ctx.fillRect(0, h*0.7, w, h*0.3);
+
+            // Вікно (світло ззовні)
+            ctx.fillStyle = 'rgba(68,100,140,0.02)';
+            ctx.fillRect(w*0.17, h*0.25, w*0.16, h*0.18);
+
+        } else if (roomId === 'cellar') {
+            // Темний підвал
+            ctx.fillStyle = '#030206';
+            ctx.fillRect(0,0,w,h);
+
+            // Кам'яні стіни
+            ctx.fillStyle = '#060508';
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 12; col++) {
+                    ctx.fillRect(col * (w/12) + 2, row * (h/8) + 2, w/12 - 4, h/8 - 4);
+                }
+            }
+
+            // Світло від символу
+            if (state.flags.symbol_seen || state.flags.chest_opened) {
+                const grad = ctx.createRadialGradient(w*0.4, h*0.3, 5, w*0.4, h*0.3, 80);
+                grad.addColorStop(0, 'rgba(100,50,200,0.04)');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0,0,w,h);
+            }
+        }
+
+        ctx.restore();
+    }
+
+    function drawObject(w, h, obj) {
+        ctx.save();
+
+        const ox = obj.x * w;
+        const oy = obj.y * h;
+        const ow = obj.w * w;
+        const oh = obj.h * h;
+
+        // Підсвітка при наведенні
+        if (state.mouseX >= obj.x - obj.w/2 && state.mouseX <= obj.x + obj.w/2 &&
+            state.mouseY >= obj.y - obj.h/2 && state.mouseY <= obj.y + obj.h/2) {
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            ctx.fillRect(ox - ow/2, oy - oh/2, ow, oh);
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(ox - ow/2, oy - oh/2, ow, oh);
+        }
+
+        // Текст об'єкта
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.font = Math.floor(Math.min(w,h) * 0.018) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(obj.text, ox, oy + oh/2 + 16);
+
+        ctx.restore();
+    }
+
+    function drawEnding(w, h) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(0,0,w,h);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.fillStyle = 'rgba(255,200,100,0.15)';
+        ctx.font = Math.floor(Math.min(w,h) * 0.04) + 'px serif';
+        ctx.fillText('🌟', w/2, h/2 - 40);
+        ctx.fillText('КІНЕЦЬ', w/2, h/2 + 10);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.font = Math.floor(Math.min(w,h) * 0.015) + 'px sans-serif';
+        ctx.fillText('Дякую за гру! Приходь ще...', w/2, h/2 + 50);
+
+        ctx.restore();
+    }
+
+    // ============================================================
+    // ПЕРЕЗАПУСК
+    // ============================================================
+    window.restartGame = function() {
+        state = {
+            room: 'forest',
+            inventory: [],
+            flags: {},
+            npcDialog: null,
+            selectedItem: null,
+            message: '🌲 Обережно клікай на предмети...',
+            messageBtn: null,
+            mouseX: 0, mouseY: 0,
+        };
+        document.getElementById('dialog-overlay').classList.remove('show');
+        render();
+        renderInv();
+        renderMsg();
+    };
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    resize();
+    render();
+    renderInv();
+    renderMsg();
+
+    // Авто-підказка
+    setTimeout(() => {
+        if (state.room === 'forest') {
+            setMsg('🌲 Спробуй клікнути на хвіртку, колодязь, квіти або лавку...');
+        }
+    }, 2000);
+</script>
+</body>
+</html>
