@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DialogForge — редактор діалогів</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0e1218;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            color: #d0d8e0;
+        }
+
+        #app {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            height: 100vh;
+        }
+
+        /* ========== ЛІВА ПАНЕЛЬ ========== */
+        #left {
+            background: #0c1016;
+            border-right: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+        }
+        #left .header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        #left .header h1 {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #e0e8f0;
+        }
+        #left .header .sub {
+            font-size: 11px;
+            color: rgba(255,255,255,0.2);
+            margin-top: 3px;
+        }
+        #left .actions {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        #left .actions button {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #c8d0d8;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+            text-align: left;
+        }
+        #left .actions button:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.1);
+        }
+        #left .actions button.primary {
+            background: rgba(68,136,204,0.15);
+            border-color: rgba(68,136,204,0.2);
+            color: #88bbee;
+        }
+        #left .actions button.primary:hover {
+            background: rgba(68,136,204,0.25);
+        }
+        #left .actions button.danger {
+            color: #ee6688;
+        }
+        #left .actions button.danger:hover {
+            background: rgba(238,102,136,0.1);
+            border-color: rgba(238,102,136,0.2);
+        }
+
+        #node-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        #node-list::-webkit-scrollbar { width: 4px; }
+        #node-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 2px; }
+
+        .nl-item {
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 2px;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+        .nl-item:hover { background: rgba(255,255,255,0.03); }
+        .nl-item.active { background: rgba(68,136,204,0.12); }
+        .nl-item .nl-idx {
+            width: 18px; height: 18px;
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px;
+            font-weight: 600;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.05);
+        }
+        .nl-item .nl-idx.start { background: rgba(68,204,136,0.2); color: #44cc88; }
+        .nl-item .nl-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: rgba(255,255,255,0.6);
+        }
+        .nl-item .nl-choices {
+            font-size: 9px;
+            color: rgba(255,255,255,0.2);
+        }
+
+        /* ========== ЦЕНТР ========== */
+        #canvas-wrap {
+            position: relative;
+            background: #0a0e14;
+            overflow: hidden;
+        }
+        #canvas-wrap canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #canvas-wrap .hint {
+            position: absolute;
+            bottom: 16px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(255,255,255,0.1);
+            pointer-events: none;
+        }
+
+        /* ========== ПРАВА ПАНЕЛЬ ========== */
+        #right {
+            background: #0c1016;
+            border-left: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+        }
+        #right .header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        #right .header h2 {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.3);
+        }
+        #props {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        #props::-webkit-scrollbar { width: 4px; }
+        #props::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 2px; }
+
+        .pf {
+            margin-bottom: 16px;
+        }
+        .pf label {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.2);
+            margin-bottom: 4px;
+        }
+        .pf input, .pf textarea, .pf select {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color: #d0d8e0;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.15s;
+        }
+        .pf input:focus, .pf textarea:focus {
+            border-color: rgba(68,136,204,0.3);
+            background: rgba(255,255,255,0.05);
+        }
+        .pf textarea { min-height: 60px; resize: vertical; }
+        .pf input[type="color"] {
+            height: 40px;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        .choice-row {
+            display: flex; gap: 6px; align-items: center;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 4px;
+        }
+        .choice-row input { flex: 1; }
+        .choice-row .del {
+            cursor: pointer;
+            color: rgba(255,255,255,0.15);
+            font-size: 16px;
+            line-height: 1;
+            padding: 2px 6px;
+        }
+        .choice-row .del:hover { color: #ee6688; }
+
+        #no-selection {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.1);
+            font-size: 13px;
+        }
+
+        /* ========== PREVIEW ========== */
+        #preview-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(6,8,12,0.92);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(6px);
+        }
+        #preview-box {
+            background: #0c1016;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            width: 500px;
+            max-height: 400px;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        #preview-box .p-speaker {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.2);
+            margin-bottom: 6px;
+        }
+        #preview-box .p-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 16px;
+        }
+        #preview-box .p-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+        #preview-box .p-choices button {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #b0c0d0;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        #preview-box .p-choices button:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+        }
+        #preview-close {
+            margin-top: 20px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.2);
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #preview-close:hover { color: rgba(255,255,255,0.4); }
+
+        #empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: rgba(255,255,255,0.06);
+        }
+        #empty-state .icon { font-size: 50px; margin-bottom: 12px; }
+        #empty-state .text { font-size: 13px; }
+
+        .node-el {
+            position: absolute;
+            width: 160px;
+            background: rgba(12,16,22,0.92);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: move;
+            user-select: none;
+            z-index: 10;
+            backdrop-filter: blur(6px);
+            transition: box-shadow 0.15s;
+        }
+        .node-el:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .node-el.selected {
+            border-color: rgba(68,136,204,0.4);
+            box-shadow: 0 0 0 1px rgba(68,136,204,0.2), 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .node-el .n-speaker {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.2);
+        }
+        .node-el .n-text {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 2px;
+            line-height: 1.3;
+            max-height: 32px;
+            overflow: hidden;
+        }
+        .node-el .n-choices {
+            font-size: 9px;
+            color: rgba(255,255,255,0.15);
+            margin-top: 4px;
+        }
+        .node-el .n-idx {
+            position: absolute;
+            top: -6px; left: -6px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            font-size: 9px;
+            font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(68,136,204,0.15);
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Ліва панель -->
+    <div id="left">
+        <div class="header">
+            <h1>🎭 DialogForge</h1>
+            <div class="sub">Редактор дерев діалогів</div>
+        </div>
+        <div class="actions">
+            <button class="primary" onclick="addNode()">+ Новий вузол</button>
+            <button onclick="exportJSON()">📥 Експорт JSON</button>
+            <button onclick="document.getElementById('importInput').click()">📤 Імпорт JSON</button>
+            <button onclick="previewDialog()">▶️ Preview</button>
+            <button class="danger" onclick="clearAll()">🗑 Очистити</button>
+            <input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(event)">
+        </div>
+        <div id="node-list"></div>
+    </div>
+
+    <!-- Центр (канвас) -->
+    <div id="canvas-wrap">
+        <div id="empty-state">
+            <div class="icon">🌳</div>
+            <div class="text">Натисни «+ Новий вузол»</div>
+        </div>
+        <div id="nodes-container" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
+        <svg id="svg-lines" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:5"></svg>
+        <div class="hint">🖱 Перетягуй вузли • Клік — редагувати</div>
+    </div>
+
+    <!-- Права панель -->
+    <div id="right">
+        <div class="header"><h2>⚙️ Властивості</h2></div>
+        <div id="props">
+            <div id="no-selection">Оберіть вузол, щоб редагувати</div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview -->
+<div id="preview-overlay" onclick="closePreview()">
+    <div id="preview-box" onclick="event.stopPropagation()">
+        <div class="p-speaker" id="pSpeaker">Персонаж</div>
+        <div class="p-text" id="pText">Текст діалогу</div>
+        <div class="p-choices" id="pChoices"></div>
+        <button id="preview-close" onclick="closePreview()">✕ Закрити</button>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // ДАНІ
+    // ============================================================
+    let nodes = [];
+    let selected = null;
+    let nextId = 1;
+    let dragging = null;
+    let dragOffX = 0, dragOffY = 0;
+
+    // ============================================================
+    // ДОДАВАННЯ ВУЗЛА
+    // ============================================================
+    function addNode() {
+        const container = document.getElementById('nodes-container');
+        const rect = container.getBoundingClientRect();
+        const node = {
+            id: nextId++,
+            speaker: 'Персонаж',
+            text: 'Новий діалог...',
+            x: 40 + (nodes.length * 30) % 300,
+            y: 40 + (nodes.length * 40) % 200,
+            choices: [
+                { text: 'Варіант 1', next: null },
+                { text: 'Варіант 2', next: null },
+            ],
+            color: '#4488cc',
+        };
+        nodes.push(node);
+        selected = node.id;
+        renderNodes();
+        renderList();
+        renderProps();
+        document.getElementById('empty-state').style.display = 'none';
+    }
+
+    // ============================================================
+    // РЕНДЕР ВУЗЛІВ (DOM)
+    // ============================================================
+    function renderNodes() {
+        const container = document.getElementById('nodes-container');
+        container.innerHTML = '';
+
+        nodes.forEach(n => {
+            const el = document.createElement('div');
+            el.className = 'node-el' + (selected === n.id ? ' selected' : '');
+            el.style.left = n.x + 'px';
+            el.style.top = n.y + 'px';
+            el.dataset.id = n.id;
+            el.innerHTML = `
+                <div class="n-idx" style="background:${n.color}22;color:${n.color}">${n.id}</div>
+                <div class="n-speaker">${n.speaker}</div>
+                <div class="n-text">${n.text || '...'}</div>
+                <div class="n-choices">${n.choices.length} варіантів</div>
+            `;
+            el.addEventListener('mousedown', e => {
+                if (e.target.closest('.node-el')) {
+                    selectNode(n.id);
+                    startDrag(e, n.id);
+                }
+            });
+            el.addEventListener('touchstart', e => {
+                selectNode(n.id);
+                startDragTouch(e, n.id);
+            }, { passive: true });
+            container.appendChild(el);
+        });
+
+        renderLines();
+    }
+
+    // ============================================================
+    // ЛІНІЇ (SVG)
+    // ============================================================
+    function renderLines() {
+        const svg = document.getElementById('svg-lines');
+        const container = document.getElementById('nodes-container');
+        const rect = container.getBoundingClientRect();
+        svg.innerHTML = '';
+
+        nodes.forEach(n => {
+            n.choices.forEach((c, ci) => {
+                if (c.next === null) return;
+                const target = nodes.find(t => t.id === c.next);
+                if (!target) return;
+
+                const x1 = n.x + 160;
+                const y1 = n.y + 16 + ci * 40;
+                const x2 = target.x;
+                const y2 = target.y + 20;
+
+                const cx1 = x1 + 50;
+                const cy1 = y1;
+                const cx2 = x2 - 50;
+                const cy2 = y2;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+                path.setAttribute('stroke-width', '1.5');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke-dasharray', '4,3');
+                svg.appendChild(path);
+
+                // Мітка
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2 - 8;
+                text.setAttribute('x', mx);
+                text.setAttribute('y', my);
+                text.setAttribute('fill', 'rgba(255,255,255,0.12)');
+                text.setAttribute('font-size', '8');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = c.text.substring(0, 15) + (c.text.length > 15 ? '...' : '');
+                svg.appendChild(text);
+            });
+        });
+    }
+
+    // ============================================================
+    // ПЕРЕТЯГУВАННЯ
+    // ============================================================
+    function startDrag(e, id) {
+        dragging = id;
+        const el = document.querySelector(`.node-el[data-id="${id}"]`);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        dragOffX = e.clientX - r.left;
+        dragOffY = e.clientY - r.top;
+    }
+
+    function startDragTouch(e, id) {
+        dragging = id;
+        const el = document.querySelector(`.node-el[data-id="${id}"]`);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        dragOffX = e.touches[0].clientX - r.left;
+        dragOffY = e.touches[0].clientY - r.top;
+    }
+
+    document.addEventListener('mousemove', e => {
+        if (dragging === null) return;
+        const node = nodes.find(n => n.id === dragging);
+        if (!node) return;
+        const container = document.getElementById('nodes-container');
+        const cr = container.getBoundingClientRect();
+        node.x = Math.max(0, e.clientX - cr.left - dragOffX);
+        node.y = Math.max(0, e.clientY - cr.top - dragOffY);
+        renderNodes();
+    });
+
+    document.addEventListener('mouseup', () => { dragging = null; });
+
+    document.addEventListener('touchmove', e => {
+        if (dragging === null) return;
+        const node = nodes.find(n => n.id === dragging);
+        if (!node) return;
+        const container = document.getElementById('nodes-container');
+        const cr = container.getBoundingClientRect();
+        node.x = Math.max(0, e.touches[0].clientX - cr.left - dragOffX);
+        node.y = Math.max(0, e.touches[0].clientY - cr.top - dragOffY);
+        renderNodes();
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => { dragging = null; });
+
+    // ============================================================
+    // ВИБІР ВУЗЛА
+    // ============================================================
+    function selectNode(id) {
+        selected = id;
+        renderNodes();
+        renderList();
+        renderProps();
+    }
+
+    // ============================================================
+    // РЕНДЕР ЛІСТИНГУ
+    // ============================================================
+    function renderList() {
+        const list = document.getElementById('node-list');
+        list.innerHTML = '';
+        nodes.forEach(n => {
+            const el = document.createElement('div');
+            el.className = 'nl-item' + (selected === n.id ? ' active' : '');
+            el.innerHTML = `
+                <div class="nl-idx ${nodes.indexOf(n) === 0 ? 'start' : ''}" style="color:${n.color}">${n.id}</div>
+                <div class="nl-text">${n.speaker}: ${n.text.substring(0, 30)}</div>
+                <div class="nl-choices">${n.choices.length}→</div>
+            `;
+            el.addEventListener('click', () => selectNode(n.id));
+            list.appendChild(el);
+        });
+    }
+
+    // ============================================================
+    // РЕНДЕР ВЛАСТИВОСТЕЙ
+    // ============================================================
+    function renderProps() {
+        const props = document.getElementById('props');
+        if (!selected) {
+            props.innerHTML = '<div id="no-selection">Оберіть вузол, щоб редагувати</div>';
+            return;
+        }
+        const node = nodes.find(n => n.id === selected);
+        if (!node) return;
+
+        let html = `
+            <div class="pf">
+                <label>Персонаж</label>
+                <input type="text" value="${node.speaker}" onchange="updateNode(${node.id},'speaker',this.value)">
+            </div>
+            <div class="pf">
+                <label>Текст діалогу</label>
+                <textarea onchange="updateNode(${node.id},'text',this.value)">${node.text}</textarea>
+            </div>
+            <div class="pf">
+                <label>Колір</label>
+                <input type="color" value="${node.color}" onchange="updateNode(${node.id},'color',this.value)">
+            </div>
+            <div class="pf">
+                <label>Варіанти відповідей</label>
+                <div id="choices-list">`;
+
+        node.choices.forEach((c, i) => {
+            html += `
+                <div class="choice-row">
+                    <input type="text" value="${c.text}" placeholder="Текст варіанту"
+                        onchange="updateChoice(${node.id},${i},'text',this.value)">
+                    <select onchange="updateChoice(${node.id},${i},'next',parseInt(this.value)||null)">
+                        <option value="">— нікуди →</option>`;
+            nodes.forEach(t => {
+                if (t.id === node.id) return;
+                html += `<option value="${t.id}" ${c.next === t.id ? 'selected' : ''}>${t.id}: ${t.speaker}</option>`;
+            });
+            html += `</select>
+                    <span class="del" onclick="delChoice(${node.id},${i})">×</span>
+                </div>`;
+        });
+
+        html += `
+                </div>
+                <button style="margin-top:6px;background:none;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer"
+                    onclick="addChoice(${node.id})">+ Додати варіант</button>
+            </div>
+        `;
+
+        props.innerHTML = html;
+    }
+
+    function updateNode(id, field, value) {
+        const node = nodes.find(n => n.id === id);
+        if (!node) return;
+        node[field] = value;
+        renderNodes();
+        renderList();
+    }
+
+    function updateChoice(id, idx, field, value) {
+        const node = nodes.find(n => n.id === id);
+        if (!node || !node.choices[idx]) return;
+        node.choices[idx][field] = value;
+        renderLines();
+    }
+
+    function addChoice(id) {
+        const node = nodes.find(n => n.id === id);
+        if (!node) return;
+        node.choices.push({ text: 'Новий варіант', next: null });
+        renderProps();
+        renderNodes();
+    }
+
+    function delChoice(id, idx) {
+        const node = nodes.find(n => n.id === id);
+        if (!node) return;
+        node.choices.splice(idx, 1);
+        renderProps();
+        renderNodes();
+    }
+
+    // ============================================================
+    // ЕКСПОРТ / ІМПОРТ
+    // ============================================================
+    function exportJSON() {
+        const data = { nodes: nodes.map(n => ({...n})) };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dialog.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.nodes && Array.isArray(data.nodes)) {
+                    nodes = data.nodes;
+                    nextId = (nodes.reduce((max, n) => Math.max(max, n.id), 0) || 0) + 1;
+                    selected = nodes.length > 0 ? nodes[0].id : null;
+                    renderNodes();
+                    renderList();
+                    renderProps();
+                    document.getElementById('empty-state').style.display = nodes.length > 0 ? 'none' : 'flex';
+                }
+            } catch(err) {
+                alert('Помилка імпорту: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // ============================================================
+    // PREVIEW
+    // ============================================================
+    let previewHistory = [];
+    let previewNodeId = null;
+
+    function previewDialog() {
+        if (nodes.length === 0) return;
+        previewHistory = [];
+        previewNodeId = nodes[0].id;
+        showPreviewNode(previewNodeId);
+        document.getElementById('preview-overlay').style.display = 'flex';
+    }
+
+    function showPreviewNode(id) {
+        const node = nodes.find(n => n.id === id);
+        if (!node) return;
+        previewNodeId = id;
+        document.getElementById('pSpeaker').textContent = node.speaker;
+        document.getElementById('pText').textContent = node.text;
+
+        const cont = document.getElementById('pChoices');
+        cont.innerHTML = '';
+        node.choices.forEach(c => {
+            const btn = document.createElement('button');
+            btn.textContent = c.text;
+            btn.onclick = () => {
+                if (c.next !== null) {
+                    previewHistory.push(id);
+                    showPreviewNode(c.next);
+                } else {
+                    document.getElementById('pText').textContent = '(кінець діалогу)';
+                    cont.innerHTML = '<button onclick="closePreview()">✕ Закрити</button>';
+                }
+            };
+            cont.appendChild(btn);
+        });
+    }
+
+    function closePreview() {
+        document.getElementById('preview-overlay').style.display = 'none';
+    }
+
+    // ============================================================
+    // ОЧИСТИТИ
+    // ============================================================
+    function clearAll() {
+        if (!confirm('Очистити всі вузли?')) return;
+        nodes = [];
+        selected = null;
+        nextId = 1;
+        renderNodes();
+        renderList();
+        renderProps();
+        document.getElementById('empty-state').style.display = 'flex';
+    }
+
+    // ============================================================
+    // СТАРТОВИЙ ПРИКЛАД
+    // ============================================================
+    function loadExample() {
+        nodes = [
+            { id: 1, speaker: '👤 Незнайомець', text: 'Ти нарешті прийшов. Я чекав. Хто ти?', x: 40, y: 40, color: '#4488cc',
+                choices: [{ text: 'Я шукаю правду.', next: 2 }, { text: 'Я заблукав.', next: 3 }] },
+            { id: 2, speaker: '👤 Незнайомець', text: 'Правда — це біль. Але ти готовий?', x: 280, y: 20, color: '#4488cc',
+                choices: [{ text: 'Так.', next: 4 }, { text: 'Може, іншим разом.', next: null }] },
+            { id: 3, speaker: '👤 Незнайомець', text: 'Ти не заблукав. Ти повернувся додому.', x: 280, y: 120, color: '#4488cc',
+                choices: [{ text: 'Де мій дім?', next: 4 }, { text: 'Ні, я пішов.', next: null }] },
+            { id: 4, speaker: '👤 Незнайомець', text: 'Твій дім — там, де чекають. А тепер іди.', x: 520, y: 70, color: '#4488cc',
+                choices: [{ text: 'Дякую.', next: null }] },
+        ];
+        nextId = 5;
+        selected = 1;
+        renderNodes();
+        renderList();
+        renderProps();
+        document.getElementById('empty-state').style.display = 'none';
+    }
+
+    loadExample();
+</script>
+</body>
+</html>
