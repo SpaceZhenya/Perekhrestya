@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoForge — генератор відео</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14;
+            color: #d0d8e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: 100vh;
+        }
+
+        #viewport {
+            position: relative;
+            background: #060a10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #viewport canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #viewport .rec-indicator {
+            position: absolute;
+            top: 16px; left: 16px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #ee4466;
+        }
+        #viewport .rec-indicator .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ee4466;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        #viewport .time-display {
+            position: absolute;
+            bottom: 16px; right: 16px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.15);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #panel {
+            background: #0c1016;
+            border-left: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        #panel::-webkit-scrollbar { width: 4px; }
+        #panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 2px; }
+
+        .ph {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .ph h1 {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #e0e8f0;
+        }
+        .ph .sub {
+            font-size: 11px;
+            color: rgba(255,255,255,0.2);
+            margin-top: 2px;
+        }
+
+        .section {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .section label {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.2);
+            margin-bottom: 5px;
+        }
+        .section input, .section textarea, .section select {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color: #d0d8e0;
+            font-family: inherit;
+            outline: none;
+        }
+        .section input:focus, .section textarea:focus {
+            border-color: rgba(68,136,204,0.3);
+        }
+        .section textarea { min-height: 60px; resize: vertical; }
+
+        .section .btn-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .section button {
+            flex: 1;
+            min-width: 80px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #c8d0d8;
+            padding: 8px 0;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .section button:hover { background: rgba(255,255,255,0.06); }
+        .section button.green { background: rgba(68,204,136,0.12); border-color: rgba(68,204,136,0.15); color: #44cc88; }
+        .section button.green:hover { background: rgba(68,204,136,0.2); }
+        .section button.red { background: rgba(238,68,102,0.12); border-color: rgba(238,68,102,0.15); color: #ee4466; }
+        .section button.red:hover { background: rgba(238,68,102,0.2); }
+        .section button.blue { background: rgba(68,136,204,0.12); border-color: rgba(68,136,204,0.15); color: #4488cc; }
+        .section button.blue:hover { background: rgba(68,136,204,0.2); }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+        .preset-grid button {
+            min-width: auto;
+            font-size: 10px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .preset-grid button.active {
+            background: rgba(68,136,204,0.15);
+            border-color: rgba(68,136,204,0.25);
+            color: #88bbee;
+        }
+
+        #export-options {
+            display: none;
+            margin-top: 8px;
+        }
+        #export-options.show { display: block; }
+
+        .progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: #4488cc;
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 2px;
+        }
+
+        .style-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .style-tags button {
+            min-width: auto;
+            padding: 4px 10px;
+            font-size: 10px;
+            background: rgba(255,255,255,0.02);
+        }
+        .style-tags button:hover { background: rgba(255,255,255,0.05); }
+        .style-tags button.active {
+            background: rgba(68,136,204,0.12);
+            border-color: rgba(68,136,204,0.2);
+            color: #88bbee;
+        }
+
+        #log {
+            font-size: 10px;
+            color: rgba(255,255,255,0.15);
+            max-height: 60px;
+            overflow-y: auto;
+            padding: 8px 0;
+            line-height: 1.5;
+        }
+        #log::-webkit-scrollbar { width: 3px; }
+        #log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); }
+
+        .duration-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .duration-control input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.06);
+            height: 3px;
+            border-radius: 2px;
+            border: none;
+            padding: 0;
+        }
+        .duration-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #4488cc;
+            cursor: pointer;
+        }
+        .duration-control span {
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            min-width: 30px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="viewport">
+        <canvas id="c"></canvas>
+        <div class="rec-indicator" id="recIndicator"><span class="dot"></span> REC</div>
+        <div class="time-display" id="timeDisplay">00:00</div>
+    </div>
+
+    <div id="panel">
+        <div class="ph">
+            <h1>🎬 VideoForge</h1>
+            <div class="sub">Генератор атмосферного відео</div>
+        </div>
+
+        <div class="section">
+            <label>Опиши сцену</label>
+            <textarea id="prompt" rows="2" placeholder="Тихий ліс у тумані, місячне світло крізь дерева...">Нічний дощ за вікном, вогні міста розмиті, спокійна меланхолія</textarea>
+        </div>
+
+        <div class="section">
+            <label>Режим</label>
+            <div class="preset-grid">
+                <button class="active" data-preset="rain" onclick="setPreset('rain')">🌧 Дощ</button>
+                <button data-preset="fire" onclick="setPreset('fire')">🔥 Вогонь</button>
+                <button data-preset="stars" onclick="setPreset('stars')">✨ Зорі</button>
+                <button data-preset="waves" onclick="setPreset('waves')">🌊 Хвилі</button>
+                <button data-preset="smoke" onclick="setPreset('smoke')">💨 Туман</button>
+                <button data-preset="neon" onclick="setPreset('neon')">🌃 Неон</button>
+                <button data-preset="snow" onclick="setPreset('snow')">❄️ Сніг</button>
+                <button data-preset="leaves" onclick="setPreset('leaves')">🍂 Листя</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Стилізація</label>
+            <div class="style-tags" id="styleTags">
+                <button class="active" data-style="vhs" onclick="toggleStyle('vhs')">📼 VHS</button>
+                <button data-style="glitch" onclick="toggleStyle('glitch')">💥 Глітч</button>
+                <button data-style="blur" onclick="toggleStyle('blur')">🌫 Розмиття</button>
+                <button data-style="grain" onclick="toggleStyle('grain')">📺 Зерно</button>
+                <button data-style="chroma" onclick="toggleStyle('chroma')">🌈 Хрома</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Тривалість</label>
+            <div class="duration-control">
+                <input type="range" id="durationSlider" min="5" max="30" value="10">
+                <span id="durationLabel">10с</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Музика</label>
+            <select id="musicSelect" onchange="setMusic(this.value)">
+                <option value="">Без звуку</option>
+                <option value="ambient">🌊 Ambient</option>
+                <option value="lofi">🎧 Lo-fi</option>
+                <option value="rain">🌧 Дощ</option>
+                <option value="crickets">🦗 Ніч</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <div class="btn-row">
+                <button class="green" onclick="toggleRecord()" id="recBtn">⏺ Записати</button>
+                <button class="blue" onclick="downloadVideo()" id="dlBtn" disabled>💾 Скачати MP4</button>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+            <div id="log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // CANVAS SETUP
+    // ============================================================
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    let W, H;
+
+    function resize() {
+        const rect = document.getElementById('viewport').getBoundingClientRect();
+        c.width = rect.width * 1;
+        c.height = rect.height * 1;
+        c.style.width = rect.width + 'px';
+        c.style.height = rect.height + 'px';
+        W = c.width;
+        H = c.height;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ============================================================
+    // СТАН
+    // ============================================================
+    let preset = 'rain';
+    let styles = new Set(['vhs']);
+    let duration = 10;
+    let recording = false;
+    let recordingTime = 0;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let animationId = null;
+    let time = 0;
+    let audioCtx = null;
+
+    function log(msg) {
+        const el = document.getElementById('log');
+        el.innerHTML += msg + '<br>';
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // ============================================================
+    // ПРЕСЕТИ
+    // ============================================================
+    function setPreset(name) {
+        preset = name;
+        document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('active', b.dataset.preset === name));
+        log(`🎨 Режим: ${name}`);
+    }
+
+    function toggleStyle(name) {
+        if (styles.has(name)) styles.delete(name); else styles.add(name);
+        document.querySelectorAll('[data-style]').forEach(b => b.classList.toggle('active', styles.has(b.dataset.style)));
+    }
+
+    document.getElementById('durationSlider').addEventListener('input', e => {
+        duration = parseInt(e.target.value);
+        document.getElementById('durationLabel').textContent = duration + 'с';
+    });
+
+    // Стилі за замовчуванням
+    document.querySelectorAll('[data-style].active').forEach(b => styles.add(b.dataset.style));
+
+    // ============================================================
+    // АУДІО
+    // ============================================================
+    let audioSource = null;
+    let audioGain = null;
+
+    function setMusic(val) {
+        if (audioSource) {
+            audioSource.stop();
+            audioSource = null;
+        }
+        if (!val || !audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (val === 'ambient') playAmbient();
+        else if (val === 'lofi') playLofi();
+        else if (val === 'rain') playRainSound();
+        else if (val === 'crickets') playCrickets();
+    }
+
+    function playAmbient() {
+        const dur = duration + 2;
+        const sr = audioCtx.sampleRate;
+        const len = sr * dur;
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            data[i] = (Math.sin(t * 0.2) * 0.1 + Math.sin(t * 0.5) * 0.05 + (Math.random() - 0.5) * 0.02) *
+                Math.min(1, i / (sr * 2)) * Math.min(1, (len - i) / (sr * 2));
+        }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = buf;
+        audioSource.loop = false;
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = 0.08;
+        audioSource.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+        audioSource.start();
+    }
+
+    function playLofi() {
+        const dur = duration + 2;
+        const sr = audioCtx.sampleRate;
+        const len = sr * dur;
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        let beat = 0;
+        for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const bpm = 0.24;
+            beat = Math.sin(2 * Math.PI * t * 2.5) * 0.15;
+            const chord = Math.sin(t * 1.05) * 0.08 + Math.sin(t * 1.32) * 0.06 + Math.sin(t * 1.58) * 0.05;
+            const noise = (Math.random() - 0.5) * 0.01;
+            data[i] = (beat + chord + noise) *
+                Math.min(1, i / (sr * 1)) * Math.min(1, (len - i) / (sr * 2));
+        }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = buf;
+        audioSource.loop = false;
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = 0.12;
+        audioSource.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+        audioSource.start();
+    }
+
+    function playRainSound() {
+        const dur = duration + 2;
+        const sr = audioCtx.sampleRate;
+        const len = sr * dur;
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+            let s = 0;
+            for (let k = 0; k < 3; k++) {
+                s += Math.sin(2 * Math.PI * (300 + k * 200) * (i / sr) + Math.random() * 2) * 0.1;
+            }
+            data[i] = (s + (Math.random() - 0.5) * 0.15) *
+                Math.min(1, i / (sr * 1)) * Math.min(1, (len - i) / (sr * 2));
+        }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = buf;
+        audioSource.loop = false;
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = 0.06;
+        audioSource.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+        audioSource.start();
+    }
+
+    function playCrickets() {
+        const dur = duration + 2;
+        const sr = audioCtx.sampleRate;
+        const len = sr * dur;
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const chirp = Math.sin(2 * Math.PI * 4200 * t) * 0.08 * Math.max(0, Math.sin(t * 12)) * Math.max(0, Math.sin(t * 8.3));
+            data[i] = (chirp + (Math.random() - 0.5) * 0.01) *
+                Math.min(1, i / (sr * 1)) * Math.min(1, (len - i) / (sr * 2));
+        }
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = buf;
+        audioSource.loop = false;
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = 0.04;
+        audioSource.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+        audioSource.start();
+    }
+
+    // ============================================================
+    // МАЛЮВАННЯ — ПРЕСЕТИ
+    // ============================================================
+    function drawScene(p, t, elapsed) {
+        ctx.fillStyle = '#060a10';
+        ctx.fillRect(0, 0, W, H);
+
+        switch (p) {
+            case 'rain': drawRain(t); break;
+            case 'fire': drawFire(t); break;
+            case 'stars': drawStars(t); break;
+            case 'waves': drawWaves(t); break;
+            case 'smoke': drawSmoke(t); break;
+            case 'neon': drawNeon(t); break;
+            case 'snow': drawSnow(t); break;
+            case 'leaves': drawLeaves(t); break;
+            default: drawRain(t);
+        }
+
+        // Стилізація
+        if (styles.has('vhs')) applyVHS(t);
+        if (styles.has('glitch')) applyGlitch(t);
+        if (styles.has('grain')) applyGrain();
+        if (styles.has('chroma')) applyChroma(t);
+
+        // Накласти текст
+        drawText(t, elapsed);
+    }
+
+    // ---- ДОЩ ----
+    function drawRain(t) {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#0a0e18');
+        grad.addColorStop(0.4, '#141828');
+        grad.addColorStop(1, '#1a2030');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 80; i++) {
+            const x = (i * 137.5 + t * 0.5) % W;
+            const y = (i * 97.3 + t * 200) % (H * 1.5) - H * 0.5;
+            const len = 15 + ((i * 31) % 20);
+            const alpha = 0.06 + ((i * 17) % 40) / 400;
+            ctx.strokeStyle = `rgba(180,200,255,${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 2, y + len);
+            ctx.stroke();
+        }
+    }
+
+    // ---- ВОГОНЬ ----
+    function drawFire(t) {
+        const grad = ctx.createRadialGradient(W/2, H*0.7, 10, W/2, H*0.7, H*0.5);
+        grad.addColorStop(0, '#442200');
+        grad.addColorStop(0.3, '#1a0e00');
+        grad.addColorStop(1, '#06080a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 40; i++) {
+            const x = W/2 + Math.sin(i * 2.1 + t * 0.8) * 80 + ((i * 37) % 60) - 30;
+            const y = H * 0.7 - i * 5 + Math.sin(t * 1.5 + i) * 4;
+            const r = 8 + ((i * 13) % 20);
+            const alpha = 0.15 - i * 0.003;
+            const colors = ['#ff4400', '#ff6600', '#ffaa00', '#ffdd00', '#ff6600'];
+            ctx.fillStyle = colors[i % 5];
+            ctx.globalAlpha = Math.max(0, alpha);
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 1.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // ---- ЗОРІ ----
+    function drawStars(t) {
+        const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.7);
+        grad.addColorStop(0, '#0a0e1a');
+        grad.addColorStop(1, '#04060a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 60; i++) {
+            const x = (i * 151.7 + 23) % W;
+            const y = (i * 113.3 + 47) % H;
+            const s = 1 + ((i * 17) % 3);
+            const twinkle = 0.3 + 0.7 * Math.sin(t * 0.5 + i * 1.7);
+            ctx.fillStyle = `rgba(200,220,255,${twinkle * 0.8})`;
+            ctx.fillRect(x, y, s, s);
+        }
+    }
+
+    // ---- ХВИЛІ ----
+    function drawWaves(t) {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#020408');
+        grad.addColorStop(0.5, '#0a1424');
+        grad.addColorStop(1, '#0c1828');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let w = 0; w < 3; w++) {
+            ctx.beginPath();
+            ctx.moveTo(0, H/2);
+            for (let x = 0; x <= W; x += 4) {
+                const y = H/2 + Math.sin(x * 0.008 + t * (0.5 + w * 0.2) + w * 2) * (20 + w * 15)
+                    + Math.sin(x * 0.02 + t * 0.8) * 8;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(20,60,120,${0.06 - w * 0.015})`;
+            ctx.fill();
+        }
+    }
+
+    // ---- ТУМАН ----
+    function drawSmoke(t) {
+        const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.5);
+        grad.addColorStop(0, '#0e1218');
+        grad.addColorStop(1, '#06080a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 12; i++) {
+            const x = W * (0.1 + ((i * 97 + 13) % 80) / 100) + Math.sin(t * 0.1 + i) * 40;
+            const y = H * (0.1 + ((i * 53 + 7) % 80) / 100) + Math.sin(t * 0.15 + i * 1.5) * 30;
+            const r = 80 + ((i * 37) % 60) + Math.sin(t * 0.05 + i * 2) * 20;
+            const grad2 = ctx.createRadialGradient(x, y, 0, x, y, r);
+            grad2.addColorStop(0, `rgba(160,180,200,${0.02 + (i % 3) * 0.005})`);
+            grad2.addColorStop(1, 'rgba(160,180,200,0)');
+            ctx.fillStyle = grad2;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ---- НЕОН ----
+    function drawNeon(t) {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#0e001a');
+        grad.addColorStop(1, '#04000a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 15; i++) {
+            const x = (i * 67 + 3) % W;
+            const y = ((i * 43 + 17) % H);
+            const hue = (i * 37 + t * 10) % 360;
+            ctx.strokeStyle = `hsla(${hue},80%,60%,${0.1 + Math.sin(t + i) * 0.05})`;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = `hsla(${hue},80%,60%,0.3)`;
+            ctx.shadowBlur = 15;
+
+            for (let j = 0; j < 3; j++) {
+                const ox = x + j * 30 + Math.sin(t * 0.5 + j + i) * 10;
+                const oy = y + Math.sin(t * 0.3 + j * 2 + i) * 8;
+                ctx.beginPath();
+                ctx.arc(ox, oy, 15 - j * 4, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        ctx.shadowBlur = 0;
+    }
+
+    // ---- СНІГ ----
+    function drawSnow(t) {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#0c1018');
+        grad.addColorStop(1, '#161c24');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 100; i++) {
+            const x = (i * 97.3 + t * 0.3 + Math.sin(t * 0.1 + i * 1.3) * 20) % W;
+            const y = (i * 131 + t * 60) % (H * 1.4) - H * 0.2;
+            const s = 2 + ((i * 17) % 4);
+            const alpha = 0.3 + ((i * 13) % 40) / 80;
+            ctx.fillStyle = `rgba(200,220,255,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x, y, s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ---- ЛИСТЯ ----
+    function drawLeaves(t) {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#0e0a08');
+        grad.addColorStop(1, '#0e0806');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < 25; i++) {
+            const x = (i * 131 + t * 0.8 + Math.sin(t * 0.3 + i) * 30) % (W + 30) - 15;
+            const y = (i * 97 + t * 40 + Math.sin(t * 0.2 + i * 0.5) * 20) % (H * 1.3) - H * 0.2;
+            const rot = t * 0.5 + i * 0.7;
+            const colors = ['#4a3020', '#5a3828', '#3a2818', '#6a4030', '#2a1810'];
+            ctx.fillStyle = colors[i % 5];
+            ctx.globalAlpha = 0.15 + (i % 3) * 0.04;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rot);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 6, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // ============================================================
+    // СТИЛІЗАЦІЯ
+    // ============================================================
+    function applyVHS(t) {
+        const h = H * 0.01;
+        for (let i = 0; i < 4; i++) {
+            const y = (i * H / 4 + Math.sin(t * 2 + i) * 3);
+            ctx.fillStyle = `rgba(0,0,0,${0.02 + Math.sin(t * 0.5 + i * 2) * 0.01})`;
+            ctx.fillRect(0, y, W, h + 1);
+        }
+        // Колірні смуги
+        if (Math.sin(t * 0.3) > 0.97) {
+            ctx.fillStyle = 'rgba(255,0,100,0.02)';
+            ctx.fillRect(0, 0, W*0.3, H);
+        }
+    }
+
+    function applyGlitch(t) {
+        if (Math.sin(t * 10) > 0.985) {
+            const offset = (Math.random() * 20 - 10);
+            const h = H * 0.03 + Math.random() * H * 0.1;
+            const y = Math.random() * H;
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(offset, y, W, h);
+        }
+    }
+
+    function applyGrain() {
+        const d = ctx.createImageData(W, H);
+        const data = d.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const g = (Math.random() - 0.5) * 8;
+            data[i] = data[i] + g;
+            data[i+1] = data[i+1] + g;
+            data[i+2] = data[i+2] + g;
+        }
+        ctx.putImageData(d, 0, 0);
+    }
+
+    function applyChroma(t) {
+        const offset = 3 + Math.sin(t * 0.2) * 2;
+        ctx.drawImage(c, offset, 0);
+        ctx.drawImage(c, -offset, 0);
+        ctx.globalCompositeOperation = 'screen';
+        ctx.drawImage(c, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function drawText(t, elapsed) {
+        const prompt = document.getElementById('prompt').value;
+        if (!prompt) return;
+
+        ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.sin(t * 0.1) * 0.01})`;
+        ctx.font = `${14 + Math.sin(t * 0.05) * 1}px "Georgia", serif`;
+        ctx.textAlign = 'center';
+
+        // Розділити на рядки
+        const words = prompt.split(' ');
+        let lines = [];
+        let current = '';
+        for (const w of words) {
+            if ((current + ' ' + w).length > 35) {
+                lines.push(current);
+                current = w;
+            } else {
+                current = (current ? current + ' ' : '') + w;
+            }
+        }
+        if (current) lines.push(current);
+
+        lines.forEach((line, i) => {
+            const alpha = 0.08 + i * 0.02;
+            ctx.fillStyle = `rgba(200,200,210,${alpha})`;
+            ctx.fillText(line, W/2, 40 + i * 22);
+        });
+    }
+
+    // ============================================================
+    // ЗАПИС ВІДЕО
+    // ============================================================
+    let stream = null;
+    let recorder = null;
+
+    function toggleRecord() {
+        if (recording) {
+            stopRecord();
+        } else {
+            startRecord();
+        }
+    }
+
+    async function startRecord() {
+        // Скинути
+        recordedChunks = [];
+        recordingTime = 0;
+        time = 0;
+
+        // Налаштувати аудіо для запису
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Отримати стрім з канвасу
+        stream = c.captureStream(30);
+
+        // Якщо є аудіо, додати його
+        let audioDest = null;
+        if (audioSource && audioCtx) {
+            audioDest = audioCtx.createMediaStreamDestination();
+            audioGain.connect(audioDest);
+            const audioTrack = audioDest.stream.getAudioTracks()[0];
+            if (audioTrack) stream.addTrack(audioTrack);
+        }
+
+        const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+        let mimeType = '';
+        for (const mt of mimeTypes) {
+            if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
+        if (!mimeType) mimeType = 'video/webm';
+
+        try {
+            recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+        } catch(e) {
+            log(`❌ Помилка запису: ${e.message}`);
+            return;
+        }
+
+        recorder.ondataavailable = e => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            document.getElementById('recIndicator').style.display = 'none';
+            document.getElementById('recBtn').textContent = '⏺ Записати';
+            document.getElementById('recBtn').className = 'green';
+            document.getElementById('dlBtn').disabled = recordedChunks.length === 0;
+            log('✅ Запис завершено!');
+        };
+
+        recording = true;
+        document.getElementById('recIndicator').style.display = 'flex';
+        document.getElementById('recBtn').textContent = '⏹ Стоп';
+        document.getElementById('recBtn').className = 'red';
+        document.getElementById('dlBtn').disabled = true;
+
+        recorder.start(100);
+        log('🔴 Запис...');
+
+        // Запустити музику
+        setMusic(document.getElementById('musicSelect').value);
+
+        // Запустити анімацію
+        if (animationId) cancelAnimationFrame(animationId);
+        const startTime = performance.now();
+
+        function animate() {
+            const elapsed = (performance.now() - startTime) / 1000;
+            time = elapsed;
+            recordingTime = elapsed;
+            time = elapsed;
+
+            if (elapsed >= duration) {
+                stopRecord();
+                return;
+            }
+
+            drawScene(preset, elapsed, elapsed);
+            document.getElementById('timeDisplay').textContent = formatTime(elapsed);
+            document.getElementById('progressFill').style.width = (elapsed / duration * 100) + '%';
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        animate();
+    }
+
+    function stopRecord() {
+        if (recorder && recorder.state === 'recording') {
+            recorder.stop();
+        }
+        recording = false;
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        document.getElementById('recIndicator').style.display = 'none';
+        document.getElementById('recBtn').textContent = '⏺ Записати';
+        document.getElementById('recBtn').className = 'green';
+        document.getElementById('recBtn').disabled = false;
+
+        // Зупинити аудіо
+        if (audioSource) {
+            try { audioSource.stop(); } catch(e) {}
+            audioSource = null;
+        }
+    }
+
+    function downloadVideo() {
+        if (recordedChunks.length === 0) return;
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const promptPreview = document.getElementById('prompt').value.substring(0, 20).replace(/[^a-zA-Zа-яА-Я0-9]/g, '_') || 'video';
+        a.download = `videoforge_${promptPreview}_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        log('💾 Відео скачано!');
+    }
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    // ============================================================
+    // АНІМАЦІЯ (попередній перегляд)
+    // ============================================================
+    let previewTime = 0;
+    let previewStart = 0;
+
+    function animatePreview() {
+        if (recording) return;
+        previewTime = (performance.now() - previewStart) / 1000;
+        drawScene(preset, previewTime, previewTime);
+        document.getElementById('timeDisplay').textContent = formatTime(previewTime % 60);
+        requestAnimationFrame(animatePreview);
+    }
+
+    previewStart = performance.now();
+    animatePreview();
+
+    log('🎬 VideoForge готовий. Обери тему і натисни "Записати"');
+</script>
+</body>
+</html>
