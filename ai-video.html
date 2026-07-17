@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video — генератор відео</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14; color: #d0d8e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+
+        #app {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .logo h1 { font-size: 28px; font-weight: 300; letter-spacing: 0.1em; color: #e0e8f0; }
+        .logo .sub { font-size: 12px; color: rgba(255,255,255,0.15); margin-top: 4px; letter-spacing: 0.3em; text-transform: uppercase; }
+
+        .card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+        .card label {
+            display: block;
+            font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.2);
+            margin-bottom: 6px;
+        }
+        .card textarea {
+            width: 100%;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: #d0d8e0;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.6;
+        }
+        .card textarea:focus { border-color: rgba(68,136,204,0.3); }
+        .card textarea::placeholder { color: rgba(255,255,255,0.08); }
+
+        .card .hint {
+            font-size: 11px;
+            color: rgba(255,255,255,0.1);
+            margin-top: 6px;
+        }
+
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .examples button {
+            padding: 4px 12px;
+            font-size: 11px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px;
+            color: rgba(255,255,255,0.3);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .examples button:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
+
+        .row { display: flex; gap: 8px; align-items: center; }
+        .row select, .row input[type="text"] {
+            flex: 1;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #d0d8e0;
+            font-family: inherit;
+            outline: none;
+        }
+        .row select:focus, .row input[type="text"]:focus { border-color: rgba(68,136,204,0.3); }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: rgba(68,136,204,0.12);
+            border: 1px solid rgba(68,136,204,0.15);
+            border-radius: 8px;
+            color: #88bbee;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary:hover { background: rgba(68,136,204,0.18); border-color: rgba(68,136,204,0.25); }
+        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-secondary {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); }
+
+        .config-toggle {
+            font-size: 11px;
+            color: rgba(255,255,255,0.15);
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            margin-top: 4px;
+        }
+        .config-toggle:hover { color: rgba(255,255,255,0.25); }
+        #configSection { display: none; }
+
+        #result {
+            display: none;
+            margin-top: 12px;
+        }
+        #result.show { display: block; }
+
+        .video-wrap {
+            background: #060a10;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .video-wrap video {
+            width: 100%;
+            display: block;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .result-actions button {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .result-actions button:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); }
+
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        #loading.show { display: block; }
+
+        .spinner {
+            width: 32px; height: 32px;
+            border: 2px solid rgba(68,136,204,0.1);
+            border-top-color: #4488cc;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #loading .info { font-size: 12px; color: rgba(255,255,255,0.2); }
+        #loading .eta { font-size: 11px; color: rgba(255,255,255,0.1); margin-top: 4px; }
+        #loading .model-warning { font-size: 10px; color: rgba(255,200,100,0.3); margin-top: 8px; }
+
+        #error {
+            display: none;
+            padding: 12px 16px;
+            border: 1px solid rgba(238,68,102,0.15);
+            background: rgba(238,68,102,0.05);
+            border-radius: 8px;
+            color: #ee6688;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        #error.show { display: block; }
+
+        #history {
+            margin-top: 20px;
+        }
+        #history .h-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+        #history .h-item:hover { background: rgba(255,255,255,0.02); }
+        #history .h-item .h-prompt {
+            flex: 1;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #history .h-item .h-date {
+            font-size: 10px;
+            color: rgba(255,255,255,0.1);
+        }
+        #history .h-item .h-play {
+            font-size: 16px;
+            line-height: 1;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .key-status {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .key-status.ok { background: rgba(68,204,136,0.1); color: #44cc88; }
+        .key-status.nok { background: rgba(238,68,102,0.1); color: #ee6688; }
+
+        .fade-in { animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="logo">
+        <h1>🎬 AI Video</h1>
+        <div class="sub">Text → Video Generator</div>
+    </div>
+
+    <!-- ПРОМПТ -->
+    <div class="card">
+        <label>Опиши відео</label>
+        <textarea id="prompt" placeholder="Наприклад: Кіт у космосі пливе в невагомості, стиль 80-х, ретрофутуризм...">Кіт пливе в невагомості, навколо зорі та туманності, стиль 80-х</textarea>
+        <div class="examples">
+            <button onclick="useExample(this)">Кіт у космосі</button>
+            <button onclick="useExample(this)">Ліс восени, листя падає</button>
+            <button onclick="useExample(this)">Кіберпанк місто вночі</button>
+            <button onclick="useExample(this)">Динозавр у місті, 50-ті</button>
+        </div>
+    </div>
+
+    <!-- API + МОДЕЛЬ -->
+    <div class="card">
+        <div class="row">
+            <select id="model">
+                <option value="damo-vilab/text-to-video-ms-1.7b">🎥 Text-to-Video 1.7B (Damo)</option>
+                <option value="AliVilab/Text-to-video-ms-1.7b">🎥 Text-to-Video 1.7B (Ali)</option>
+                <option value="stabilityai/stable-video-diffusion-img2vid">🎞 Stable Video Diffusion</option>
+                <option value="ByteDance/AnimateDiff-Lightning">⚡ AnimateDiff Lightning</option>
+            </select>
+        </div>
+
+        <div class="config-toggle" onclick="toggleConfig()">⚙️ Налаштування API</div>
+        <div id="configSection">
+            <div style="margin-top:8px">
+                <label>HuggingFace API Token</label>
+                <div class="row">
+                    <input type="password" id="apiKey" placeholder="hf_xxxxxxxxxxxxxxxxxx">
+                    <button class="btn-secondary" onclick="saveKey()">💾</button>
+                </div>
+                <div style="margin-top:4px">
+                    <span class="key-status nok" id="keyStatus">🔑 Не налаштовано</span>
+                </div>
+                <div class="hint">Отримай токен на huggingface.co/settings/tokens. Безкоштовно.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ГЕНЕРАЦІЯ -->
+    <button class="btn-primary" onclick="generate()" id="genBtn">🚀 Згенерувати відео</button>
+
+    <!-- ЛОАДІНГ -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="info">🎬 AI генерує відео...</div>
+        <div class="eta">Зазвичай 30-60 секунд</div>
+        <div class="model-warning">⚠️ Модель може завантажуватись до 2 хв при першому запуску</div>
+    </div>
+
+    <!-- ПОМИЛКА -->
+    <div id="error"></div>
+
+    <!-- РЕЗУЛЬТАТ -->
+    <div id="result">
+        <div class="card">
+            <label>🎬 Результат</label>
+            <div class="video-wrap">
+                <video id="videoPlayer" controls autoplay muted></video>
+            </div>
+            <div class="result-actions">
+                <button onclick="downloadVideo()">💾 Скачати MP4</button>
+                <button onclick="copyPrompt()">📋 Копіювати промпт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ІСТОРІЯ -->
+    <div id="history">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.15);margin-bottom:8px;display:block">📁 Історія</label>
+        <div id="historyList"></div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // КЕРУВАННЯ API КЛЮЧЕМ
+    // ============================================================
+    function saveKey() {
+        const key = document.getElementById('apiKey').value.trim();
+        if (!key) return;
+        localStorage.setItem('hf_api_key', key);
+        updateKeyStatus();
+    }
+
+    function loadKey() {
+        const key = localStorage.getItem('hf_api_key');
+        if (key) {
+            document.getElementById('apiKey').value = key;
+            updateKeyStatus();
+        }
+    }
+
+    function getKey() {
+        return localStorage.getItem('hf_api_key') || document.getElementById('apiKey').value.trim();
+    }
+
+    function updateKeyStatus() {
+        const key = getKey();
+        const el = document.getElementById('keyStatus');
+        if (key && key.startsWith('hf_')) {
+            el.className = 'key-status ok';
+            el.textContent = '🔑 Активовано';
+        } else {
+            el.className = 'key-status nok';
+            el.textContent = '🔑 Потрібен токен';
+        }
+    }
+
+    function toggleConfig() {
+        const el = document.getElementById('configSection');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ============================================================
+    // ПРИКЛАДИ
+    // ============================================================
+    function useExample(btn) {
+        document.getElementById('prompt').value = btn.textContent;
+    }
+
+    // ============================================================
+    // ГЕНЕРАЦІЯ
+    // ============================================================
+    let currentVideoUrl = null;
+    let history = JSON.parse(localStorage.getItem('ai_video_history') || '[]');
+
+    async function generate() {
+        const prompt = document.getElementById('prompt').value.trim();
+        if (!prompt) { alert('Напиши опис відео'); return; }
+
+        const key = getKey();
+        if (!key) { alert('🔑 Додай API Token у налаштуваннях'); return; }
+
+        const model = document.getElementById('model').value;
+        const genBtn = document.getElementById('genBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+
+        genBtn.disabled = true;
+        loading.classList.add('show');
+        result.classList.remove('show');
+        error.classList.remove('show');
+
+        try {
+            const videoBlob = await callHFInference(prompt, model, key);
+
+            const url = URL.createObjectURL(videoBlob);
+            if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
+            currentVideoUrl = url;
+
+            const player = document.getElementById('videoPlayer');
+            player.src = url;
+            player.load();
+
+            result.classList.add('show');
+            loading.classList.remove('show');
+            genBtn.disabled = false;
+
+            // Історія
+            addToHistory(prompt, model, url);
+            renderHistory();
+
+        } catch (e) {
+            loading.classList.remove('show');
+            genBtn.disabled = false;
+            error.textContent = '❌ ' + e.message;
+            error.classList.add('show');
+        }
+    }
+
+    async function callHFInference(prompt, model, token) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+        try {
+            const resp = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ inputs: prompt }),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeout);
+
+            if (!resp.ok) {
+                const text = await resp.text();
+                let msg = text;
+                try {
+                    const json = JSON.parse(text);
+                    msg = json.error || text;
+                } catch(e) {}
+
+                if (resp.status === 403) throw new Error('Доступ заборонено. Можливо, потрібно прийняти ліцензію на HuggingFace.');
+                if (resp.status === 503) throw new Error('Модель завантажується. Спробуй ще раз через хвилину.\n' + msg);
+                throw new Error(msg);
+            }
+
+            // Отримуємо бінарні дані
+            const contentType = resp.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const json = await resp.json();
+                if (json.error) throw new Error(json.error);
+                // Можливо, це base64
+                if (json.video) {
+                    return base64ToBlob(json.video);
+                }
+                throw new Error('Несподівана відповідь: ' + JSON.stringify(json).substring(0, 200));
+            }
+
+            // Це відеофайл
+            return await resp.blob();
+
+        } catch (e) {
+            clearTimeout(timeout);
+            if (e.name === 'AbortError') throw new Error('Час очікування вичерпано (2 хв). Спробуй іншу модель.');
+            throw e;
+        }
+    }
+
+    function base64ToBlob(base64) {
+        const binary = atob(base64);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            array[i] = binary.charCodeAt(i);
+        }
+        return new Blob([array], { type: 'video/mp4' });
+    }
+
+    // ============================================================
+    // ЗАВАНТАЖЕННЯ
+    // ============================================================
+    function downloadVideo() {
+        if (!currentVideoUrl) return;
+        const a = document.createElement('a');
+        a.href = currentVideoUrl;
+        const prompt = document.getElementById('prompt').value.substring(0, 30).replace(/[^a-zA-Zа-яА-Я0-9_\s]/g, '').trim() || 'video';
+        a.download = `ai_${prompt.substring(0, 20)}.mp4`;
+        a.click();
+    }
+
+    function copyPrompt() {
+        const prompt = document.getElementById('prompt').value;
+        navigator.clipboard.writeText(prompt).catch(() => {});
+    }
+
+    // ============================================================
+    // ІСТОРІЯ
+    // ============================================================
+    function addToHistory(prompt, model, url) {
+        history.unshift({
+            prompt,
+            model,
+            url,
+            date: new Date().toISOString(),
+        });
+        if (history.length > 20) history = history.slice(0, 20);
+        localStorage.setItem('ai_video_history', JSON.stringify(history));
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        if (history.length === 0) {
+            list.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.08);text-align:center;padding:20px">Поки що порожньо</div>';
+            return;
+        }
+        list.innerHTML = history.map((item, i) => `
+            <div class="h-item fade-in" onclick="playHistory(${i})">
+                <span class="h-play">🎬</span>
+                <span class="h-prompt">${escapeHtml(item.prompt.substring(0, 60))}</span>
+                <span class="h-date">${formatDate(item.date)}</span>
+            </div>
+        `).join('');
+    }
+
+    function playHistory(index) {
+        const item = history[index];
+        if (!item || !item.url) return;
+        document.getElementById('videoPlayer').src = item.url;
+        document.getElementById('result').classList.add('show');
+        document.getElementById('videoPlayer').load();
+        document.getElementById('videoPlayer').play();
+        document.getElementById('prompt').value = item.prompt;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+        try {
+            const d = new Date(iso);
+            return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        } catch(e) { return ''; }
+    }
+
+    // ============================================================
+    // СТАРТ
+    // ============================================================
+    loadKey();
+    renderHistory();
+    updateKeyStatus();
+
+    // Якщо є ключ, сховати конфіг
+    if (getKey()) {
+        document.getElementById('configSection').style.display = 'none';
+    }
+</script>
+</body>
+</html>
