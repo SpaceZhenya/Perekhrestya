@@ -3,128 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Курс історії України</title>
+    <title>Курс історії України — повний</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#f5f0e8;color:#2c2418;font-family:'Segoe UI','Georgia',serif;display:flex;justify-content:center;padding:20px}
-        #app{width:820px;max-width:98vw;min-height:90vh;padding:10px 0}
+        body{
+            background:linear-gradient(135deg,#f5f0e6 0%,#ede6da 100%);
+            color:#2c2418;font-family:'Segoe UI','Georgia',serif;
+            display:flex;justify-content:center;padding:20px;min-height:100vh;
+        }
+        #app{width:860px;max-width:98vw;min-height:90vh;padding:10px 0;animation:fadeIn 0.3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-        /* Шапка */
-        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:0 4px}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 4px}
         .header h1{font-size:22px;font-weight:400;color:#8a7a6a}
         .header h1 span{color:#b8a898;font-weight:300}
-        .header .info{font-size:13px;color:#b8a898}
+        .header .info{font-size:13px;color:#b8a898;text-align:right}
         .header .info b{color:#8a7a6a}
+        .header .info .mod-name{display:block;font-size:11px;color:#c8b898;margin-top:1px}
 
-        /* Прогрес */
-        .progress-bar{height:4px;background:#e8e0d0;border-radius:2px;margin-bottom:20px;overflow:hidden}
-        .progress-bar .fill{height:100%;background:#b8a070;border-radius:2px;transition:width 0.4s}
+        .modules{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+        .modules button{
+            padding:5px 12px;border:1px solid #ece4d8;border-radius:5px;
+            font-size:11px;color:#b8a898;cursor:pointer;transition:all 0.15s;
+            background:transparent;font-family:inherit;
+        }
+        .modules button:hover{background:#faf6f0}
+        .modules button.active{background:#b8a070;border-color:#b8a070;color:#fff}
+        .modules button.done{background:#e8f0e0;border-color:#b8c898;color:#6a8a5a}
+        .modules button.locked{opacity:0.3;cursor:default}
 
-        /* Основний блок */
+        .progress-bar{height:4px;background:#e8e0d0;border-radius:2px;margin-bottom:18px;overflow:hidden}
+        .progress-bar .fill{height:100%;background:linear-gradient(90deg,#b8a070,#d4b880);border-radius:2px;transition:width 0.5s ease}
+
         .card{
             background:#ffffff;border:1px solid #e8e0d0;
-            border-radius:12px;padding:32px 36px;min-height:420px;
-            box-shadow:0 1px 4px rgba(0,0,0,0.02);
+            border-radius:12px;padding:32px 36px;min-height:400px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.02);
+            animation:fadeIn 0.3s ease;
         }
 
         .card h2{
-            font-size:24px;font-weight:400;color:#3c3024;margin-bottom:12px;
+            font-size:24px;font-weight:400;color:#3c3024;margin-bottom:14px;
             display:flex;align-items:center;gap:10px;
         }
         .card h2 .ico{font-size:28px}
-
-        .card .body{
-            font-size:16px;line-height:1.8;color:#3c3024;
+        .card h2 .badge{
+            font-size:11px;font-weight:400;color:#fff;background:#b8a070;
+            padding:2px 10px;border-radius:10px;margin-left:8px;
         }
-        .card .body p{margin-bottom:10px}
 
+        .card .body{font-size:16px;line-height:1.8;color:#3c3024}
+        .card .body p{margin-bottom:10px}
         .card .body b{color:#1a1008}
-        .card .body i{color:#5a4a3a}
+        .card .body i{color:#6a5a4a}
 
         .card .highlight{
             padding:14px 18px;background:#f8f4ec;
             border-left:3px solid #c8b898;border-radius:0 6px 6px 0;
             margin:12px 0;font-size:15px;color:#5a4a3a;line-height:1.6;
         }
+        .card .highlight b{color:#3c3024}
 
-        .card .box-row{
-            display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;
-        }
-        .card .box-row .item{
+        .card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+        .card .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+        .card .grid2 .item,.card .grid3 .item{
             background:#faf6f0;border:1px solid #ece4d8;
             border-radius:8px;padding:14px;
         }
-        .card .box-row .item .num{font-size:20px;color:#8a7a6a;font-weight:500}
-        .card .box-row .item .txt{font-size:14px;color:#6a5a4a;margin-top:2px}
+        .card .grid2 .item .n,.card .grid3 .item .n{font-size:20px;color:#8a7a6a;font-weight:500}
+        .card .grid2 .item .t,.card .grid3 .item .t{font-size:13px;color:#6a5a4a;margin-top:2px}
 
-        .card .gallery{
-            display:flex;gap:12px;margin:14px 0;flex-wrap:wrap;
-        }
-        .card .gallery .g-item{
-            width:90px;height:90px;background:#faf6f0;
+        .card .gallery{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap}
+        .card .gallery .g{
+            width:86px;height:86px;background:#faf6f0;
             border:1px solid #ece4d8;border-radius:8px;
             display:flex;flex-direction:column;align-items:center;justify-content:center;
         }
-        .card .gallery .g-item .g-ico{font-size:36px}
-        .card .gallery .g-item .g-txt{font-size:11px;color:#8a7a6a;margin-top:2px}
+        .card .gallery .g .gi{font-size:34px}
+        .card .gallery .g .gt{font-size:10px;color:#8a7a6a;margin-top:2px}
 
-        .card .timeline{margin:14px 0;padding:0 0 0 28px;border-left:2px solid #ece4d8}
-        .card .timeline .tl{margin-bottom:10px}
-        .card .timeline .tl .yr{font-size:12px;color:#b8a898;font-weight:600}
-        .card .timeline .tl .desc{font-size:15px;color:#3c3024}
+        .card .tl{margin:14px 0;padding:0 0 0 28px;border-left:2px solid #ece4d8}
+        .card .tl .te{margin-bottom:10px;animation:fadeIn 0.3s}
+        .card .tl .te .yr{font-size:12px;color:#b8a898;font-weight:600}
+        .card .tl .te .desc{font-size:14px;color:#3c3024}
 
-        .card .quiz-question{margin-bottom:18px}
-        .card .quiz-question .q-label{font-size:12px;color:#b8a898;margin-bottom:3px}
-        .card .quiz-question .q-text{font-size:16px;color:#3c3024;margin-bottom:8px}
-        .card .quiz-question .q-opts{display:flex;flex-direction:column;gap:4px}
-        .card .quiz-question .q-opts label{
-            display:flex;align-items:center;gap:10px;
-            padding:8px 14px;background:#faf6f0;
-            border:1px solid #ece4d8;border-radius:6px;
-            font-size:15px;color:#5a4a3a;cursor:pointer;transition:0.1s;
+        /* Міні-мапа */
+        .map-container{
+            margin:14px 0;padding:16px;background:#faf6f0;border:1px solid #ece4d8;border-radius:8px;
+            display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
         }
-        .card .quiz-question .q-opts label:hover{background:#f5f0e8;border-color:#d8d0c0}
-        .card .quiz-question .q-opts input[type=radio]{accent-color:#8a7a6a}
-        .card .quiz-question .q-opts label.ok{background:#e8f0e0;border-color:#b8c898}
-        .card .quiz-question .q-opts label.bad{background:#f0e0e0;border-color:#c8a898}
+        .map-container .region{
+            padding:8px 14px;border:1px solid #e0d8c8;border-radius:6px;
+            font-size:13px;color:#8a7a6a;background:#fff;text-align:center;
+        }
+        .map-container .region .rn{font-size:10px;color:#b8a898}
+        .map-container .region.highlight{background:#b8a070;color:#fff;border-color:#b8a070}
+        .map-container .region.highlight .rn{color:rgba(255,255,255,0.4)}
 
-        /* Навігація */
-        .nav{display:flex;justify-content:space-between;margin-top:20px;gap:8px}
+        .card .quiz-q{margin-bottom:16px}
+        .card .quiz-q .ql{font-size:11px;color:#b8a898;margin-bottom:2px}
+        .card .quiz-q .qt{font-size:16px;color:#3c3024;margin-bottom:6px}
+        .card .quiz-q .qo{display:flex;flex-direction:column;gap:3px}
+        .card .quiz-q .qo label{
+            display:flex;align-items:center;gap:10px;
+            padding:8px 14px;background:#faf6f0;border:1px solid #ece4d8;
+            border-radius:6px;font-size:15px;color:#5a4a3a;cursor:pointer;transition:0.1s;
+        }
+        .card .quiz-q .qo label:hover{background:#f5f0e8;border-color:#d8d0c0}
+        .card .quiz-q .qo input[type=radio]{accent-color:#8a7a6a}
+        .card .quiz-q .qo label.ok{background:#e8f0e0;border-color:#b8c898}
+        .card .quiz-q .qo label.bad{background:#f0e0e0;border-color:#c8a898}
+        .card .quiz-q .explain{
+            font-size:13px;color:#8a7a6a;padding:6px 12px;margin-top:3px;
+            background:#f8f4ec;border-radius:4px;display:none;
+        }
+        .card .quiz-q .explain.show{display:block;animation:fadeIn 0.2s}
+
+        .nav{display:flex;justify-content:space-between;margin-top:18px;gap:8px}
         .nav button{
-            padding:10px 24px;background:#faf6f0;border:1px solid #e8e0d0;
+            padding:10px 22px;background:#faf6f0;border:1px solid #e8e0d0;
             border-radius:6px;color:#8a7a6a;font-size:14px;cursor:pointer;
             font-family:inherit;transition:0.1s;
         }
         .nav button:hover{background:#f5f0e8;border-color:#d8d0c0;color:#5a4a3a}
-        .nav button:disabled{opacity:0.3;cursor:not-allowed}
-        .nav button.primary{background:#b8a070;border-color:#b8a070;color:#fff}
-        .nav button.primary:hover{background:#a89060}
+        .nav button:disabled{opacity:0.25;cursor:not-allowed}
+        .nav button.pri{background:#b8a070;border-color:#b8a070;color:#fff}
+        .nav button.pri:hover{background:#a89060}
+        .nav button.green{background:#7a9a6a;border-color:#7a9a6a;color:#fff}
+        .nav button.green:hover{background:#6a8a5a}
 
-        /* Результат */
-        .result-box{text-align:center;padding:30px 0}
-        .result-box .score{font-size:56px;color:#b8a898;font-weight:300}
-        .result-box .score b{color:#6a5a4a}
-        .result-box .label{font-size:16px;color:#8a7a6a;margin-top:6px}
-        .result-box .stars{font-size:40px;margin:10px 0}
+        .result-box{text-align:center;padding:20px 0}
+        .result-box .big{font-size:52px;color:#b8a898;font-weight:300}
+        .result-box .big b{color:#6a5a4a}
+        .result-box .label{font-size:18px;color:#8a7a6a;margin-top:6px}
+        .result-box .stars{font-size:44px;margin:8px 0}
         .result-box .detail{font-size:13px;color:#b8a898}
-        .result-box .detail span{margin:0 12px}
+        .result-box .detail span{margin:0 10px}
 
-        /* Модулі в шапці */
-        .modules{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-        .modules .mod{
-            padding:6px 14px;border:1px solid #ece4d8;border-radius:6px;
-            font-size:12px;color:#b8a898;cursor:pointer;transition:0.1s;background:transparent;font-family:inherit;
-        }
-        .modules .mod:hover{background:#faf6f0}
-        .modules .mod.active{background:#b8a070;border-color:#b8a070;color:#fff}
-        .modules .mod.done{background:#e8f0e0;border-color:#b8c898;color:#6a8a5a}
-
-        /* Адаптив */
         @media(max-width:600px){
-            .card{padding:20px 18px}
+            .card{padding:20px 16px}
             .card h2{font-size:20px}
-            .card .box-row{grid-template-columns:1fr}
-            .modules .mod{font-size:11px;padding:4px 10px}
+            .grid2,.grid3{grid-template-columns:1fr!important}
+            .modules button{font-size:10px;padding:4px 8px}
         }
     </style>
 </head>
@@ -133,157 +153,257 @@
 <div id="app">
     <div class="header">
         <h1>📜 <span>Курс історії України</span></h1>
-        <div class="info">Модуль <b id="modNum">1</b> / <span id="modTotal">4</span></div>
+        <div class="info">
+            <b id="modNum">1</b> / <span id="modTotal">8</span>
+            <span class="mod-name" id="modName">Київська Русь</span>
+        </div>
     </div>
 
     <div class="modules" id="modulesBar"></div>
     <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
 
-    <div class="card" id="mainCard"></div>
+    <div class="card" id="card">
+        <h2>🏛️ <span id="cardTitle">Київська Русь</span></h2>
+        <div class="body" id="cardBody"></div>
+    </div>
 
     <div class="nav" id="navBar">
         <button id="btnPrev" onclick="go(-1)">← Назад</button>
-        <button id="btnNext" class="primary" onclick="go(1)">Вперед →</button>
+        <button id="btnNext" class="pri" onclick="go(1)">Вперед →</button>
     </div>
 </div>
 
 <script>
     // ============================================================
-    // КУРС ІСТОРІЇ УКРАЇНИ — модулі
+    // КУРС ІСТОРІЇ УКРАЇНИ — 8 модулів
     // ============================================================
 
     const COURSE = [
-        // ---- МОДУЛЬ 1: Київська Русь ----
+        // ========== 1 ==========
         {
-            title: '🏛️ Київська Русь — перша держава',
+            title: '🏛️ Київська Русь',
+            mapRegions: ['Київ', 'Чернігів', 'Новгород', 'Переяслав'],
             content: `
-                <p>Київська Русь — середньовічна держава, що існувала з <b>IX</b> по <b>XIII</b> століття. Вона займала територію сучасної України, Білорусі та частини Росії.</p>
-                <p>Це була <b>найбільша держава Європи</b> свого часу. Через неї проходив торговий шлях <b>"із варяг у греки"</b> — з Балтійського моря до Чорного.</p>
-                <div class="highlight">«Звідки є пішла Руська земля…» — літопис «Повість минулих літ»</div>
-                <p>Засновниками держави вважаються князі <b>Рюрик</b> (862) та <b>Олег</b> (882), який об'єднав Київ і Новгород.</p>
-
-                <div class="box-row">
-                    <div class="item"><div class="num">882</div><div class="txt">Об'єднання Києва та Новгорода князем Олегом</div></div>
-                    <div class="item"><div class="num">862</div><div class="txt">Покликання варягів на князювання</div></div>
+                <p>Київська Русь — перша східнослов'янська держава, що виникла в <b>IX столітті</b>. У часи розквіту вона була <b>найбільшою державою Європи</b>.</p>
+                <p>Торговий шлях <b>«із варяг у греки»</b> з'єднував Балтійське море з Візантією. Київ стояв на перехресті цього шляху.</p>
+                <div class="highlight">882 рік — князь Олег об'єднав Новгород і Київ. Це вважається початком Київської Русі.</div>
+                <p>Династія <b>Рюриковичів</b> правила понад 700 років. Найвідоміші князі: Олег, Володимир Великий, Ярослав Мудрий.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">882</div><div class="t">Об'єднання Києва і Новгорода</div></div>
+                    <div class="item"><div class="n">988</div><div class="t">Хрещення Русі</div></div>
                 </div>
             `,
             quiz: [
-                { q: 'У якому році князь Олег об\'єднав Київ і Новгород?', opts: ['862', '882', '988', '1240'], correct: 1 },
-                { q: 'Як називався торговий шлях через Київську Русь?', opts: ['Шовковий шлях', 'Із варяг у греки', 'Бурштиновий шлях', 'Залізний шлях'], correct: 1 },
-                { q: 'Хто вважається засновником династії Рюриковичів?', opts: ['Олег', 'Рюрик', 'Володимир', 'Ярослав'], correct: 1 },
+                { q: 'У якому році князь Олег об\'єднав Київ і Новгород?', opts: ['862', '882', '988', '1037'], correct: 1,
+                  explain: '882 року Олег захопив Київ і зробив його столицею об\'єднаної держави.' },
+                { q: 'Як називався головний торговий шлях Київської Русі?', opts: ['Шовковий шлях', 'Із варяг у греки', 'Бурштиновий шлях', 'Соляний шлях'], correct: 1,
+                  explain: 'Він з\'єднував Скандинавію (варягів) з Візантією (греками) через річки Східної Європи.' },
+                { q: 'Хто охрестив Русь у 988 році?', opts: ['Ярослав Мудрий', 'Володимир Великий', 'Олег', 'Святослав'], correct: 1,
+                  explain: 'Володимир Великий обрав християнство візантійського обряду, що визначило розвиток культури.' },
             ],
         },
 
-        // ---- МОДУЛЬ 2: Хрещення та розквіт ----
+        // ========== 2 ==========
         {
-            title: '⛪ Хрещення Русі та розквіт',
+            title: '⛪ Галицько-Волинське князівство',
+            mapRegions: ['Галич', 'Володимир', 'Львів', 'Холм'],
             content: `
-                <p>У <b>988 році</b> князь <b>Володимир Великий</b> охрестив Русь за візантійським обрядом. Це визначило культурний розвиток на багато століть.</p>
-                <p>Володимир обрав християнство після того, як посланці розповіли йому про красу візантійських храмів. Легенда каже: <i>«Не знали — на небі ми чи на землі»</i>.</p>
-
-                <div class="gallery">
-                    <div class="g-item"><div class="g-ico">⛪</div><div class="g-txt">Софія Київська</div></div>
-                    <div class="g-item"><div class="g-ico">📜</div><div class="g-txt">Руська Правда</div></div>
-                    <div class="g-item"><div class="g-ico">💧</div><div class="g-txt">Хрещення 988</div></div>
-                    <div class="g-item"><div class="g-ico">📖</div><div class="g-txt">Літописи</div></div>
+                <p>Після занепаду Києва центром українських земель стало <b>Галицько-Волинське князівство</b> (1199–1340).</p>
+                <p>Князь <b>Роман Мстиславич</b> об'єднав Галич і Волинь. Його син <b>Данило Галицький</b> став королем Русі.</p>
+                <div class="highlight">1253 рік — Данило Галицький коронований папою Римським у Дорогичині.</div>
+                <p>Князівство мало тісні зв'язки з Європою. Данило навіть запрошував німців і поляків для розбудови міст.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1199</div><div class="t">Об'єднання Галича і Волині</div></div>
+                    <div class="item"><div class="n">1253</div><div class="t">Коронація Данила</div></div>
                 </div>
-
-                <p><b>Ярослав Мудрий</b> (1019–1054) — час найвищого розквіту. Він:</p>
-                <p>• Збудував <b>Софійський собор</b> у Києві (1037)<br>
-                • Створив перший закон — <b>«Руську Правду»</b><br>
-                • Заснував школи та бібліотеки<br>
-                • Породнився з європейськими монархами</p>
-
-                <div class="timeline">
-                    <div class="tl"><div class="yr">988</div><div class="desc">Хрещення Русі Володимиром</div></div>
-                    <div class="tl"><div class="yr">1019–1054</div><div class="desc">Князювання Ярослава Мудрого</div></div>
-                    <div class="tl"><div class="yr">1037</div><div class="desc">Закладено Софійський собор</div></div>
-                </div>
-
-                <p>У Києві в ті часи було <b>400 церков</b> і 8 ринків. Це було одне з найбільших міст Європи.</p>
             `,
             quiz: [
-                { q: 'У якому році відбулося хрещення Русі?', opts: ['862', '882', '988', '1037'], correct: 2 },
-                { q: 'Хто створив "Руську Правду"?', opts: ['Володимир Великий', 'Ярослав Мудрий', 'Князь Олег', 'Княгиня Ольга'], correct: 1 },
-                { q: 'Скільки церков було в Києві в часи розквіту?', opts: ['100', '200', '400', '800'], correct: 2 },
+                { q: 'Хто об\'єднав Галицьке і Волинське князівства?', opts: ['Данило Галицький', 'Роман Мстиславич', 'Юрій Львович', 'Володимир Василькович'], correct: 1,
+                  explain: 'Роман Мстиславич об\'єднав обидва князівства 1199 року, створивши могутню державу.' },
+                { q: 'У якому році Данило Галицький став королем?', opts: ['1199', '1223', '1253', '1240'], correct: 2,
+                  explain: 'Данило був коронований у 1253 році в Дорогичині як «Король Русі».' },
+                { q: 'Чому Галицько-Волинське князівство було особливим?', opts: ['Було найбільшим у світі', 'Мало тісні зв\'язки з Європою', 'Винайшло порох', 'Підкорило Візантію'], correct: 1,
+                  explain: 'Воно підтримувало активні дипломатичні та торговельні зв\'язки з країнами Європи.' },
             ],
         },
 
-        // ---- МОДУЛЬ 3: Занепад та монголи ----
+        // ========== 3 ==========
         {
-            title: '🌪️ Занепад і монгольська навала',
+            title: '⚔️ Козаччина та Запорізька Січ',
+            mapRegions: ['Запоріжжя', 'Хортиця', 'Київ', 'Чигирин'],
             content: `
-                <p>Після смерті Ярослава Мудрого почалися <b>міжусобні війни</b>. Князі воювали за владу, і держава розпалася на окремі князівства.</p>
-                <p>Найбільші князівства: Київське, Чернігівське, Галицьке, Волинське, Переяславське, Новгородське.</p>
-
-                <div class="highlight">Роздробленість послабила Русь перед лицем зовнішньої загрози.</div>
-
-                <p><b>1237–1240</b> — монгольська навала хана <b>Батия</b>. Міста падали одне за одним:</p>
-
-                <div class="timeline">
-                    <div class="tl"><div class="yr">1223</div><div class="desc">Битва на Калці — перша поразка від монголів</div></div>
-                    <div class="tl"><div class="yr">1237</div><div class="desc">Падіння Рязані, Владимира, Москви</div></div>
-                    <div class="tl"><div class="yr">1240</div><div class="desc">6 грудня — зруйнування Києва</div></div>
+                <p><b>Українське козацтво</b> виникло в <b>XV столітті</b> на південних кордонах. Козаки були вільними людьми, які жили за власними законами.</p>
+                <p><b>Запорізька Січ</b> (з 1552 року) — військово-політична організація козаків. Вона мала демократичний устрій: гетьмана обирали.</p>
+                <div class="highlight">«Козак — то вільна людина, нікому не кланяється, крім Бога та війська»</div>
+                <p>Козаки вели війни з турками, татарами та поляками. Їхні морські походи на <b>чайках</b> (човнах) сягали Стамбула.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1552</div><div class="t">Заснування Запорізької Січі</div></div>
+                    <div class="item"><div class="n">1648</div><div class="t">Початок повстання Хмельницького</div></div>
                 </div>
-
-                <p>Київ упав після довгої облоги. Місто було спалене, а більшість жителів загинули. Це поклало край Київській Русі.</p>
-                <p>Проте традиції не зникли. Вони продовжили жити в <b>Галицько-Волинському князівстві</b>, яке ще століття зберігало спадщину Русі.</p>
             `,
             quiz: [
-                { q: 'У якому році монголи зруйнували Київ?', opts: ['1223', '1237', '1240', '1250'], correct: 2 },
-                { q: 'Яке князівство продовжило традиції Київської Русі після навали?', opts: ['Московське', 'Галицько-Волинське', 'Новгородське', 'Чернігівське'], correct: 1 },
-                { q: 'Яка битва стала першою зустріччю русів з монголами?', opts: ['Битва на Калці', 'Льодова битва', 'Куликовська битва', 'Битва на Синіх Водах'], correct: 0 },
+                { q: 'Коли була заснована Запорізька Січ?', opts: ['1492', '1552', '1648', '1709'], correct: 1,
+                  explain: 'Дмитро Вишневецький заснував Січ на острові Хортиця 1552 року.' },
+                { q: 'На чому козаки ходили в морські походи?', opts: ['Лайбах', 'Чайках', 'Стругах', 'Галерах'], correct: 1,
+                  explain: 'Чайки — це легкі козацькі човни, які могли вміщати до 50 козаків.' },
+                { q: 'Який устрій був у Запорізькій Січі?', opts: ['Монархія', 'Демократія', 'Олігархія', 'Теократія'], correct: 1,
+                  explain: 'Січ мала демократичний устрій: гетьмана і старшину обирали на загальній раді.' },
             ],
         },
 
-        // ---- МОДУЛЬ 4: Спадщина ----
+        // ========== 4 ==========
         {
-            title: '🌟 Спадщина Київської Русі',
+            title: '🇺🇦 Гетьманщина та Богдан Хмельницький',
+            mapRegions: ['Чигирин', 'Київ', 'Переяслав', 'Львів'],
             content: `
-                <p>Київська Русь залишила величезну спадщину, яка впливає на нас і сьогодні.</p>
-
-                <div class="box-row">
-                    <div class="item"><div class="num">✝️</div><div class="txt"><b>Християнство</b> — віра, культура, писемність, архітектура</div></div>
-                    <div class="item"><div class="num">⚖️</div><div class="txt"><b>«Руська Правда»</b> — перший писаний закон</div></div>
-                    <div class="item"><div class="num">📖</div><div class="txt"><b>Літописи</b> — історія, мова, література</div></div>
-                    <div class="item"><div class="num">🌍</div><div class="txt"><b>Зв\'язок з Європою</b> — дипломатія, торгівля, шлюби</div></div>
+                <p><b>Богдан Хмельницький</b> підняв козацьке повстання 1648 року. Протягом 6 років він створив незалежну державу — <b>Гетьманщину</b>.</p>
+                <p>Повстання почалося з перемог під <b>Жовтими Водами</b> та <b>Корсунем</b>. Козаки розбили польське військо.</p>
+                <div class="highlight">1649 рік — Зборівський договір: визнання козацької держави.</div>
+                <p>Через військову скруту Хмельницький уклав <b>Переяславську угоду</b> (1654) з Московією. Це мало трагічні наслідки.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1648</div><div class="t">Початок повстання</div></div>
+                    <div class="item"><div class="n">1654</div><div class="t">Переяславська рада</div></div>
                 </div>
-
-                <div class="highlight">
-                    <b>Головний урок:</b> Київська Русь заклала основи української державності, культури та ідентичності.
-                </div>
-
-                <p><b>Чому це важливо знати:</b></p>
-                <p>• Україна має <b>понад 1000 років</b> державної традиції<br>
-                • Київ — одне з найстаріших міст Європи<br>
-                • Наша культура глибока й самобутня<br>
-                • Розуміння минулого допомагає будувати майбутнє</p>
-
-                <p style="margin-top:14px;padding:14px;background:#faf6f0;border-radius:8px;text-align:center;font-size:15px;">
-                    🏆 <b>Курс завершено!</b> Пройди тест, щоб перевірити знання.
-                </p>
             `,
             quiz: [
-                { q: 'Коли було закладено Софійський собор у Києві?', opts: ['988', '1019', '1037', '1240'], correct: 2 },
-                { q: 'Який князь увів християнство в Київській Русі?', opts: ['Ярослав Мудрий', 'Володимир Великий', 'Олег', 'Святослав'], correct: 1 },
-                { q: 'Кого називали "матір\'ю міст руських"?', opts: ['Москву', 'Київ', 'Новгород', 'Чернігів'], correct: 1 },
-                { q: 'Як називається найдавніший руський літопис?', opts: ['Повість минулих літ', 'Слово о полку Ігоревім', 'Руська Правда', 'Іпатіївський літопис'], correct: 0 },
+                { q: 'У якому році почалося повстання Хмельницького?', opts: ['1638', '1648', '1654', '1660'], correct: 1,
+                  explain: 'Повстання почалося 1648 року з перемог під Жовтими Водами та Корсунем.' },
+                { q: 'Який договір Москва нав\'язала козакам 1654 року?', opts: ['Зборівський', 'Переяславський', 'Білоцерківський', 'Гадяцький'], correct: 1,
+                  explain: 'Переяславська рада 1654 року привела до втрати незалежності Гетьманщини.' },
+                { q: 'Яка держава виникла в результаті повстання?', opts: ['Слобожанщина', 'Гетьманщина', 'Запоріжжя', 'Малоросія'], correct: 1,
+                  explain: 'Гетьманщина — українська козацька держава зі столицею в Чигирині.' },
+            ],
+        },
+
+        // ========== 5 ==========
+        {
+            title: '🌅 Українська революція 1917–1921',
+            mapRegions: ['Київ', 'Львів', 'Харків', 'Катеринослав'],
+            content: `
+                <p>Після падіння Російської імперії 1917 року українці проголосили власну державу — <b>УНР</b> (Українська Народна Республіка).</p>
+                <p><b>Михайло Грушевський</b> очолив Центральну Раду. <b>IV Універсал</b> (22 січня 1918) проголосив повну незалежність.</p>
+                <div class="highlight">22 січня 1918 — проголошення незалежності УНР. Нині це День Соборності України.</div>
+                <p>Після УНР владу мали гетьман Скоропадський (1918) та Директорія. 22 січня 1919 року УНР і ЗУНР об\'єдналися.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1917</div><div class="t">Створення Центральної Ради</div></div>
+                    <div class="item"><div class="n">22.01.1918</div><div class="t">IV Універсал — незалежність</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'Хто очолював Центральну Раду УНР?', opts: ['Симон Петлюра', 'Михайло Грушевський', 'Володимир Винниченко', 'Павло Скоропадський'], correct: 1,
+                  explain: 'Грушевський — видатний історик і голова Центральної Ради, автор «Історії України-Руси».' },
+                { q: 'Коли проголошено незалежність УНР?', opts: ['1 грудня 1917', '22 січня 1918', '22 січня 1919', '1 грудня 1918'], correct: 1,
+                  explain: '22 січня 1918 року IV Універсал проголосив незалежність УНР.' },
+                { q: 'З ким об\'єдналася УНР 1919 року?', opts: ['Кубанню', 'ЗУНР', 'Білорусією', 'Польщею'], correct: 1,
+                  explain: '22 січня 1919 року УНР і ЗУНР (Західноукраїнська НР) підписали Акт Злуки.' },
+            ],
+        },
+
+        // ========== 6 ==========
+        {
+            title: '☭ Радянська доба',
+            mapRegions: ['Харків', 'Київ', 'Донбас', 'Одеса'],
+            content: `
+                <p>У 1922 році Україну примусово включили до складу СРСР. Почалася доба радянської влади.</p>
+                <p><b>Голодомор 1932–1933</b> — штучний голод, організований сталінським режимом. Загинуло <b>3–7 мільйонів</b> українців. Це визнано геноцидом.</p>
+                <div class="highlight">Голодомор — найстрашніша трагедія українського народу в XX столітті.</div>
+                <p><b>Сталінські репресії</b> 1937–1938 знищили українську інтелігенцію. Розстріляно десятки тисяч письменників, вчителів, священників.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1932–33</div><div class="t">Голодомор — геноцид українців</div></div>
+                    <div class="item"><div class="n">1937–38</div><div class="t">Великий терор</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'У які роки стався Голодомор в Україні?', opts: ['1930–1931', '1932–1933', '1935–1936', '1937–1938'], correct: 1,
+                  explain: 'Голодомор 1932–1933 років — штучний голод, визнаний геноцидом українського народу.' },
+                { q: 'Скільки українців загинуло від Голодомору?', opts: ['1–2 млн', '3–7 млн', '10–15 млн', 'До 1 млн'], correct: 1,
+                  explain: 'За різними оцінками, від 3 до 7 мільйонів українців загинули від голоду.' },
+                { q: 'Що таке Великий терор 1937–1938?', opts: ['Війна з Німеччиною', 'Масові репресії проти народу', 'Будівництво заводів', 'Колективізація'], correct: 1,
+                  explain: 'Масові політичні репресії, спрямовані на знищення інтелігенції та «ворогів народу».' },
+            ],
+        },
+
+        // ========== 7 ==========
+        {
+            title: '💥 Україна у Другій світовій війні',
+            mapRegions: ['Київ', 'Львів', 'Одеса', 'Харків'],
+            content: `
+                <p>Друга світова війна (1939–1945) стала найкривавішою в історії України. Україна була головним полем битви.</p>
+                <p>Українці воювали в Червоній армії, в <b>УПА</b> (Українська повстанська армія), у дивізії «Галичина» та в партизанських загонах.</p>
+                <div class="highlight">1941–1944 — нацистська окупація України. Знищено понад 5 млн українців, зруйновано 700 міст.</div>
+                <p><b>Бабин Яр</b> у Києві — місце масових розстрілів нацистами. Лише за 2 дні (29–30 вересня 1941) там розстріляли 33 771 євреїв.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">1941–1944</div><div class="t">Нацистська окупація</div></div>
+                    <div class="item"><div class="n">29–30.09.1941</div><div class="t">Трагедія Бабиного Яру</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'Скільки міст зруйновано в Україні під час війни?', opts: ['200', '500', '700', '1000'], correct: 2,
+                  explain: '700 міст і 28 000 сіл було зруйновано в Україні під час нацистської окупації.' },
+                { q: 'Що таке Бабин Яр?', opts: ['Місце битви', 'Місце масових розстрілів', 'Партизанська база', 'Концтабір'], correct: 1,
+                  explain: 'Бабин Яр — урочище в Києві, де нацисти розстрілювали євреїв, українців, ромів.' },
+                { q: 'Яка українська армія боролася за незалежність під час війни?', opts: ['УГА', 'УПА', 'ЧА', 'ВО'], correct: 1,
+                  explain: 'УПА — Українська повстанська армія, що боролася за незалежну Україну.' },
+            ],
+        },
+
+        // ========== 8 ==========
+        {
+            title: '🇺🇦 Сучасна Україна',
+            mapRegions: ['Київ', 'Донецьк', 'Луганськ', 'Крим'],
+            content: `
+                <p><b>24 серпня 1991</b> — Україна проголосила незалежність. 1 грудня 1991 року понад 90% українців підтримали це на референдумі.</p>
+                <p><b>Помаранчева революція</b> (2004) та <b>Революція Гідності</b> (2013–2014) — боротьба за демократію.</p>
+                <div class="highlight">2014 рік — Росія окупувала Крим та розпочала війну на Донбасі.</div>
+                <p><b>24 лютого 2022</b> — повномасштабне вторгнення Росії. Українці мужньо захищають свою землю.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">24.08.1991</div><div class="t">Проголошення незалежности</div></div>
+                    <div class="item"><div class="n">24.02.2022</div><div class="t">Велика війна з Росією</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'Коли Україна проголосила незалежність?', opts: ['1 грудня 1991', '24 серпня 1991', '22 січня 1990', '24 серпня 1990'], correct: 1,
+                  explain: '24 серпня 1991 року Верховна Рада України прийняла Акт проголошення незалежності України.' },
+                { q: 'Який відсоток українців підтримав незалежність на референдумі?', opts: ['75%', '82%', '90%+', '96%'], correct: 2,
+                  explain: 'Понад 90% громадян проголосували за незалежність 1 грудня 1991 року.' },
+                { q: 'Коли почалося повномасштабне вторгнення Росії?', opts: ['2014', '24 лютого 2022', '24 серпня 2022', '2023'], correct: 1,
+                  explain: '24 лютого 2022 року Росія розпочала повномасштабну війну проти України.' },
             ],
         },
     ];
 
     // ============================================================
+    // ФІНАЛЬНИЙ ЕКЗАМЕН
+    // ============================================================
+    const FINAL_EXAM = (function(){
+        const qs = [];
+        COURSE.forEach((mod, mi) => {
+            mod.quiz.forEach(q => {
+                qs.push({ ...q, sourceMod: mi + 1 });
+            });
+        });
+        return qs;
+    })();
+
+    // ============================================================
     // СТАН
     // ============================================================
-    let modIdx = 0;          // поточний модуль
-    let step = 'content';    // 'content' | 'quiz' | 'result'
-    let answers = [];
-    let results = [];        // скільки правильних на модуль
-    let quizSubmitted = false;
+    let state = {
+        modIdx: 0,
+        phase: 'content',    // 'content' | 'quiz' | 'result' | 'final' | 'finalResult'
+        answers: [],
+        results: [],         // правильних відповідей на модуль
+        finalAnswers: [],
+        finalSubmitted: false,
+        finalResult: null,
+    };
 
-    const card = document.getElementById('mainCard');
+    const card = document.getElementById('card');
+    const cardTitle = document.getElementById('cardTitle');
+    const cardBody = document.getElementById('cardBody');
     const modNum = document.getElementById('modNum');
     const modTotal = document.getElementById('modTotal');
+    const modName = document.getElementById('modName');
     const progressFill = document.getElementById('progressFill');
     const modulesBar = document.getElementById('modulesBar');
     const btnPrev = document.getElementById('btnPrev');
@@ -293,215 +413,363 @@
     // РЕНДЕР
     // ============================================================
     function render() {
-        modTotal.textContent = COURSE.length;
+        const m = COURSE[state.modIdx];
+        modTotal.textContent = COURSE.length + 1;
 
-        // Панель модулів
-        modulesBar.innerHTML = COURSE.map((m, i) => {
-            let cls = i === modIdx ? 'active' : (results[i] !== undefined ? 'done' : '');
-            return `<button class="mod ${cls}" onclick="jumpTo(${i})">${i+1}. ${m.title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 ]/g,'').slice(0,18)}</button>`;
-        }).join('');
+        // Modules bar
+        let html = '';
+        const allMods = [...COURSE, null]; // null = final exam
+        allMods.forEach((_, i) => {
+            if (i === state.modIdx && state.phase !== 'final' && state.phase !== 'finalResult') {
+                html += `<button class="mod active" onclick="jumpTo(${i})">${i+1}. ${COURSE[i].title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 /\-]/g,'').slice(0,16)}</button>`;
+            } else if (i === COURSE.length) {
+                const isActive = state.phase === 'final' || state.phase === 'finalResult';
+                const isDone = state.finalResult !== null;
+                html += `<button class="mod ${isActive?'active':''} ${isDone?'done':''}" onclick="startFinal()">🏆 Фінал</button>`;
+            } else if (state.results[i] !== undefined) {
+                html += `<button class="mod done" onclick="jumpTo(${i})">${i+1}. ${COURSE[i].title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 /\-]/g,'').slice(0,16)}</button>`;
+            } else {
+                html += `<button class="mod" onclick="jumpTo(${i})">${i+1}. ${COURSE[i].title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 /\-]/g,'').slice(0,16)}</button>`;
+            }
+        });
+        modulesBar.innerHTML = html;
 
-        // Прогрес
-        const done = results.length;
-        const total = COURSE.length;
-        progressFill.style.width = (done / total * 100) + '%';
+        // Progress
+        const doneModules = state.results.length;
+        const totalModules = COURSE.length;
+        const hasFinal = state.finalResult !== null;
+        progressFill.style.width = ((doneModules + (hasFinal ? 1 : 0)) / (totalModules + 1) * 100) + '%';
 
-        modNum.textContent = modIdx + 1;
+        // Card
+        if (state.phase === 'final' || state.phase === 'finalResult') {
+            renderFinal();
+            return;
+        }
 
-        if (step === 'content') renderContent();
-        else if (step === 'quiz') renderQuiz();
+        modNum.textContent = state.modIdx + 1;
+        modName.textContent = COURSE[state.modIdx].title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 ]/g, '');
+
+        if (state.phase === 'content') renderContent();
+        else if (state.phase === 'quiz') renderQuiz();
         else renderResult();
+
+        updateNav();
     }
 
     // ============================================================
-    // КОНТЕНТ МОДУЛЯ
+    // CONTENT
     // ============================================================
     function renderContent() {
-        const m = COURSE[modIdx];
-        card.innerHTML = `
-            <h2>${m.title}</h2>
-            <div class="body">${m.content}</div>
-        `;
-        btnPrev.disabled = false;
-        btnNext.textContent = '📝 Почати тест →';
-        btnNext.className = 'primary';
-        btnPrev.textContent = modIdx > 0 ? '← Попередній модуль' : '← Початок';
+        const m = COURSE[state.modIdx];
+        // Map
+        const mapHtml = `<div class="map-container">
+            ${m.mapRegions.map(r => `<div class="region"><div class="rn">${r}</div>▪</div>`).join('')}
+        </div>`;
+
+        cardTitle.innerHTML = m.title;
+        cardBody.innerHTML = mapHtml + m.content;
+        btnPrev.textContent = '← Назад';
+        btnNext.textContent = '📝 Тест →';
     }
 
     // ============================================================
-    // ТЕСТ
+    // QUIZ
     // ============================================================
     function renderQuiz() {
-        const m = COURSE[modIdx];
-        if (answers.length === 0) {
-            answers = m.quiz.map(() => -1);
-        }
-        quizSubmitted = false;
+        const m = COURSE[state.modIdx];
+        const quiz = m.quiz;
 
-        card.innerHTML = `
-            <h2>📝 Тест — модуль ${modIdx+1}</h2>
-            <div class="body">
-                ${m.quiz.map((q, i) => `
-                    <div class="quiz-question">
-                        <div class="q-label">Питання ${i+1}</div>
-                        <div class="q-text">${q.q}</div>
-                        <div class="q-opts">
-                            ${q.opts.map((opt, j) => `
-                                <label onclick="pickAnswer(${i}, ${j})" id="qlbl${i}_${j}">
-                                    <input type="radio" name="q${i}" value="${j}" ${answers[i]===j?'checked':''}>
-                                    ${opt}
-                                </label>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('')}
+        if (state.answers.length === 0) state.answers = quiz.map(() => -1);
+
+        cardTitle.innerHTML = '📝 Тест — модуль ' + (state.modIdx+1);
+        cardBody.innerHTML = quiz.map((q, i) => `
+            <div class="quiz-q">
+                <div class="ql">Питання ${i+1} / ${quiz.length}</div>
+                <div class="qt">${q.q}</div>
+                <div class="qo">
+                    ${q.opts.map((o, j) => `
+                        <label onclick="pick(${i},${j})" id="lbl${i}_${j}">
+                            <input type="radio" name="q${i}" value="${j}" ${state.answers[i]===j?'checked':''}>
+                            ${o}
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="explain" id="exp${i}">${q.explain || ''}</div>
             </div>
-        `;
+        `).join('');
 
-        btnPrev.disabled = false;
-        btnPrev.textContent = '← До уроку';
+        btnPrev.textContent = '← Урок';
         btnNext.textContent = '✅ Перевірити';
-        btnNext.className = 'primary';
     }
 
-    window.pickAnswer = function(qi, opt) {
-        answers[qi] = opt;
-        const m = COURSE[modIdx];
+    window.pick = function(qi, opt) {
+        state.answers[qi] = opt;
+        const m = COURSE[state.modIdx];
         m.quiz.forEach((_, j) => {
-            const el = document.getElementById('qlbl' + qi + '_' + j);
+            const el = document.getElementById('lbl' + qi + '_' + j);
             if (el) el.style.borderColor = j === opt ? '#b8a070' : '';
         });
     };
 
-    // ============================================================
-    // РЕЗУЛЬТАТ
-    // ============================================================
-    function renderResult() {
-        const m = COURSE[modIdx];
+    function checkQuiz() {
+        const m = COURSE[state.modIdx];
+        const quiz = m.quiz;
+        const unanswered = state.answers.filter(a => a === -1).length;
+        if (unanswered > 0) {
+            alert('Дай відповіді на всі питання! (' + unanswered + ' пропущено)');
+            return;
+        }
+
         let correct = 0;
-        m.quiz.forEach((q, i) => {
-            if (answers[i] === q.correct) correct++;
+        quiz.forEach((q, i) => {
+            const isCorrect = state.answers[i] === q.correct;
+            if (isCorrect) correct++;
+            q.opts.forEach((_, j) => {
+                const el = document.getElementById('lbl' + i + '_' + j);
+                if (!el) return;
+                if (j === q.correct) el.className = 'ok';
+                else if (j === state.answers[i] && !isCorrect) el.className = 'bad';
+            });
+            const exp = document.getElementById('exp' + i);
+            if (exp) exp.classList.add('show');
         });
 
-        const pct = Math.round(correct / m.quiz.length * 100);
+        state.results[state.modIdx] = correct;
+        state.phase = 'result';
+        render();
+    }
+
+    // ============================================================
+    // RESULT
+    // ============================================================
+    function renderResult() {
+        const m = COURSE[state.modIdx];
+        const quiz = m.quiz;
+        const correct = state.results[state.modIdx];
+
+        const pct = Math.round(correct / quiz.length * 100);
         const stars = pct === 100 ? '⭐⭐⭐' : pct >= 70 ? '⭐⭐' : pct >= 40 ? '⭐' : '💪';
         const msg = pct === 100 ? 'Ідеально!' : pct >= 70 ? 'Чудово!' : pct >= 40 ? 'Непогано!' : 'Спробуй ще!';
 
-        // Зберегти результат
-        results[modIdx] = correct;
-
-        card.innerHTML = `
-            <h2>🏆 Результат — модуль ${modIdx+1}</h2>
-            <div class="body">
-                <div class="result-box">
-                    <div class="stars">${stars}</div>
-                    <div class="score"><b>${correct}</b> / ${m.quiz.length}</div>
-                    <div class="label">${msg}</div>
-                    <div class="detail">
-                        <span>✅ ${correct} правильних</span>
-                        <span>❌ ${m.quiz.length - correct} помилок</span>
-                        <span>📊 ${pct}%</span>
-                    </div>
+        cardTitle.innerHTML = '🏆 Результат — модуль ' + (state.modIdx+1);
+        cardBody.innerHTML = `
+            <div class="result-box">
+                <div class="stars">${stars}</div>
+                <div class="big"><b>${correct}</b> / ${quiz.length}</div>
+                <div class="label">${msg}</div>
+                <div class="detail">
+                    <span>✅ ${correct}</span>
+                    <span>❌ ${quiz.length - correct}</span>
+                    <span>📊 ${pct}%</span>
                 </div>
             </div>
         `;
 
-        const isLast = modIdx >= COURSE.length - 1;
-        const allDone = results.length >= COURSE.length;
-
-        btnPrev.disabled = false;
-        btnPrev.textContent = '← До тесту';
+        const isLast = state.modIdx >= COURSE.length - 1;
+        const allDone = state.results.filter(r => r !== undefined).length >= COURSE.length;
 
         if (allDone && isLast) {
-            btnNext.textContent = '🎉 Курс завершено!';
-            btnNext.className = 'primary';
+            btnPrev.textContent = '← Тест';
+            btnNext.textContent = '🏆 Фінальний екзамен →';
+            btnNext.className = 'green';
         } else if (isLast) {
-            btnNext.textContent = '📖 На початок курсу';
+            btnPrev.textContent = '← Тест';
+            btnNext.textContent = '📖 На початок';
             btnNext.className = '';
         } else {
+            btnPrev.textContent = '← Тест';
             btnNext.textContent = 'Наступний модуль →';
-            btnNext.className = 'primary';
+            btnNext.className = 'pri';
         }
+    }
+
+    // ============================================================
+    // FINAL EXAM
+    // ============================================================
+    function renderFinal() {
+        if (state.phase === 'finalResult') {
+            renderFinalResult();
+            return;
+        }
+
+        if (state.finalAnswers.length === 0) state.finalAnswers = FINAL_EXAM.map(() => -1);
+
+        cardTitle.innerHTML = '🏆 Фінальний екзамен';
+        cardBody.innerHTML = `
+            <p style="margin-bottom:14px">Фінальний тест з усіх модулів. <b>${FINAL_EXAM.length} питань</b>. Успіхів!</p>
+            ${FINAL_EXAM.map((q, i) => `
+                <div class="quiz-q">
+                    <div class="ql">Питання ${i+1} / ${FINAL_EXAM.length} (модуль ${q.sourceMod})</div>
+                    <div class="qt">${q.q}</div>
+                    <div class="qo">
+                        ${q.opts.map((o, j) => `
+                            <label onclick="pickFinal(${i},${j})" id="flbl${i}_${j}">
+                                <input type="radio" name="fq${i}" value="${j}" ${state.finalAnswers[i]===j?'checked':''}>
+                                ${o}
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="explain" id="fexp${i}">${q.explain || ''}</div>
+                </div>
+            `).join('')}
+        `;
+
+        btnPrev.textContent = '← До курсів';
+        btnNext.textContent = '✅ Завершити екзамен';
+        modNum.textContent = '🏆';
+        modName.textContent = 'Фінальний екзамен';
+    }
+
+    window.pickFinal = function(qi, opt) {
+        state.finalAnswers[qi] = opt;
+        FINAL_EXAM.forEach((_, j) => {
+            const el = document.getElementById('flbl' + qi + '_' + j);
+            if (el) el.style.borderColor = j === opt ? '#b8a070' : '';
+        });
+    };
+
+    function checkFinal() {
+        const unanswered = state.finalAnswers.filter(a => a === -1).length;
+        if (unanswered > 0) {
+            alert('Дай відповіді на всі питання! (' + unanswered + ' пропущено)');
+            return;
+        }
+
+        let correct = 0;
+        FINAL_EXAM.forEach((q, i) => {
+            const isCorrect = state.finalAnswers[i] === q.correct;
+            if (isCorrect) correct++;
+            q.opts.forEach((_, j) => {
+                const el = document.getElementById('flbl' + i + '_' + j);
+                if (!el) return;
+                if (j === q.correct) el.className = 'ok';
+                else if (j === state.finalAnswers[i] && !isCorrect) el.className = 'bad';
+            });
+            const exp = document.getElementById('fexp' + i);
+            if (exp) exp.classList.add('show');
+        });
+
+        state.finalResult = { correct, total: FINAL_EXAM.length };
+        state.phase = 'finalResult';
+        render();
+    }
+
+    function renderFinalResult() {
+        const r = state.finalResult;
+        const pct = Math.round(r.correct / r.total * 100);
+        const stars = pct === 100 ? '⭐⭐⭐' : pct >= 80 ? '⭐⭐' : pct >= 50 ? '⭐' : '💪';
+        const msg = pct === 100 ? 'Абсолютний результат! Ти знавець історії!' :
+                    pct >= 80 ? 'Відмінно! Прекрасні знання!' :
+                    pct >= 60 ? 'Добре! Ти багато запам\'ятав.' :
+                    pct >= 40 ? 'Непогано. Варто повторити матеріал.' :
+                    'Потрібно повчити ще. Спробуй спочатку!';
+
+        cardTitle.innerHTML = '🏆 Фінальний результат';
+        cardBody.innerHTML = `
+            <div class="result-box">
+                <div class="stars">${stars}</div>
+                <div class="big"><b>${r.correct}</b> / ${r.total}</div>
+                <div class="label">${msg}</div>
+                <div class="detail">
+                    <span>✅ ${r.correct}</span>
+                    <span>❌ ${r.total - r.correct}</span>
+                    <span>📊 ${pct}%</span>
+                </div>
+                ${pct === 100 ? '<p style="margin-top:14px;color:#8a7a6a;">🎉 Ти пройшов увесь курс!</p>' : ''}
+            </div>
+            <div style="margin-top:16px;padding:16px;background:#f8f4ec;border-radius:8px;">
+                <p style="font-size:14px;color:#5a4a3a;line-height:1.6;">
+                    <b>📊 Статистика курсів:</b><br>
+                    ${state.results.map((r, i) => `Модуль ${i+1}: ${r}/${COURSE[i].quiz.length} правильних`).join('<br>')}
+                </p>
+            </div>
+        `;
+
+        btnPrev.textContent = '← Назад';
+        btnNext.textContent = '🔄 Пройти курс спочатку';
+        btnNext.className = 'pri';
+        modNum.textContent = '🏆';
+        modName.textContent = 'Завершено!';
     }
 
     // ============================================================
     // НАВІГАЦІЯ
     // ============================================================
     window.go = function(dir) {
-        if (step === 'content') {
-            if (dir > 0) {
-                // Перехід до тесту
-                answers = [];
-                step = 'quiz';
-                render();
-            } else {
-                // Назад до попереднього модуля (або нічого)
-                if (modIdx > 0) {
-                    modIdx--;
-                    step = 'content';
-                    render();
-                }
-            }
+        if (state.phase === 'final') {
+            if (dir > 0) checkFinal();
+            else { state.phase = 'content'; state.modIdx = 0; render(); }
+            return;
         }
-        else if (step === 'quiz') {
-            if (dir > 0) {
-                // Перевірка
-                checkQuiz();
-            } else {
-                // Назад до уроку
-                step = 'content';
-                render();
-            }
-        }
-        else if (step === 'result') {
-            if (dir > 0) {
-                // Наступний модуль або на початок
-                if (modIdx < COURSE.length - 1) {
-                    modIdx++;
-                    step = 'content';
-                    render();
-                } else {
-                    modIdx = 0;
-                    step = 'content';
-                    render();
-                }
-            } else {
-                // Назад до тесту
-                step = 'quiz';
-                render();
-            }
-        }
-    };
-
-    function checkQuiz() {
-        const m = COURSE[modIdx];
-        const unanswered = answers.filter(a => a === -1).length;
-        if (unanswered > 0) {
-            alert('Будь ласка, дай відповіді на всі питання! (' + unanswered + ' пропущено)');
+        if (state.phase === 'finalResult') {
+            if (dir > 0) { resetAll(); }
+            else { state.phase = 'final'; render(); }
             return;
         }
 
-        // Показати правильні/неправильні
-        m.quiz.forEach((q, i) => {
-            q.opts.forEach((_, j) => {
-                const el = document.getElementById('qlbl' + i + '_' + j);
-                if (!el) return;
-                if (j === q.correct) el.className = 'ok';
-                else if (j === answers[i] && j !== q.correct) el.className = 'bad';
-            });
-        });
+        if (state.phase === 'content') {
+            if (dir > 0) { state.answers = []; state.phase = 'quiz'; render(); }
+            else {
+                if (state.modIdx > 0) { state.modIdx--; state.answers = []; render(); }
+            }
+        }
+        else if (state.phase === 'quiz') {
+            if (dir > 0) checkQuiz();
+            else { state.phase = 'content'; render(); }
+        }
+        else if (state.phase === 'result') {
+            if (dir > 0) {
+                const allDone = state.results.filter(r => r !== undefined).length >= COURSE.length;
+                if (allDone && state.modIdx >= COURSE.length - 1) {
+                    state.phase = 'final';
+                    state.finalAnswers = [];
+                    render();
+                } else if (state.modIdx < COURSE.length - 1) {
+                    state.modIdx++;
+                    state.phase = 'content';
+                    state.answers = [];
+                    render();
+                } else {
+                    state.modIdx = 0;
+                    state.phase = 'content';
+                    state.answers = [];
+                    render();
+                }
+            } else {
+                state.phase = 'quiz';
+                render();
+            }
+        }
+    };
 
-        step = 'result';
+    window.jumpTo = function(i) {
+        if (i === state.modIdx && state.phase === 'content') return;
+        if (i >= COURSE.length) { startFinal(); return; }
+        state.modIdx = i;
+        state.phase = 'content';
+        state.answers = [];
+        render();
+    };
+
+    window.startFinal = function() {
+        state.phase = 'final';
+        state.finalAnswers = [];
+        render();
+    };
+
+    function resetAll() {
+        state.modIdx = 0;
+        state.phase = 'content';
+        state.answers = [];
+        state.results = [];
+        state.finalAnswers = [];
+        state.finalResult = null;
         render();
     }
 
-    window.jumpTo = function(i) {
-        if (i === modIdx) return;
-        modIdx = i;
-        step = 'content';
-        answers = [];
-        render();
-    };
+    function updateNav() {
+        // nav already handled in render
+    }
 
     // ============================================================
     // СТАРТ
