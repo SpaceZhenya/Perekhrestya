@@ -174,8 +174,8 @@
 
     <!-- КЛЮЧ -->
     <div id="key-section">
-        <span class="ks-label">🔑 Gemini Key</span>
-        <input id="apiKey" type="password" placeholder="Вставте безкоштовний Gemini API ключ..." value="">
+        <span class="ks-label">🔑 DeepSeek API Key</span>
+        <input id="apiKey" type="password" placeholder="Встав DeepSeek API ключ..." value="">
         <button onclick="saveKey()">Зберегти</button>
         <button onclick="toggleGuide()" style="background:transparent;border-color:rgba(255,255,255,0.03);color:rgba(255,255,255,0.15);padding:8px 10px;">❓</button>
         <div class="ai-status offline" id="aiStatus">
@@ -185,15 +185,15 @@
     </div>
 
     <div class="get-key-guide" id="guide">
-        <b style="color:rgba(255,255,255,0.4)">Як отримати безкоштовний Gemini ключ:</b>
+        <b style="color:rgba(255,255,255,0.4)">Як отримати безкоштовний DeepSeek ключ:</b>
         <ol>
-            <li>Перейди на <a href="https://aistudio.google.com/apikey" target="_blank" style="color:rgba(68,136,204,0.4)">aistudio.google.com/apikey</a></li>
-            <li>Натисни <b>«Create API Key»</b></li>
-            <li>Ключ з'явиться — скопіюй його</li>
-            <li>Встав вище і натисни «Зберегти»</li>
+            <li>Перейди на <a href="https://platform.deepseek.com/" target="_blank" style="color:rgba(68,136,204,0.4)">platform.deepseek.com</a></li>
+            <li>Натисни <b>«Sign Up»</b> — зареєструйся (пошта + пароль)</li>
+            <li>Перейди в <b>«API Keys»</b> → <b>«Create API Key»</b></li>
+            <li>Скопіюй ключ і встав вище</li>
         </ol>
         <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.08)">
-            ✅ <b>Безкоштовно</b> — 60 запитів/хв, без карти, без лімітів
+            ✅ <b>Безкоштовно</b> — 10 млн токенів одразу, без карти
         </div>
     </div>
 
@@ -268,7 +268,7 @@
     let allModes = [...DEFAULT_MODES, ...customModes];
     let activeMode = null;
     let loading = false;
-    let savedKey = localStorage.getItem('aichat_key') || '';
+    let savedKey = localStorage.getItem('aichat_key_deepseek') || '';
     let aiOnline = false;
     let history = [];
 
@@ -280,7 +280,7 @@
     function saveKey() {
         const key = document.getElementById('apiKey').value.trim();
         if (!key) { alert('Встав API ключ'); return; }
-        localStorage.setItem('aichat_key', key);
+        localStorage.setItem('aichat_key_deepseek', key);
         savedKey = key;
         log('🔑 Ключ збережено');
         // Тестуємо
@@ -289,21 +289,28 @@
 
     async function testKey(key) {
         try {
-            const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+            const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: 'Привіт' }] }] }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + key,
+                },
+                body: JSON.stringify({
+                    model: 'deepseek-chat',
+                    messages: [{ role: 'user', content: 'Привіт' }],
+                    max_tokens: 10,
+                }),
                 signal: AbortSignal.timeout(10000),
             });
             if (resp.ok) {
                 aiOnline = true;
                 updateAIStatus();
-                log('✅ Gemini AI підключено!');
+                log('✅ DeepSeek AI підключено!');
             } else {
-                const err = await resp.text();
+                const err = await resp.json();
                 aiOnline = false;
                 updateAIStatus();
-                log('❌ Помилка ключа: ' + (err.substring(0, 100)));
+                log('❌ ' + (err?.error?.message || 'Помилка ключа'));
             }
         } catch(e) {
             aiOnline = false;
@@ -409,7 +416,7 @@
 
         if (!savedKey) {
             document.getElementById('guide').classList.add('show');
-            alert('Спочатку додай безкоштовний Gemini API ключ');
+            alert('Спочатку додай DeepSeek API ключ');
             return;
         }
 
@@ -436,7 +443,7 @@
             // Обрізаємо історію (останні 10 повідомлень)
             if (history.length > 10) history = history.slice(-10);
 
-            const answer = await callGemini(text);
+            const answer = await callDeepSeek(text);
 
             history.push({ role: 'model', content: answer });
             aiMsg.innerHTML = `<div class="who">${activeMode.ico} ${escapeHtml(activeMode.name)}</div>${escapeHtml(answer).replace(/\n/g, '<br>')}`;
@@ -453,67 +460,58 @@
     }
 
     // ============================================================
-    // GEMINI API
+    // DEEPSEEK API
     // ============================================================
-    async function callGemini(message) {
+    async function callDeepSeek(message) {
         const mode = activeMode;
         if (!mode) throw new Error('No mode selected');
 
-        // Формуємо історію для контексту
-        const contents = [];
-        // Системний промпт передаємо як перше повідомлення
-        contents.push({
-            role: 'user',
-            parts: [{ text: 'Ти — ' + mode.name + '. ' + (mode.prompt || '') + '\n\nЗапам\'ятай цю інструкцію і дотримуйся її у всіх відповідях.' }]
-        });
-        contents.push({
-            role: 'model',
-            parts: [{ text: 'Зрозуміло! Я ' + mode.name + '. Дотримуватимусь цієї інструкції.' }]
-        });
+        const systemMsg = 'Ти — ' + mode.name + '. ' + (mode.prompt || '') + ' Відповідай українською.';
 
-        // Додаємо останні повідомлення з історії
-        for (const h of history) {
-            contents.push({ role: h.role, parts: [{ text: h.content }] });
+        // Формуємо повідомлення з історією
+        const messages = [
+            { role: 'system', content: systemMsg },
+        ];
+
+        // Додаємо останні повідомлення (до 10)
+        const recentHistory = history.slice(-8);
+        for (const h of recentHistory) {
+            messages.push({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content });
         }
 
-        // Додаємо поточне повідомлення, якщо його ще немає в історії
-        if (!history.length || history[history.length-1].content !== message) {
-            contents.push({ role: 'user', parts: [{ text: message }] });
-        }
+        // Додаємо поточне
+        messages.push({ role: 'user', content: message });
 
         try {
-            const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + savedKey, {
+            const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + savedKey,
+                },
                 body: JSON.stringify({
-                    contents: contents,
-                    generationConfig: {
-                        temperature: 0.9,
-                        maxOutputTokens: 1024,
-                    },
-                    safetySettings: [
-                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                    ],
+                    model: 'deepseek-chat',
+                    messages: messages,
+                    temperature: 0.9,
+                    max_tokens: 1024,
+                    stream: false,
                 }),
                 signal: AbortSignal.timeout(30000),
             });
 
             if (!resp.ok) {
-                const errText = await resp.text();
-                if (resp.status === 403 || resp.status === 400) {
+                const err = await resp.json();
+                if (resp.status === 401 || resp.status === 403) {
                     aiOnline = false;
                     updateAIStatus();
-                    throw new Error('Ключ не працює. Отримай новий на aistudio.google.com/apikey');
+                    throw new Error('Ключ не дійсний. Отримай новий на platform.deepseek.com');
                 }
-                throw new Error('Помилка ' + resp.status + ': ' + errText.substring(0, 100));
+                throw new Error(err?.error?.message || 'Помилка ' + resp.status);
             }
 
             const data = await resp.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) throw new Error('Порожня відповідь AI');
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) throw new Error('Порожня відповідь');
 
             return text.trim();
 
