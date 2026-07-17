@@ -148,7 +148,7 @@
     // ============================================================
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x080810);
-    scene.fog = new THREE.FogExp2(0x080810, 0.04);
+    scene.fog = new THREE.FogExp2(0x080810, 0.02);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 30);
     camera.position.set(0, 1.6, 0);
@@ -157,17 +157,21 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 1.5;
     document.body.prepend(renderer.domElement);
 
     // ============================================================
     // ОСВІТЛЕННЯ
     // ============================================================
-    const ambient = new THREE.AmbientLight(0x1a1a2a, 0.5);
+    const ambient = new THREE.AmbientLight(0x445566, 1.5);
     scene.add(ambient);
-    const lamp = new THREE.PointLight(0xffcc88, 1.2, 6);
+    const lamp = new THREE.PointLight(0xffcc88, 2.0, 8);
     lamp.position.set(0, 2.5, 0);
     scene.add(lamp);
+    // Додаткове світло з вікон
+    const moon = new THREE.DirectionalLight(0x8899cc, 0.8);
+    moon.position.set(2, 4, -3);
+    scene.add(moon);
 
     // ============================================================
     // СТАН
@@ -192,7 +196,7 @@
 
     function makeFloor(group, w, d) {
         const geo = new THREE.PlaneGeometry(w, d);
-        const mat = new THREE.MeshStandardMaterial({ color: 0x1a1610, roughness: 0.95 });
+        const mat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.95 });
         const m = new THREE.Mesh(geo, mat);
         m.rotation.x = -Math.PI/2;
         m.position.y = -0.01;
@@ -200,7 +204,7 @@
         group.add(m);
     }
 
-    function makeWall(group, w, h, x, y, z, ry, color = 0x2a241a) {
+    function makeWall(group, w, h, x, y, z, ry, color = 0x5a4a3a) {
         const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, side: THREE.DoubleSide });
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
         m.position.set(x, y, z);
@@ -336,10 +340,10 @@
         const Wc = 3.6, Dc = 3.0, Hc = 2.6;
 
         makeFloor(g, Wc, Dc);
-        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0, 0x221e18);
-        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0, 0x221e18);
-        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2, 0x221e18);
-        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2, 0x221e18);
+        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0);
+        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0);
+        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2);
+        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2);
 
         const ceil = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Dc),
             new THREE.MeshStandardMaterial({ color: 0x1a1610, roughness: 0.95, side: THREE.DoubleSide }));
@@ -389,10 +393,10 @@
         const Wc = 3.6, Dc = 3.0, Hc = 2.6;
 
         makeFloor(g, Wc, Dc);
-        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0, 0x16121a);
-        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0, 0x16121a);
-        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2, 0x16121a);
-        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2, 0x16121a);
+        makeWall(g, Wc, Hc, 0, Hc/2, -Dc/2, 0, 0x3a3030);
+        makeWall(g, Wc, Hc, 0, Hc/2, Dc/2, 0, 0x3a3030);
+        makeWall(g, Dc, Hc, -Wc/2, Hc/2, 0, Math.PI/2, 0x3a3030);
+        makeWall(g, Dc, Hc, Wc/2, Hc/2, 0, Math.PI/2, 0x3a3030);
 
         const ceil = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Dc),
             new THREE.MeshStandardMaterial({ color: 0x0e0c14, roughness: 0.95, side: THREE.DoubleSide }));
