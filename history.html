@@ -87,6 +87,48 @@
         .card .tl .te .yr{font-size:12px;color:#b8a898;font-weight:600}
         .card .tl .te .desc{font-size:14px;color:#3c3024}
 
+        /* Сертифікат */
+        .certificate{
+            background:linear-gradient(135deg,#fdf9f0 0%,#f5ecdc 100%);
+            border:3px double #b8a070;border-radius:14px;
+            padding:36px 40px;text-align:center;position:relative;
+            margin:10px 0 6px;
+        }
+        .certificate .crown{font-size:44px}
+        .certificate h3{font-size:26px;color:#3c3024;font-weight:600;letter-spacing:1px;margin:6px 0}
+        .certificate .cname{
+            font-size:30px;color:#8a6a30;font-weight:700;margin:10px 0;
+            border-bottom:2px solid #e0d0b0;padding:0 20px 6px;display:inline-block;
+        }
+        .certificate .cname-input{
+            font-size:22px;padding:8px 16px;border:1px solid #e0d0b0;border-radius:8px;
+            text-align:center;background:#fff;color:#3c3024;width:70%;max-width:320px;
+            font-family:inherit;
+        }
+        .certificate .ctext{font-size:14px;color:#6a5a4a;line-height:1.7;margin-top:8px}
+        .certificate .cscore{font-size:18px;color:#8a7a6a;margin:10px 0}
+        .certificate .cdate{font-size:12px;color:#b8a898;margin-top:14px;letter-spacing:0.5px}
+        .certificate .seal{
+            width:74px;height:74px;border-radius:50%;border:3px solid #b8a070;
+            display:flex;align-items:center;justify-content:center;
+            margin:14px auto 0;font-size:30px;color:#b8a070;background:#fff8ec;
+        }
+        .btn-row{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+
+        .retry-btn{
+            padding:8px 18px;background:#7a9a6a;border:none;border-radius:6px;
+            color:#fff;font-size:14px;cursor:pointer;font-family:inherit;transition:0.15s;
+        }
+        .retry-btn:hover{background:#6a8a5a}
+
+        @media print{
+            body{background:#fff;padding:0}
+            #app{width:100%;max-width:100%}
+            .header,.modules,.progress-bar,.nav,.btn-row{display:none!important}
+            .card{box-shadow:none;border:none;padding:0}
+            .certificate{border-width:4px}
+        }
+
         /* Міні-мапа */
         .map-container{
             margin:14px 0;padding:16px;background:#faf6f0;border:1px solid #ece4d8;border-radius:8px;
@@ -370,6 +412,55 @@
                   explain: '24 лютого 2022 року Росія розпочала повномасштабну війну проти України.' },
             ],
         },
+
+        // ========== 9 ==========
+        {
+            title: '🎨 Культура України',
+            mapRegions: ['Київ', 'Львів', 'Харків', 'Одеса'],
+            content: `
+                <p>Українська культура — одна з найбагатших у Європі. <b>«Кобзар» Тараса Шевченка</b> став символом національного відродження.</p>
+                <p><b>Леся Українка</b> — геніальна поетеса, авторка «Лісової пісні». <b>Іван Франко</b> — письменник і вчений, «Каменяр» української літератури.</p>
+                <div class="highlight"><b>«Щедрик»</b> Миколи Леонтовича знає весь світ — це відома мелодія Carol of the Bells.</div>
+                <p>Українські кобзарі та бандуристи століттями передавали історію через пісні. Наша пісенна спадщина внесена до скарбниці ЮНЕСКО.</p>
+                <div class="grid3">
+                    <div class="item"><div class="n">🎼</div><div class="t">«Щедрик» Леонтовича</div></div>
+                    <div class="item"><div class="n">📖</div><div class="t">«Кобзар» Шевченка</div></div>
+                    <div class="item"><div class="n">🏛️</div><div class="t">Софія Київська</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'Яка книга стала символом українського відродження?', opts: ['«Лісова пісня»', '«Кобзар»', '«Каменярі»', '«Захар Беркут»'], correct: 1,
+                  explain: '«Кобзар» Тараса Шевченка (1840) — найважливіша книга української літератури.' },
+                { q: 'Хто написав «Лісову пісню»?', opts: ['Тарас Шевченко', 'Іван Франко', 'Леся Українка', 'Микола Леонтович'], correct: 2,
+                  explain: 'Леся Українка написала драму-феєрію «Лісова пісня» у 1911 році.' },
+                { q: 'Який український твір відомий у світі як Carol of the Bells?', opts: ['«Щедрик» Леонтовича', '«Запорозький марш»', '«Ой у лузі червона калина»', '«Реве та стогне Дніпр широкий»'], correct: 0,
+                  explain: '«Щедрик» Миколи Леонтовича став всесвітньо відомою різдвяною мелодією.' },
+            ],
+        },
+
+        // ========== 10 ==========
+        {
+            title: '👤 Видатні постаті',
+            mapRegions: ['Київ', 'Чернігів', 'Полтава', 'Львів'],
+            content: `
+                <p><b>Григорій Сковорода</b> (1722–1794) — мандрівний філософ, «український Сократ». Його вчення про «сродну працю» актуальне й сьогодні.</p>
+                <p><b>Тарас Шевченко</b> (1814–1861) — поет, художник, засновник нової української літератури. Його слово стало голосом народу.</p>
+                <div class="highlight"><b>Іван Мазепа</b> — гетьман, меценат, що збудував десятки церков. Його ім'ям названо вулиці в Європі та США.</div>
+                <p><b>Михайло Грушевський</b> — найвидатніший український історик, автор багатотомної «Історії України-Руси», перший голова УНР.</p>
+                <div class="grid2">
+                    <div class="item"><div class="n">Г. Сковорода</div><div class="t">Філософ «сродної праці»</div></div>
+                    <div class="item"><div class="n">Т. Шевченко</div><div class="t">Поет і художник</div></div>
+                </div>
+            `,
+            quiz: [
+                { q: 'Кого називають «українським Сократом»?', opts: ['Тараса Шевченка', 'Григорія Сковороду', 'Івана Франка', 'Михайла Грушевського'], correct: 1,
+                  explain: 'Григорій Сковорода — мандрівний філософ XVIII століття, якого порівнювали з Сократом.' },
+                { q: 'Хто написав багатотомну «Історію України-Руси»?', opts: ['Микола Костомаров', 'Михайло Грушевський', 'Дмитро Яворницький', 'Володимир Антонович'], correct: 1,
+                  explain: 'Михайло Грушевський створив фундаментальну працю з історії України.' },
+                { q: 'Який гетьман був відомим меценатом і будував церкви?', opts: ['Богдан Хмельницький', 'Петро Конашевич-Сагайдачний', 'Іван Мазепа', 'Павло Полуботок'], correct: 2,
+                  explain: 'Іван Мазепа витрачав величезні кошти на будівництво церков і підтримку культури.' },
+            ],
+        },
     ];
 
     // ============================================================
@@ -388,14 +479,41 @@
     // ============================================================
     // СТАН
     // ============================================================
+    const SAVE_KEY = 'historyCourse_v2';
+
+    function loadProgress() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (d && d.results) state.results = d.results;
+            if (d && d.finalResult) state.finalResult = d.finalResult;
+            if (d && d.studentName) state.studentName = d.studentName;
+        } catch (e) { /* ignore */ }
+    }
+
+    function saveProgress() {
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify({
+                results: state.results,
+                finalResult: state.finalResult,
+                studentName: state.studentName || '',
+            }));
+        } catch (e) { /* ignore */ }
+    }
+
     let state = {
         modIdx: 0,
-        phase: 'content',    // 'content' | 'quiz' | 'result' | 'final' | 'finalResult'
+        phase: 'content',    // 'content' | 'quiz' | 'result' | 'final' | 'finalResult' | 'certificate' | 'reviewQuiz' | 'reviewResult'
         answers: [],
         results: [],         // правильних відповідей на модуль
         finalAnswers: [],
         finalSubmitted: false,
         finalResult: null,
+        studentName: '',
+        reviewQs: [],        // питання для повторення помилок
+        reviewAnswers: [],
+        reviewResult: null,
     };
 
     const card = document.getElementById('card');
@@ -423,7 +541,7 @@
             if (i === state.modIdx && state.phase !== 'final' && state.phase !== 'finalResult') {
                 html += `<button class="mod active" onclick="jumpTo(${i})">${i+1}. ${COURSE[i].title.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9 /\-]/g,'').slice(0,16)}</button>`;
             } else if (i === COURSE.length) {
-                const isActive = state.phase === 'final' || state.phase === 'finalResult';
+                const isActive = state.phase === 'final' || state.phase === 'finalResult' || state.phase === 'certificate';
                 const isDone = state.finalResult !== null;
                 html += `<button class="mod ${isActive?'active':''} ${isDone?'done':''}" onclick="startFinal()">🏆 Фінал</button>`;
             } else if (state.results[i] !== undefined) {
@@ -443,6 +561,18 @@
         // Card
         if (state.phase === 'final' || state.phase === 'finalResult') {
             renderFinal();
+            return;
+        }
+        if (state.phase === 'certificate') {
+            renderCertificate();
+            return;
+        }
+        if (state.phase === 'reviewQuiz') {
+            renderReviewQuiz();
+            return;
+        }
+        if (state.phase === 'reviewResult') {
+            renderReviewResult();
             return;
         }
 
@@ -536,6 +666,14 @@
 
         state.results[state.modIdx] = correct;
         state.phase = 'result';
+        // Збираємо помилки для повторення
+        state.reviewQs = [];
+        quiz.forEach((q, i) => {
+            if (state.answers[i] !== q.correct) {
+                state.reviewQs.push({ ...q, _idx: i });
+            }
+        });
+        saveProgress();
         render();
     }
 
@@ -563,6 +701,11 @@
                     <span>📊 ${pct}%</span>
                 </div>
             </div>
+            ${state.reviewQs.length > 0 ? `
+                <div style="text-align:center;margin-top:4px">
+                    <button class="retry-btn" onclick="startReview()">🔁 Повторити помилки (${state.reviewQs.length})</button>
+                </div>
+            ` : ''}
         `;
 
         const isLast = state.modIdx >= COURSE.length - 1;
@@ -581,6 +724,99 @@
             btnNext.textContent = 'Наступний модуль →';
             btnNext.className = 'pri';
         }
+    }
+
+    // ============================================================
+    // ПОВТОРЕННЯ ПОМИЛОК
+    // ============================================================
+    window.startReview = function() {
+        if (state.reviewQs.length === 0) return;
+        state.reviewAnswers = state.reviewQs.map(() => -1);
+        state.phase = 'reviewQuiz';
+        renderReviewQuiz();
+    };
+
+    function renderReviewQuiz() {
+        cardTitle.innerHTML = '🔁 Повторення помилок — модуль ' + (state.modIdx+1);
+        cardBody.innerHTML = `
+            <p style="margin-bottom:12px">Тільки питання, де були помилки. <b>${state.reviewQs.length} питань</b>. Давай!</p>
+            ${state.reviewQs.map((q, i) => `
+                <div class="quiz-q">
+                    <div class="ql">Питання ${i+1} / ${state.reviewQs.length}</div>
+                    <div class="qt">${q.q}</div>
+                    <div class="qo">
+                        ${q.opts.map((o, j) => `
+                            <label onclick="pickReview(${i},${j})" id="rlbl${i}_${j}">
+                                <input type="radio" name="rq${i}" value="${j}" ${state.reviewAnswers[i]===j?'checked':''}>
+                                ${o}
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="explain" id="rexp${i}">${q.explain || ''}</div>
+                </div>
+            `).join('')}
+        `;
+        btnPrev.textContent = '← До результату';
+        btnNext.textContent = '✅ Перевірити';
+    }
+
+    window.pickReview = function(qi, opt) {
+        state.reviewAnswers[qi] = opt;
+        state.reviewQs.forEach((_, j) => {
+            const el = document.getElementById('rlbl' + qi + '_' + j);
+            if (el) el.style.borderColor = j === opt ? '#7a9a6a' : '';
+        });
+    };
+
+    function checkReview() {
+        const unanswered = state.reviewAnswers.filter(a => a === -1).length;
+        if (unanswered > 0) {
+            alert('Дай відповіді на всі питання! (' + unanswered + ' пропущено)');
+            return;
+        }
+        let correct = 0;
+        state.reviewQs.forEach((q, i) => {
+            const isCorrect = state.reviewAnswers[i] === q.correct;
+            if (isCorrect) correct++;
+            q.opts.forEach((_, j) => {
+                const el = document.getElementById('rlbl' + i + '_' + j);
+                if (!el) return;
+                if (j === q.correct) el.className = 'ok';
+                else if (j === state.reviewAnswers[i] && !isCorrect) el.className = 'bad';
+            });
+            const exp = document.getElementById('rexp' + i);
+            if (exp) exp.classList.add('show');
+        });
+        state.reviewResult = correct;
+        state.phase = 'reviewResult';
+        renderReviewResult();
+    }
+
+    function renderReviewResult() {
+        const total = state.reviewQs.length;
+        const correct = state.reviewResult;
+        const pct = Math.round(correct / total * 100);
+        const msg = pct === 100 ? 'Всі помилки виправлено! 🎉' : pct >= 70 ? 'Добре, але є ще робота!' : 'Спробуй ще раз, ти зможеш!';
+        cardTitle.innerHTML = '🔁 Результат повторення';
+        cardBody.innerHTML = `
+            <div class="result-box">
+                <div class="stars">${pct === 100 ? '⭐⭐⭐' : pct >= 70 ? '⭐⭐' : '⭐'}</div>
+                <div class="big"><b>${correct}</b> / ${total}</div>
+                <div class="label">${msg}</div>
+                <div class="detail">
+                    <span>✅ ${correct}</span>
+                    <span>❌ ${total - correct}</span>
+                    <span>📊 ${pct}%</span>
+                </div>
+            </div>
+            ${pct < 100 ? `
+                <div style="text-align:center;margin-top:4px">
+                    <button class="retry-btn" onclick="startReview()">🔁 Ще раз</button>
+                </div>
+            ` : ''}
+        `;
+        btnPrev.textContent = '← Назад';
+        btnNext.textContent = 'До наступного →';
     }
 
     // ============================================================
@@ -651,6 +887,7 @@
 
         state.finalResult = { correct, total: FINAL_EXAM.length };
         state.phase = 'finalResult';
+        saveProgress();
         render();
     }
 
@@ -677,6 +914,9 @@
                 </div>
                 ${pct === 100 ? '<p style="margin-top:14px;color:#8a7a6a;">🎉 Ти пройшов увесь курс!</p>' : ''}
             </div>
+            <div style="text-align:center;margin-top:8px">
+                <button class="retry-btn" style="background:#b8a070" onclick="openCertificate()">🎓 Отримати сертифікат</button>
+            </div>
             <div style="margin-top:16px;padding:16px;background:#f8f4ec;border-radius:8px;">
                 <p style="font-size:14px;color:#5a4a3a;line-height:1.6;">
                     <b>📊 Статистика курсів:</b><br>
@@ -693,6 +933,61 @@
     }
 
     // ============================================================
+    // СЕРТИФІКАТ
+    // ============================================================
+    window.openCertificate = function() {
+        state.phase = 'certificate';
+        renderCertificate();
+    };
+
+    function renderCertificate() {
+        const r = state.finalResult;
+        const pct = Math.round(r.correct / r.total * 100);
+        const grade = pct === 100 ? 'Відмінно' : pct >= 80 ? 'Дуже добре' : pct >= 60 ? 'Добре' : 'Задовільно';
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        cardTitle.innerHTML = '🎓 Сертифікат';
+        cardBody.innerHTML = `
+            <div class="certificate">
+                <div class="crown">🏆</div>
+                <h3>СЕРТИФІКАТ</h3>
+                <div class="ctext">про успішне проходження курсу</div>
+                <div class="cname" id="certName">${state.studentName ? escapeHtml(state.studentName) : ''}</div>
+                ${state.studentName ? '' : `
+                    <div style="margin:6px 0">
+                        <input class="cname-input" id="certNameInput" placeholder="Введи своє ім'я" maxlength="40">
+                    </div>
+                `}
+                <div class="ctext">«<b>Повний курс історії України</b>»<br>${COURSE.length} модулів • фінальний екзамен</div>
+                <div class="cscore">Результат: <b>${r.correct}</b> / ${r.total} (${pct}%) — ${grade}</div>
+                <div class="cdate">Видано ${dateStr}</div>
+                <div class="seal">🇺🇦</div>
+            </div>
+        `;
+
+        const input = document.getElementById('certNameInput');
+        if (input) {
+            input.addEventListener('input', function() {
+                state.studentName = this.value;
+                const nameEl = document.getElementById('certName');
+                if (nameEl) nameEl.textContent = this.value;
+                saveProgress();
+            });
+        }
+
+        btnPrev.textContent = '← До результату';
+        btnNext.textContent = '🖨️ Роздрукувати';
+        btnNext.className = 'pri';
+        modNum.textContent = '🎓';
+        modName.textContent = 'Сертифікат';
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ============================================================
     // НАВІГАЦІЯ
     // ============================================================
     window.go = function(dir) {
@@ -704,6 +999,21 @@
         if (state.phase === 'finalResult') {
             if (dir > 0) { resetAll(); }
             else { state.phase = 'final'; render(); }
+            return;
+        }
+        if (state.phase === 'certificate') {
+            if (dir > 0) { window.print(); }
+            else { state.phase = 'finalResult'; render(); }
+            return;
+        }
+        if (state.phase === 'reviewQuiz') {
+            if (dir > 0) checkReview();
+            else { state.phase = 'result'; render(); }
+            return;
+        }
+        if (state.phase === 'reviewResult') {
+            if (dir > 0) { state.phase = 'result'; render(); }
+            else { state.phase = 'reviewQuiz'; renderReviewQuiz(); }
             return;
         }
 
@@ -764,6 +1074,10 @@
         state.results = [];
         state.finalAnswers = [];
         state.finalResult = null;
+        state.reviewQs = [];
+        state.reviewAnswers = [];
+        state.reviewResult = null;
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
         render();
     }
 
@@ -774,6 +1088,7 @@
     // ============================================================
     // СТАРТ
     // ============================================================
+    loadProgress();
     render();
 </script>
 </body>
